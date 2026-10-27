@@ -140,12 +140,20 @@
         </div>
 
         {{-- Gesprächswünsche --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3" x-data="{ suche: '' }">
-            <div class="flex flex-wrap items-center justify-between gap-2">
+        {{-- Aufklapper als div statt button: ein deaktiviertes fieldset sperrt sonst auch das Aufklappen. --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3"
+             x-data="{ offen: false, suche: '', anzahl: {{ count($gewaehlt) }} }">
+            <div role="button" tabindex="0" :aria-expanded="offen" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" @keydown.space.prevent="offen = ! offen"
+                 class="flex cursor-pointer items-center justify-between gap-2">
                 <div>
                     <h2 class="text-base font-semibold text-gray-800">Mit diesen Eltern möchte ich unbedingt sprechen</h2>
-                    <p class="mt-1 text-sm text-gray-500">Kind anhaken – gemeint sind dessen Eltern. Die Notiz sieht nur die Schule.</p>
+                    <p class="mt-1 text-sm text-gray-500"><span x-text="anzahl"></span> ausgewählt</p>
                 </div>
+                <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
+            </div>
+            <div x-show="offen" x-cloak>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm text-gray-500">Kind anhaken – gemeint sind dessen Eltern. Die Notiz sieht nur die Schule.</p>
                 <input type="search" x-model="suche" placeholder="Name suchen …" class="rounded-lg border-gray-300 text-sm">
             </div>
             @if ($kinder->isEmpty())
@@ -164,7 +172,7 @@
                                  x-show="suche === '' || @js(mb_strtolower($z['kind']->name.' '.$elternNamen)).includes(suche.toLowerCase())"
                                  class="rounded-lg border px-3 py-2" :class="an ? 'border-indigo-300 bg-indigo-50/60' : 'border-gray-200'">
                                 <label class="flex items-start gap-2">
-                                    <input type="checkbox" name="wuensche[]" value="{{ $kid }}" x-model="an" class="mt-0.5 rounded border-gray-300">
+                                    <input type="checkbox" name="wuensche[]" value="{{ $kid }}" x-model="an" @change="anzahl += $event.target.checked ? 1 : -1" class="mt-0.5 rounded border-gray-300">
                                     <span class="text-sm">
                                         <span class="font-medium text-gray-800">{{ $z['kind']->name }}</span>
                                         <span class="block text-xs {{ $elternNamen === '' ? 'text-amber-700' : 'text-gray-500' }}">
@@ -180,6 +188,7 @@
                     </div>
                 @endforeach
             @endif
+            </div>
         </div>
         </fieldset>
 
