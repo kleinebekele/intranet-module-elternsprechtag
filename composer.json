@@ -1,0 +1,29 @@
+{
+    "name": "do1emu/module-elternsprechtag",
+    "description": "Elternsprechtag-Modul für die modulare Intranet-Plattform (Waldorfschule): Sprechtage anlegen, Eltern informieren, Terminpläne der Lehrer.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["laravel", "intranet", "modul", "schule", "elternsprechtag"],
+    "authors": [
+        {
+            "name": "do1emu"
+        }
+    ],
+    "require": {
+        "php": "^8.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Intranet\\Modules\\Elternsprechtag\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Intranet\\Modules\\Elternsprechtag\\ElternsprechtagServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
