@@ -78,14 +78,23 @@ class SprechtagController
         $sprechtag->load('tage');
         $klassen = $sprechtag->klassenListe();
 
-        $plaene = Plan::with(['tage', 'wuensche'])
+        $plaene = Plan::with(['tage', 'wuensche', 'user.roles'])
             ->where('sprechtag_id', $sprechtag->id)
             ->get()
             ->keyBy('user_id');
 
+        // Lehrer laut Linear plus alle, die selbst einen Plan angelegt haben;
+        // die Klassen je Lehrer sind seine eigene Wahl, sonst die Linear-Vorauswahl.
+        $lehrer = Klassen::lehrer($klassen)->pluck('user')
+            ->concat($plaene->pluck('user')->filter())
+            ->unique('id')
+            ->sortBy(fn (User $u) => mb_strtolower($u->name))
+            ->map(fn (User $u) => ['user' => $u, 'klassen' => Plan::klassenVon($plaene->get($u->id), $u, $sprechtag)])
+            ->values();
+
         return view('elternsprechtag::sprechtage.show', [
             'sprechtag' => $sprechtag,
-            'lehrer' => Klassen::lehrer($klassen),
+            'lehrer' => $lehrer,
             'plaene' => $plaene,
             'eltern' => Klassen::eltern($klassen),
         ]);

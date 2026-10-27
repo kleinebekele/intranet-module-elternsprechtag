@@ -3,6 +3,7 @@
     $start = [
         'slot' => (int) old('slot_minuten', $plan->slot_minuten ?? 10),
         'vorb' => (int) old('vorbereitung_minuten', $plan->vorbereitung_minuten ?? 0),
+        'klassen' => array_map('strval', old('klassen', $klassen)),
         'tage' => $sprechtag->tage->mapWithKeys(function ($t) use ($planTage, $plan) {
             $pt = $planTage->get($t->id);
             $alt = old('tage.'.$t->id);
@@ -38,7 +39,7 @@
     @include('elternsprechtag::partials.meldung')
 
     <div class="mb-4 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm">
-        <span><span class="text-gray-500">Klassen:</span> {{ implode(', ', $klassen) }}</span>
+        <span><span class="text-gray-500">Klassen des Sprechtags:</span> {{ implode(', ', $sprechtag->klassenListe()) }}</span>
         @if ($sprechtag->lehrer_frist)
             <span class="{{ $sprechtag->fristVorbei() ? 'text-gray-500' : 'font-medium text-indigo-700' }}">
                 {{ $sprechtag->fristVorbei() ? 'Frist abgelaufen am' : 'Bitte eintragen bis' }} {{ $sprechtag->lehrer_frist->format('d.m.Y') }}
@@ -68,7 +69,25 @@
 
         {{-- Gesprächslänge, Vorbereitung, Raum --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5">
-            <h2 class="text-base font-semibold text-gray-800">Termine</h2>
+            <h2 class="text-base font-semibold text-gray-800">Ich stehe zur Verfügung für</h2>
+            <div class="mt-2 flex flex-wrap gap-2">
+                @foreach ($sprechtag->klassenListe() as $k)
+                    <label class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm"
+                           :class="klassen.includes(@js((string) $k)) ? 'border-indigo-300 bg-indigo-50/60' : 'border-gray-200'">
+                        <input type="checkbox" name="klassen[]" value="{{ $k }}" x-model="klassen" class="rounded border-gray-300">
+                        {{ $k }}
+                    </label>
+                @endforeach
+            </div>
+            <p class="mt-2 text-xs text-gray-500">
+                @if ($linearKlassen !== [])
+                    Laut Linear {{ $fremd ? 'unterrichtet '.$lehrer->name : 'unterrichtest du' }} in {{ implode(', ', $linearKlassen) }} – das ist nur die Vorauswahl.
+                @else
+                    Laut Linear {{ $fremd ? 'unterrichtet '.$lehrer->name : 'unterrichtest du' }} in keiner dieser Klassen.
+                @endif
+            </p>
+
+            <h2 class="mt-5 text-base font-semibold text-gray-800">Termine</h2>
             <div class="mt-3 grid grid-cols-2 gap-3">
                 <label class="block text-sm"><span class="text-gray-600">Länge eines Gesprächs (Min.)</span>
                     <input type="number" name="slot_minuten" min="5" max="120" step="5" x-model.number="slot" required
@@ -157,9 +176,11 @@
                 <input type="search" x-model="suche" placeholder="Name suchen …" class="rounded-lg border-gray-300 text-sm">
             </div>
             @if ($kinder->isEmpty())
-                <p class="mt-3 text-sm text-gray-400">Keine Schüler in {{ implode(', ', $klassen) }} gefunden.</p>
+                <p class="mt-3 text-sm text-gray-400">Keine Schüler gefunden.</p>
             @else
+                <p x-show="klassen.length === 0" class="mt-3 text-sm text-gray-400">Oben zuerst die Klassen wählen.</p>
                 @foreach ($kinder->groupBy('klasse') as $klasse => $zeilen)
+                    <div x-show="klassen.includes(@js((string) $klasse))">
                     <h3 class="mt-4 text-sm font-semibold text-gray-700">Klasse {{ $klasse }}</h3>
                     <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
                         @foreach ($zeilen as $z)
@@ -185,6 +206,7 @@
                                        class="mt-2 w-full rounded-lg border-gray-300 text-sm">
                             </div>
                         @endforeach
+                    </div>
                     </div>
                 @endforeach
             @endif
@@ -216,6 +238,7 @@
             return {
                 slot: start.slot,
                 vorb: start.vorb,
+                klassen: start.klassen,
                 tage: start.tage,
                 // Gleiche Regel wie Support\Slots: Pause schiebt das Gespräch hinter sich.
                 slots(id) {

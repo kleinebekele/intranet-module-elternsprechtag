@@ -94,7 +94,7 @@
                                     <a href="{{ route('module.elternsprechtag.plan.zeigen', [$sprechtag, 'lehrer' => $z['user']->id]) }}"
                                        class="font-medium text-indigo-700 hover:underline">{{ $z['user']->name }}</a>
                                 </td>
-                                <td class="py-2 pr-4">{{ implode(', ', $z['klassen']) }}</td>
+                                <td class="py-2 pr-4">{{ implode(', ', $z['klassen']) ?: 'keine' }}</td>
                                 <td class="py-2 pr-4">
                                     @if (! $plan)
                                         <span class="text-red-600">noch nichts eingetragen</span>

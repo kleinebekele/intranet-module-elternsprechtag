@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Slots;
 
 /** Terminplan eines Lehrers für einen Sprechtag. */
@@ -17,7 +18,22 @@ class Plan extends Model
 
     protected function casts(): array
     {
-        return ['abgeschlossen_am' => 'datetime'];
+        return ['abgeschlossen_am' => 'datetime', 'klassen' => 'array'];
+    }
+
+    /**
+     * Klassen, für die der Lehrer an diesem Sprechtag da ist: seine eigene Wahl,
+     * sonst die Vorauswahl aus Linear – immer nur Klassen des Sprechtags.
+     *
+     * @return list<string>
+     */
+    public static function klassenVon(?self $plan, User $lehrer, Sprechtag $sprechtag): array
+    {
+        $wahl = $plan?->klassen ?? Klassen::vonLehrer($lehrer);
+        $klassen = array_values(array_intersect($sprechtag->klassenListe(), $wahl));
+        natcasesort($klassen);
+
+        return array_values($klassen);
     }
 
     public function sprechtag(): BelongsTo

@@ -3,6 +3,7 @@
 namespace Intranet\Modules\Elternsprechtag\Support;
 
 use App\Models\User;
+use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 
 /**
@@ -18,10 +19,14 @@ class Rechte
         return $user !== null && ($user->isAdmin() || $user->hatRolle(self::VERWALTUNG));
     }
 
-    /** Unterrichtet der Benutzer in mindestens einer Klasse des Sprechtags? */
+    /**
+     * Darf der Benutzer an diesem Sprechtag einen Terminplan haben? Jeder Lehrer
+     * (welche Klassen er dort übernimmt, wählt er selbst) – und wer schon einen hat.
+     */
     public static function istLehrerIn(User $user, Sprechtag $sprechtag): bool
     {
-        return array_intersect(Klassen::vonLehrer($user), $sprechtag->klassenListe()) !== [];
+        return self::istLehrer($user)
+            || Plan::where(['sprechtag_id' => $sprechtag->id, 'user_id' => $user->id])->exists();
     }
 
     /** Lehrer selbst bis zum Ende des Fristtags, die Verwaltung immer. */

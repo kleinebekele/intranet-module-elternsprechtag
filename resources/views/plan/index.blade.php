@@ -23,7 +23,12 @@
                     @endif
                 </div>
                 <div class="mt-1 text-sm text-gray-600">{{ $s->tageText() }}</div>
-                <div class="mt-1 text-sm text-gray-500">Meine Klassen: {{ implode(', ', array_intersect($s->klassenListe(), $eigene)) }}</div>
+                <div class="mt-1 text-sm text-gray-500">
+                    Meine Klassen: {{ implode(', ', $klassen[$s->id]) ?: 'keine gewählt' }}
+                    @unless ($plan)
+                        <span class="text-gray-400">(Vorschlag)</span>
+                    @endunless
+                </div>
                 @if ($s->lehrer_frist)
                     <div class="mt-2 text-xs {{ $s->fristVorbei() ? 'text-gray-400' : 'font-medium text-indigo-700' }}">
                         {{ $s->fristVorbei() ? 'Frist abgelaufen am' : 'Bitte eintragen bis' }} {{ $s->lehrer_frist->format('d.m.Y') }}
@@ -32,11 +37,11 @@
             </a>
         @empty
             <p class="text-sm text-gray-400">
-                @if ($eigene === [])
+                @if (! $lehrer)
                     Du bist in keiner Klasse als Lehrer eingetragen – deshalb gibt es hier keinen Terminplan.
-                    Lehrer sehen an dieser Stelle die Elternsprechtage ihrer Klassen.
+                    Lehrer sehen an dieser Stelle die anstehenden Elternsprechtage.
                 @else
-                    Kein Elternsprechtag, an dem eine deiner Klassen beteiligt ist.
+                    Zurzeit steht kein Elternsprechtag an.
                 @endif
             </p>
         @endforelse
