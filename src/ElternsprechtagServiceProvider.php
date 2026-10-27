@@ -24,8 +24,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
     {
         return ModuleManifest::make('elternsprechtag', 'Elternsprechtag', icon: 'calendar')
             ->rolle(Rechte::VERWALTUNG, 'Elternsprechtag: Verwaltung')
-            ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar',
-                visibleWhen: fn () => Rechte::istLehrer(auth()->user()))
+            ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
             ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');

@@ -20,5 +20,5 @@ Lehrer ist, wer die Lehrerrolle einer beteiligten Klasse hat.
 ## Rechte
 
 - Menüpunkt „Einstellungen": Rolle `elternsprechtag_verwaltung` (bzw. Admin) im Admin zuordnen.
-- Menüpunkt „Mein Terminplan": einer Rolle zuordnen, die alle Lehrer haben (z. B. `user`);
-  angezeigt wird er nur, wer eine Linear-Lehrerrolle hat.
+- Menüpunkt „Mein Terminplan": einer Rolle zuordnen, die alle Lehrer haben (z. B. `user`).
+  Sichtbar ist er allein nach dieser Zuordnung; Inhalt hat er nur für Lehrer (Linear-Lehrerrolle).

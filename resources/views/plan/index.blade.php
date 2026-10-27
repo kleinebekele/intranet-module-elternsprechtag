@@ -31,7 +31,14 @@
                 @endif
             </a>
         @empty
-            <p class="text-sm text-gray-400">Kein Elternsprechtag, an dem eine deiner Klassen beteiligt ist.</p>
+            <p class="text-sm text-gray-400">
+                @if ($eigene === [])
+                    Du bist in keiner Klasse als Lehrer eingetragen – deshalb gibt es hier keinen Terminplan.
+                    Lehrer sehen an dieser Stelle die Elternsprechtage ihrer Klassen.
+                @else
+                    Kein Elternsprechtag, an dem eine deiner Klassen beteiligt ist.
+                @endif
+            </p>
         @endforelse
     </div>
 </x-app-layout>
