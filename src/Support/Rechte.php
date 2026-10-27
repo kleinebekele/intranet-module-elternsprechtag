@@ -14,9 +14,16 @@ class Rechte
 {
     public const VERWALTUNG = 'elternsprechtag_verwaltung';
 
+    /**
+     * Wer die Einstellungen aufrufen darf, verwaltet – und darf auf den Seiten
+     * für Lehrer und Eltern „handeln als".
+     */
     public static function istVerwaltung(?User $user): bool
     {
-        return $user !== null && ($user->isAdmin() || $user->hatRolle(self::VERWALTUNG));
+        return $user !== null && (
+            $user->isAdmin()
+            || app(\App\Modules\Support\Modulzugriff::class)->darfRoute('module.elternsprechtag.sprechtage.index', $user)
+        );
     }
 
     /**

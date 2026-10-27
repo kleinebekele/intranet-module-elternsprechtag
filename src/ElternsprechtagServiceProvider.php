@@ -25,8 +25,9 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
         return ModuleManifest::make('elternsprechtag', 'Elternsprechtag', icon: 'calendar')
             ->rolle(Rechte::VERWALTUNG, 'Elternsprechtag: Verwaltung')
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
+            ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen')
+            ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen', 'eltern.buchen', 'eltern.absagen')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }
 
@@ -43,6 +44,8 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.geloescht' => 'Elternsprechtag: gelöscht',
                 'elternsprechtag.info' => 'Elternsprechtag: Eltern informiert',
                 'elternsprechtag.plan' => 'Elternsprechtag: Terminplan gespeichert',
+                'elternsprechtag.termin' => 'Elternsprechtag: Termin gebucht',
+                'elternsprechtag.absage' => 'Elternsprechtag: Termin abgesagt',
             ]);
         }
     }
@@ -64,7 +67,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
                     'klassen' => 'Beteiligte Klassen',
                     'hinweis' => 'Hinweistext, der beim Sprechtag eingetragen ist',
-                    'link' => 'Adresse des Intranets',
+                    'link' => 'Link zur Terminbuchung im Intranet',
                 ],
                 betreff: 'Elternsprechtag: {{ sprechtag }}',
                 html: self::INFO_HTML,
@@ -88,7 +91,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 <p style="margin:0 0 16px;"><strong>Klassen:</strong> {{ klassen }}</p>
 <p style="margin:0 0 16px;">{{ hinweis }}</p>
 <p style="margin:0 0 24px;">
-  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Zum Intranet</a>
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Termine buchen</a>
 </p>
 <p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
 HTML;
@@ -103,7 +106,7 @@ Klassen: {{ klassen }}
 
 {{ hinweis }}
 
-Zum Intranet: {{ link }}
+Termine buchen: {{ link }}
 
 Mit freundlichen Grüßen
 Ihr Kollegium

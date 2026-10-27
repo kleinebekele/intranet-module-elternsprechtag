@@ -78,7 +78,7 @@ class SprechtagController
         $sprechtag->load('tage');
         $klassen = $sprechtag->klassenListe();
 
-        $plaene = Plan::with(['tage', 'wuensche', 'user.roles'])
+        $plaene = Plan::with(['tage', 'wuensche', 'termine', 'user.roles'])
             ->where('sprechtag_id', $sprechtag->id)
             ->get()
             ->keyBy('user_id');
@@ -116,7 +116,7 @@ class SprechtagController
             'sprechtag' => $sprechtag->titel,
             'tage' => $sprechtag->tageText(),
             'klassen' => implode(', ', $sprechtag->klassenListe()),
-            'link' => url('/'),
+            'link' => route('module.elternsprechtag.eltern.index'),
         ];
         $hinweis = (string) $sprechtag->hinweis;
 

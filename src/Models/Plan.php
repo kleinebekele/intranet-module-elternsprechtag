@@ -56,6 +56,11 @@ class Plan extends Model
         return $this->hasMany(Wunsch::class, 'plan_id');
     }
 
+    public function termine(): HasMany
+    {
+        return $this->hasMany(Termin::class, 'plan_id');
+    }
+
     /** Anzahl Termine über alle Tage. */
     public function anzahlTermine(): int
     {

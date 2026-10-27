@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Intranet\Modules\Elternsprechtag\Http\Controllers\ElternController;
 use Intranet\Modules\Elternsprechtag\Http\Controllers\PlanController;
 use Intranet\Modules\Elternsprechtag\Http\Controllers\SprechtagController;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
@@ -28,4 +29,9 @@ Route::middleware(['web', 'auth'])
         Route::get('plan/{sprechtag}', [PlanController::class, 'zeigen'])->name('plan.zeigen');
         Route::post('plan/{sprechtag}', [PlanController::class, 'speichern'])->name('plan.speichern');
         Route::post('plan/{sprechtag}/abschliessen', [PlanController::class, 'abschliessen'])->name('plan.abschliessen');
+
+        // Eltern: Termine buchen (Verwaltung auch für andere über ?eltern=).
+        Route::get('termine', [ElternController::class, 'index'])->name('eltern.index');
+        Route::post('termine/{sprechtag}', [ElternController::class, 'buchen'])->name('eltern.buchen');
+        Route::delete('termine/termin/{termin}', [ElternController::class, 'absagen'])->name('eltern.absagen');
     });

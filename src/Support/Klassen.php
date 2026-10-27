@@ -49,6 +49,31 @@ class Klassen
             ->all();
     }
 
+    /** Klassen eines Schülers laut Linear. */
+    public static function vonKind(User $kind): array
+    {
+        return $kind->roles
+            ->pluck('role_id')
+            ->filter(fn (string $id) => str_starts_with($id, self::PRAEFIX) && str_ends_with($id, '-schueler'))
+            ->map(fn (string $id) => self::ausRolle($id))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Alle Lehrer mit irgendeiner Linear-Lehrerrolle, nach Name.
+     *
+     * @return Collection<int, User>
+     */
+    public static function alleLehrer(): Collection
+    {
+        return User::query()
+            ->whereHas('roles', fn ($q) => $q->where('roles.role_id', 'like', self::PRAEFIX.'%-lehrer'))
+            ->orderBy('name')
+            ->get();
+    }
+
     /**
      * Lehrer der Klassen, je Lehrer mit seinen Klassen daraus.
      *

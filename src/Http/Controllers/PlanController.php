@@ -24,7 +24,11 @@ class PlanController
     public function index(Request $request): View
     {
         $user = $request->user();
-        $plaene = Plan::with('tage')->where('user_id', $user->id)->get()->keyBy('sprechtag_id');
+        if ($request->filled('lehrer') && (int) $request->input('lehrer') !== $user->id) {
+            abort_unless(Rechte::istVerwaltung($user), 403);
+            $user = User::with('roles')->findOrFail((int) $request->input('lehrer'));
+        }
+        $plaene = Plan::with(['tage', 'termine'])->where('user_id', $user->id)->get()->keyBy('sprechtag_id');
         $lehrer = Rechte::istLehrer($user) || $plaene->isNotEmpty();
 
         $sprechtage = ! $lehrer ? collect() : Sprechtag::with('tage')->get()
@@ -36,10 +40,28 @@ class PlanController
             'sprechtage' => $sprechtage,
             'plaene' => $plaene,
             'lehrer' => $lehrer,
+            'person' => $user,
+            'fremd' => ! $user->is($request->user()),
+            'verwaltung' => Rechte::istVerwaltung($request->user()),
+            'personen' => $this->allePersonen($request),
             'klassen' => $sprechtage->mapWithKeys(fn (Sprechtag $s) => [
                 $s->id => Plan::klassenVon($plaene->get($s->id), $user, $s),
             ]),
         ]);
+    }
+
+    /** Für „Handeln als": alle Lehrer laut Linear plus alle mit einem Plan. */
+    private function allePersonen(Request $request)
+    {
+        if (! Rechte::istVerwaltung($request->user())) {
+            return collect();
+        }
+
+        return Klassen::alleLehrer()
+            ->concat(User::whereIn('id', Plan::query()->select('user_id'))->get())
+            ->unique('id')
+            ->sortBy(fn (User $u) => mb_strtolower($u->name))
+            ->values();
     }
 
     public function zeigen(Request $request, Sprechtag $sprechtag): View
@@ -47,7 +69,7 @@ class PlanController
         $lehrer = $this->lehrer($request, $sprechtag);
         $sprechtag->load('tage');
 
-        $plan = Plan::with(['tage', 'wuensche'])->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
+        $plan = Plan::with(['tage', 'wuensche', 'termine.tag', 'termine.kind', 'termine.eltern'])->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
         $klassen = Plan::klassenVon($plan->exists ? $plan : null, $lehrer, $sprechtag);
         $planTage = $plan->tage->keyBy('tag_id');
 
@@ -63,6 +85,8 @@ class PlanController
             'kinder' => Klassen::kinder($sprechtag->klassenListe()),
             'wuensche' => $plan->wuensche->keyBy('kind_user_id'),
             'darfAendern' => Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer),
+            'verwaltung' => Rechte::istVerwaltung($request->user()),
+            'personen' => $this->allePersonen($request),
         ]);
     }
 

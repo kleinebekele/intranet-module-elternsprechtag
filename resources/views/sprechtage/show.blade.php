@@ -70,7 +70,7 @@
 
         <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3">
             <h2 class="text-base font-semibold text-gray-800">Lehrer ({{ $lehrer->count() }})</h2>
-            <p class="mt-1 text-sm text-gray-500">Alle, die laut Linear in einer der Klassen unterrichten. Klick auf den Namen öffnet den Terminplan.</p>
+            <p class="mt-1 text-sm text-gray-500">Lehrer laut Linear und alle, die selbst einen Plan angelegt haben. Klick auf den Namen öffnet den Terminplan.</p>
             <div class="mt-3 overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="text-left text-xs uppercase text-gray-500">
@@ -79,7 +79,7 @@
                             <th class="py-2 pr-4">Klassen</th>
                             <th class="py-2 pr-4">Stand</th>
                             <th class="py-2 pr-4">Tage</th>
-                            <th class="py-2 pr-4">Termine</th>
+                            <th class="py-2 pr-4">Gebucht / Termine</th>
                             <th class="py-2 pr-4">Gesprächswünsche</th>
                             <th class="py-2 pr-4">Raum</th>
                         </tr>
@@ -105,7 +105,7 @@
                                     @endif
                                 </td>
                                 <td class="py-2 pr-4">{{ $plan?->tage->count() ?? '–' }}</td>
-                                <td class="py-2 pr-4">{{ $plan?->anzahlTermine() ?? '–' }}</td>
+                                <td class="py-2 pr-4">{{ $plan ? $plan->termine->count().' / '.$plan->anzahlTermine() : '–' }}</td>
                                 <td class="py-2 pr-4">{{ $plan?->wuensche->count() ?? '–' }}</td>
                                 <td class="py-2 pr-4">{{ $plan?->raum ?: '–' }}</td>
                             </tr>

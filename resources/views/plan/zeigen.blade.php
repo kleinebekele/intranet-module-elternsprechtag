@@ -36,7 +36,40 @@
         </div>
     </x-slot>
 
+    @if ($verwaltung)
+        @include('elternsprechtag::partials.handeln-als', [
+            'personen' => $personen, 'param' => 'lehrer', 'aktuell' => $lehrer,
+            'aktion' => route('module.elternsprechtag.plan.zeigen', $sprechtag),
+        ])
+    @endif
+
     @include('elternsprechtag::partials.meldung')
+
+    @if ($plan->termine->isNotEmpty())
+        @php
+            $gueltig = [];
+            foreach ($plan->tage as $pt) {
+                foreach (\Intranet\Modules\Elternsprechtag\Support\Slots::fuer($plan, $pt) as $sl) {
+                    $gueltig[] = $pt->tag_id.'|'.$sl['von'];
+                }
+            }
+        @endphp
+        <div class="mb-4 rounded-xl border border-gray-200 bg-white p-5">
+            <h2 class="text-base font-semibold text-gray-800">Gebuchte Termine ({{ $plan->termine->count() }})</h2>
+            <div class="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-sm md:grid-cols-2 2xl:grid-cols-3">
+                @foreach ($plan->termine->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von) as $t)
+                    <div class="flex flex-wrap gap-x-2">
+                        <span class="font-medium text-gray-800">{{ $t->tag?->beschriftung() }} {{ $t->von }}</span>
+                        <span>{{ $t->kind?->name }}</span>
+                        <span class="text-gray-500">({{ $t->eltern?->name ?? 'Eltern' }})</span>
+                        @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
+                            <span class="text-amber-700">passt nicht mehr zu deinen Zeiten</span>
+                        @endunless
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     <div class="mb-4 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm">
         <span><span class="text-gray-500">Klassen des Sprechtags:</span> {{ implode(', ', $sprechtag->klassenListe()) }}</span>

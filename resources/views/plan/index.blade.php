@@ -3,6 +3,13 @@
         <h1 class="text-xl font-semibold text-gray-800">Mein Terminplan</h1>
     </x-slot>
 
+    @if ($verwaltung)
+        @include('elternsprechtag::partials.handeln-als', [
+            'personen' => $personen, 'param' => 'lehrer', 'aktuell' => $person,
+            'aktion' => route('module.elternsprechtag.plan.index'),
+        ])
+    @endif
+
     @include('elternsprechtag::partials.meldung')
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
@@ -10,7 +17,7 @@
             @php
                 $plan = $plaene->get($s->id);
             @endphp
-            <a href="{{ route('module.elternsprechtag.plan.zeigen', $s) }}"
+            <a href="{{ route('module.elternsprechtag.plan.zeigen', $fremd ? [$s, 'lehrer' => $person->id] : [$s]) }}"
                class="block rounded-xl border border-gray-200 bg-white p-5 hover:border-indigo-300 hover:bg-indigo-50/40">
                 <div class="flex items-start justify-between gap-2">
                     <span class="font-semibold text-gray-800">{{ $s->titel }}</span>
@@ -29,6 +36,9 @@
                         <span class="text-gray-400">(Vorschlag)</span>
                     @endunless
                 </div>
+                @if ($plan && $plan->termine->isNotEmpty())
+                    <div class="mt-1 text-sm text-green-700">{{ $plan->termine->count() }} Termine gebucht</div>
+                @endif
                 @if ($s->lehrer_frist)
                     <div class="mt-2 text-xs {{ $s->fristVorbei() ? 'text-gray-400' : 'font-medium text-indigo-700' }}">
                         {{ $s->fristVorbei() ? 'Frist abgelaufen am' : 'Bitte eintragen bis' }} {{ $s->lehrer_frist->format('d.m.Y') }}
