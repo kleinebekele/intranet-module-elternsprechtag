@@ -10,7 +10,7 @@ use Intranet\Modules\Elternsprechtag\Support\Rechte;
 /**
  * Anmelde-Klasse des Elternsprechtags.
  *
- * „Elternsprechtage" (Anlegen, Eltern informieren, Übersicht der Lehrer) hängt
+ * „Einstellungen" (Anlegen, Eltern informieren, Übersicht der Lehrer) hängt
  * am Menüpunkt `sprechtage` und damit an den Rollen, die ihm im Admin zugeordnet
  * sind. „Mein Terminplan" sieht jeder mit einer Linear-Lehrerrolle; wessen Plan
  * er öffnen und ändern darf, prüft Support\Rechte – deshalb stehen die
@@ -26,7 +26,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->rolle(Rechte::VERWALTUNG, 'Elternsprechtag: Verwaltung')
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar',
                 visibleWhen: fn () => Rechte::istLehrer(auth()->user()))
-            ->item('sprechtage', 'Elternsprechtage', 'module.elternsprechtag.sprechtage.index', icon: 'list')
+            ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
             ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }

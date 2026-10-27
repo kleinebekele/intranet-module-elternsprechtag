@@ -2,7 +2,7 @@
 
 Modul für die modulare Intranet-Plattform (Waldorfschule).
 
-- **Elternsprechtage** (Verwaltung): ein oder mehrere Tage mit Vorschlagszeiten, beteiligte
+- **Einstellungen** (Verwaltung): ein oder mehrere Tage mit Vorschlagszeiten, beteiligte
   Klassen, Frist für die Lehrer, Hinweistext. Knopf **„Eltern informieren"** schickt die
   Mailvorlage `elternsprechtag_info` an alle Eltern der Klassen (über den Ausgangskorb).
   Übersicht je Lehrer: Stand, Tage, Termine, Gesprächswünsche, Raum.
@@ -19,6 +19,6 @@ Lehrer ist, wer die Lehrerrolle einer beteiligten Klasse hat.
 
 ## Rechte
 
-- Menüpunkt „Elternsprechtage": Rolle `elternsprechtag_verwaltung` (bzw. Admin) im Admin zuordnen.
+- Menüpunkt „Einstellungen": Rolle `elternsprechtag_verwaltung` (bzw. Admin) im Admin zuordnen.
 - Menüpunkt „Mein Terminplan": einer Rolle zuordnen, die alle Lehrer haben (z. B. `user`);
   angezeigt wird er nur, wer eine Linear-Lehrerrolle hat.
