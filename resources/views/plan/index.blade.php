@@ -23,6 +23,8 @@
                     <span class="font-semibold text-gray-800">{{ $s->titel }}</span>
                     @if (! $plan)
                         <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">offen</span>
+                    @elseif ($plan->abgesagt())
+                        <span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700">abgesagt</span>
                     @elseif ($plan->abgeschlossen_am)
                         <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">veröffentlicht</span>
                     @else

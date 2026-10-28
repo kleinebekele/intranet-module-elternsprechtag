@@ -98,6 +98,11 @@
                                 <td class="py-2 pr-4">
                                     @if (! $plan)
                                         <span class="text-red-600">noch nichts eingetragen</span>
+                                    @elseif ($plan->abgesagt())
+                                        <span class="text-gray-700">✗ nimmt nicht teil</span>
+                                        @if ($plan->absage_grund)
+                                            <div class="text-xs text-gray-500">{{ $plan->absage_grund }}</div>
+                                        @endif
                                     @elseif ($plan->abgeschlossen_am)
                                         <span class="text-green-700">✓ veröffentlicht</span>
                                     @else

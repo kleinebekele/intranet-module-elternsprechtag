@@ -18,7 +18,13 @@ class Plan extends Model
 
     protected function casts(): array
     {
-        return ['abgeschlossen_am' => 'datetime', 'klassen' => 'array'];
+        return ['abgeschlossen_am' => 'datetime', 'abgesagt_am' => 'datetime', 'klassen' => 'array'];
+    }
+
+    /** Der Lehrer nimmt an diesem Sprechtag nicht teil. */
+    public function abgesagt(): bool
+    {
+        return $this->abgesagt_am !== null;
     }
 
     /**
@@ -39,7 +45,7 @@ class Plan extends Model
     /** Veröffentlicht = für Eltern buchbar (Spalte `abgeschlossen_am`). */
     public function veroeffentlicht(): bool
     {
-        return $this->abgeschlossen_am !== null;
+        return $this->abgeschlossen_am !== null && ! $this->abgesagt();
     }
 
     public function sprechtag(): BelongsTo

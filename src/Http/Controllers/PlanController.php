@@ -209,6 +209,55 @@ class PlanController
         }
 
         $text = $termin->beschriftung();
+        $benachrichtigt = $this->terminAbsagen($termin, $sprechtag, $lehrer, $mailer);
+
+        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
+            ->with('status', 'Termin abgesagt: '.$text.'.'.($benachrichtigt
+                ? ' Die Eltern bekommen eine Mail.'
+                : ' Für die Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.'));
+    }
+
+    /**
+     * Teilnahme am Sprechtag absagen bzw. wieder zusagen. Beim Absagen wird der
+     * Plan zurückgezogen und alle gebuchten Termine werden mit Mail abgesagt.
+     */
+    public function teilnahme(Request $request, Sprechtag $sprechtag, VorlagenMailer $mailer): RedirectResponse
+    {
+        $lehrer = $this->lehrer($request, $sprechtag);
+        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Die Frist für den Terminplan ist abgelaufen.');
+
+        $daten = $request->validate(['absagen' => ['boolean'], 'grund' => ['nullable', 'string', 'max:500']]);
+        $plan = Plan::with(['termine.tag', 'termine.kind', 'termine.eltern'])
+            ->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id], ['slot_minuten' => 15, 'vorbereitung_minuten' => 0]);
+        $absagen = (bool) ($daten['absagen'] ?? false);
+
+        $ohneMail = 0;
+        if ($absagen) {
+            $plan->fill(['abgesagt_am' => now(), 'absage_grund' => $daten['grund'] ?? null, 'abgeschlossen_am' => null])->save();
+            foreach ($plan->termine as $termin) {
+                $ohneMail += $this->terminAbsagen($termin->setRelation('plan', $plan), $sprechtag, $lehrer, $mailer) ? 0 : 1;
+            }
+        } elseif ($plan->exists) {
+            $plan->update(['abgesagt_am' => null, 'absage_grund' => null]);
+        }
+
+        if (class_exists(\App\Support\Audit::class)) {
+            \App\Support\Audit::schreiben('elternsprechtag.teilnahme', $sprechtag->titel, betroffener: $lehrer,
+                daten: ['sprechtag' => $sprechtag->id, 'abgesagt' => $absagen, 'termine' => $absagen ? $plan->termine->count() : 0],
+                ziel: "Elternsprechtag {$sprechtag->id}");
+        }
+
+        $meldung = ! $absagen ? 'Teilnahme wieder zugesagt. Bitte den Plan prüfen und veröffentlichen.'
+            : 'Teilnahme abgesagt.'.($plan->termine->isNotEmpty() ? ($plan->termine->count() === 1 ? ' Der gebuchte Termin wurde' : ' Die '.$plan->termine->count().' gebuchten Termine wurden').' abgesagt, die Eltern bekommen eine Mail.' : '')
+                .($ohneMail > 0 ? " {$ohneMail} Eltern ohne Mailadresse – bitte selbst Bescheid geben." : '');
+
+        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $meldung);
+    }
+
+    /** Termin löschen, Eltern per Mail benachrichtigen; true, wenn die Mail rausging. */
+    private function terminAbsagen(Termin $termin, Sprechtag $sprechtag, User $lehrer, VorlagenMailer $mailer): bool
+    {
+        $text = $termin->beschriftung();
         $termin->delete();
 
         $eltern = $termin->eltern;
@@ -239,10 +288,7 @@ class PlanController
                 ziel: "Elternsprechtag {$sprechtag->id}");
         }
 
-        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
-            ->with('status', 'Termin abgesagt: '.$text.'.'.($benachrichtigt
-                ? ' Die Eltern bekommen eine Mail.'
-                : ' Für die Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.'));
+        return $benachrichtigt;
     }
 
     /**

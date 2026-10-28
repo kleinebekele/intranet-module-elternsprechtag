@@ -29,7 +29,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen', 'plan.absagen', 'eltern.buchen', 'eltern.absagen')
+            ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'eltern.buchen', 'eltern.absagen')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }
 
@@ -49,6 +49,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.termin' => 'Elternsprechtag: Termin gebucht',
                 'elternsprechtag.absage' => 'Elternsprechtag: Termin abgesagt',
                 'elternsprechtag.absage_lehrer' => 'Elternsprechtag: Termin von der Lehrkraft abgesagt',
+                'elternsprechtag.teilnahme' => 'Elternsprechtag: Teilnahme abgesagt bzw. wieder zugesagt',
             ]);
         }
     }

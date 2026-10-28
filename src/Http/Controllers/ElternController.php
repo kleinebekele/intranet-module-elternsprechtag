@@ -60,7 +60,7 @@ class ElternController
         $kind = Buchung::kinder($eltern, $sprechtag)->first(fn ($z) => $z['kind']->id === (int) $daten['kind_id']);
         $plan = Plan::with(['user.roles', 'tage.tag', 'termine'])
             ->where('sprechtag_id', $sprechtag->id)->find((int) $daten['plan_id']);
-        abort_if($kind === null || $plan === null || $plan->user === null, 404);
+        abort_if($kind === null || $plan === null || $plan->user === null || $plan->abgesagt(), 404);
         abort_unless(array_intersect($kind['klassen'], Plan::klassenVon($plan, $plan->user, $sprechtag)) !== [], 404);
         if (! $verwaltung && ! $plan->veroeffentlicht()) {
             return $this->zurueck($request, $eltern)->with('error', 'Diese Lehrkraft hat ihre Termine noch nicht freigegeben.');

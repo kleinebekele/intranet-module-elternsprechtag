@@ -50,7 +50,7 @@ class Buchung
         $plaene = Plan::with(['user.roles', 'tage.tag', 'termine', 'wuensche'])
             ->where('sprechtag_id', $sprechtag->id)
             ->get()
-            ->filter(fn (Plan $p) => $p->user !== null && $p->tage->isNotEmpty());
+            ->filter(fn (Plan $p) => $p->user !== null && $p->tage->isNotEmpty() && ! $p->abgesagt());
 
         $familie = self::familienTermine($kinder->pluck('kind.id')->all(), $sprechtag);
 

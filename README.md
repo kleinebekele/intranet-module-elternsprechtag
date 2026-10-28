@@ -14,6 +14,8 @@ Modul für die modulare Intranet-Plattform (Waldorfschule).
   Lehrkraft nicht. Zurückziehen sperrt neue Buchungen, gebuchte Termine bleiben. Standard je
   Gespräch: 15 Minuten. Gebuchte Termine kann die Lehrkraft absagen (auch nach der Frist); das
   Elternteil bekommt die Mailvorlage `elternsprechtag_absage` über den Ausgangskorb.
+  **„Teilnahme absagen"** (mit Grund für die Verwaltung): Plan verschwindet für die Eltern, alle
+  gebuchten Termine werden mit Mail abgesagt; „Doch teilnehmen" macht es rückgängig.
 
 ## Datenquelle
 
