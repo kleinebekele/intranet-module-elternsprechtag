@@ -21,6 +21,10 @@
                 'pausen' => $pt?->pausenListe() ?? [],
             ]];
         }),
+        // Gebuchte Slots je Tag: von → „Kind (Eltern)" fürs Einfärben.
+        'gebucht' => $plan->termine->groupBy('tag_id')->map(fn ($ts) => $ts->mapWithKeys(fn ($t) => [
+            $t->von => trim(($t->kind?->name ?? '').' ('.($t->eltern?->name ?? 'Eltern').')'),
+        ])),
     ];
     $gewaehlt = array_map('intval', old('wuensche', $wuensche->keys()->all()));
 @endphp
@@ -32,10 +36,6 @@
                 Terminplan · {{ $sprechtag->titel }}@if ($fremd) · <span class="text-indigo-700">{{ $lehrer->name }}</span>@endif
             </h1>
             <div class="flex flex-wrap items-center gap-3">
-                @if ($plan->exists && ! $plan->abgesagt())
-                    <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}"
-                       class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Terminliste als PDF</a>
-                @endif
                 <a href="{{ $fremd ? route('module.elternsprechtag.sprechtage.show', $sprechtag) : route('module.elternsprechtag.plan.index') }}"
                    class="text-sm text-indigo-700 hover:underline">← zurück</a>
             </div>
@@ -51,6 +51,7 @@
 
     @include('elternsprechtag::partials.meldung')
 
+    {{-- Gebuchte Termine: öffnet sich über „(N gebucht)" bei „Insgesamt … Termine". Außerhalb des Formulars, weil es eigene Absage-Formulare enthält. --}}
     @if ($plan->termine->isNotEmpty())
         @php
             $gueltig = [];
@@ -60,27 +61,39 @@
                 }
             }
         @endphp
-        <div class="mb-4 rounded-xl border border-gray-200 bg-white p-5">
-            <h2 class="text-base font-semibold text-gray-800">Gebuchte Termine ({{ $plan->termine->count() }})</h2>
-            <div class="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-sm md:grid-cols-2 2xl:grid-cols-3">
-                @foreach ($plan->termine->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von) as $t)
-                    <div class="flex flex-wrap gap-x-2">
-                        <span class="font-medium text-gray-800">{{ $t->tag?->beschriftung() }} {{ $t->von }}</span>
-                        <span>{{ $t->kind?->name }}</span>
-                        <span class="text-gray-500">({{ $t->eltern?->name ?? 'Eltern' }})</span>
-                        @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
-                            <span class="text-amber-700">passt nicht mehr zu deinen Zeiten</span>
-                        @endunless
-                        @if ($verwaltung || $t->beginn()->isFuture())
-                            <form method="POST" action="{{ route('module.elternsprechtag.plan.absagen', $fremd ? [$t, 'lehrer' => $lehrer->id] : [$t]) }}"
-                                  data-bestaetigen="Termin {{ $t->tag?->beschriftung() }}, {{ $t->von }} Uhr mit den Eltern von {{ $t->kind?->name }} absagen? Die Eltern bekommen eine Mail."
-                                  data-titel="Termin absagen" data-knopf="Absagen">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
-                            </form>
-                        @endif
+        <div x-data="{ offen: false }" @termine-zeigen.window="offen = true" @keydown.escape.window="offen = false">
+            <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+                 @click.self="offen = false">
+                <div class="w-full max-w-2xl rounded-xl bg-white p-5 shadow-xl">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-base font-semibold text-gray-800">Gebuchte Termine ({{ $plan->termine->count() }})</h2>
+                        <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
                     </div>
-                @endforeach
+                    <div class="mt-3 divide-y divide-gray-100 text-sm">
+                        @foreach ($plan->termine->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von) as $t)
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                                <span class="font-medium tabular-nums text-gray-800">{{ $t->tag?->beschriftung() }} · {{ $t->von }}–{{ $t->bis }}</span>
+                                <span>{{ $t->kind?->name }}</span>
+                                <span class="text-gray-500">({{ $t->eltern?->name ?? 'Eltern' }})</span>
+                                @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
+                                    <span class="text-amber-700">passt nicht mehr zu den Zeiten</span>
+                                @endunless
+                                @if ($verwaltung || $t->beginn()->isFuture())
+                                    <form method="POST" action="{{ route('module.elternsprechtag.plan.absagen', $fremd ? [$t, 'lehrer' => $lehrer->id] : [$t]) }}" class="ml-auto"
+                                          data-bestaetigen="Termin {{ $t->tag?->beschriftung() }}, {{ $t->von }} Uhr mit den Eltern von {{ $t->kind?->name }} absagen? Die Eltern bekommen eine Mail."
+                                          data-titel="Termin absagen" data-knopf="Absagen">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
+                                    </form>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}"
+                           class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Terminliste als PDF</a>
+                    </div>
+                </div>
             </div>
         </div>
     @endif
@@ -165,6 +178,14 @@
                 <textarea name="bemerkung" rows="3" maxlength="2000" class="mt-1 w-full rounded-lg border-gray-300 text-sm">{{ old('bemerkung', $plan->bemerkung) }}</textarea></label>
             <div class="mt-4 rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
                 Insgesamt <strong x-text="gesamt()"></strong> Termine
+                @if ($plan->termine->isNotEmpty())
+                    {{-- Link statt Button: ein deaktiviertes fieldset sperrt sonst auch das Öffnen. --}}
+                    <a href="#" @click.prevent="$dispatch('termine-zeigen')" class="font-medium text-green-700 underline hover:text-green-800">({{ $plan->termine->count() }} gebucht)</a>
+                @endif
+                @if ($plan->exists)
+                    <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" title="Terminliste als PDF herunterladen"
+                       class="ml-1 inline-flex items-center align-middle text-xl leading-none text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf"></i></a>
+                @endif
             </div>
         </div>
 
@@ -210,7 +231,9 @@
                             <div class="text-sm text-gray-600">Ergibt diese Termine</div>
                             <div class="mt-1 flex flex-wrap gap-1">
                                 <template x-for="s in slots(id)" :key="s.von">
-                                    <span class="rounded bg-gray-100 px-2 py-0.5 text-xs tabular-nums text-gray-700" x-text="`${s.von}–${s.bis}`"></span>
+                                    <span class="rounded px-2 py-0.5 text-xs tabular-nums" x-text="`${s.von}–${s.bis}`"
+                                          :class="gebucht(id, s.von) ? 'bg-green-100 font-medium text-green-800 ring-1 ring-green-300' : 'bg-gray-100 text-gray-700'"
+                                          :title="gebucht(id, s.von) || 'frei'"></span>
                                 </template>
                                 <span x-show="slots(id).length === 0" class="text-xs text-amber-700">Keine Termine – Zeiten prüfen.</span>
                             </div>
@@ -335,6 +358,9 @@
                         z += d + v;
                     }
                     return liste;
+                },
+                gebucht(id, von) {
+                    return (start.gebucht[id] || {})[von] || '';
                 },
                 gesamt() {
                     return Object.keys(this.tage).reduce((n, id) => n + this.slots(id).length, 0);
