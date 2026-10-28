@@ -12,7 +12,8 @@ Modul für die modulare Intranet-Plattform (Waldorfschule).
   nur noch lesbar; die Verwaltung kann jeden Plan ändern (`?lehrer=<id>`).
   **„Speichern und veröffentlichen"** gibt den Plan für die Eltern frei; vorher sehen sie die
   Lehrkraft nicht. Zurückziehen sperrt neue Buchungen, gebuchte Termine bleiben. Standard je
-  Gespräch: 15 Minuten.
+  Gespräch: 15 Minuten. Gebuchte Termine kann die Lehrkraft absagen (auch nach der Frist); das
+  Elternteil bekommt die Mailvorlage `elternsprechtag_absage` über den Ausgangskorb.
 
 ## Datenquelle
 

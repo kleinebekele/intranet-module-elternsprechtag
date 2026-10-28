@@ -2,14 +2,18 @@
 
 namespace Intranet\Modules\Elternsprechtag\Http\Controllers;
 
+use App\Mail\Vorlagen\VorlagenMailer;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
+use Intranet\Modules\Elternsprechtag\Models\Termin;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
 use Intranet\Modules\Elternsprechtag\Support\Slots;
@@ -187,6 +191,58 @@ class PlanController
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
             ->with('status', $plan->abgeschlossen_am ? 'Terminplan veröffentlicht.' : 'Veröffentlichung zurückgezogen – Eltern können keine neuen Termine mehr buchen.');
+    }
+
+    /**
+     * Die Lehrkraft sagt einen gebuchten Termin ab – auch nach der Frist. Das
+     * Elternteil, das gebucht hat, bekommt eine Mail über den Ausgangskorb.
+     */
+    public function absagen(Request $request, Termin $termin, VorlagenMailer $mailer): RedirectResponse
+    {
+        $termin->load(['plan.sprechtag', 'tag', 'kind', 'eltern']);
+        $sprechtag = $termin->plan->sprechtag;
+        $lehrer = $this->lehrer($request, $sprechtag);
+        abort_unless((int) $termin->plan->user_id === $lehrer->id, 404);
+
+        if (! Rechte::istVerwaltung($request->user()) && $termin->beginn()->isPast()) {
+            return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('error', 'Der Termin hat schon begonnen.');
+        }
+
+        $text = $termin->beschriftung();
+        $termin->delete();
+
+        $eltern = $termin->eltern;
+        $benachrichtigt = false;
+        if ($eltern && ! $eltern->istGesperrt() && filled($eltern->email)) {
+            $werte = [
+                'name' => $eltern->name,
+                'sprechtag' => $sprechtag->titel,
+                'lehrer' => $lehrer->name,
+                'kind' => (string) $termin->kind?->name,
+                'termin' => $text,
+                'link' => route('module.elternsprechtag.eltern.index'),
+            ];
+            try {
+                $mailer->senden(
+                    ElternsprechtagServiceProvider::VORLAGE_ABSAGE, $eltern->email, array_map('e', $werte), $werte,
+                    quelle: 'Elternsprechtag-Absage', referenz: 'elternsprechtag-absage:'.$termin->id, modul: 'Elternsprechtag',
+                );
+                $benachrichtigt = true;
+            } catch (\Throwable $e) {
+                Log::warning('Elternsprechtag-Absage nicht verschickt.', ['user' => $eltern->id, 'fehler' => $e->getMessage()]);
+            }
+        }
+
+        if (class_exists(\App\Support\Audit::class)) {
+            \App\Support\Audit::schreiben('elternsprechtag.absage_lehrer', $sprechtag->titel, betroffener: $eltern,
+                daten: ['sprechtag' => $sprechtag->id, 'lehrer' => $lehrer->id, 'kind' => $termin->kind_user_id, 'mail' => $benachrichtigt],
+                ziel: "Elternsprechtag {$sprechtag->id}");
+        }
+
+        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
+            ->with('status', 'Termin abgesagt: '.$text.'.'.($benachrichtigt
+                ? ' Die Eltern bekommen eine Mail.'
+                : ' Für die Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.'));
     }
 
     /**

@@ -65,6 +65,14 @@
                         @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
                             <span class="text-amber-700">passt nicht mehr zu deinen Zeiten</span>
                         @endunless
+                        @if ($verwaltung || $t->beginn()->isFuture())
+                            <form method="POST" action="{{ route('module.elternsprechtag.plan.absagen', $fremd ? [$t, 'lehrer' => $lehrer->id] : [$t]) }}"
+                                  data-bestaetigen="Termin {{ $t->tag?->beschriftung() }}, {{ $t->von }} Uhr mit den Eltern von {{ $t->kind?->name }} absagen? Die Eltern bekommen eine Mail."
+                                  data-titel="Termin absagen" data-knopf="Absagen">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
+                            </form>
+                        @endif
                     </div>
                 @endforeach
             </div>

@@ -20,6 +20,8 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 {
     public const VORLAGE_INFO = 'elternsprechtag_info';
 
+    public const VORLAGE_ABSAGE = 'elternsprechtag_absage';
+
     public function manifest(): ModuleManifest
     {
         return ModuleManifest::make('elternsprechtag', 'Elternsprechtag', icon: 'calendar')
@@ -27,7 +29,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen', 'eltern.buchen', 'eltern.absagen')
+            ->lesend('plan.zeigen', 'plan.speichern', 'plan.abschliessen', 'plan.absagen', 'eltern.buchen', 'eltern.absagen')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }
 
@@ -46,6 +48,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.plan' => 'Elternsprechtag: Terminplan gespeichert',
                 'elternsprechtag.termin' => 'Elternsprechtag: Termin gebucht',
                 'elternsprechtag.absage' => 'Elternsprechtag: Termin abgesagt',
+                'elternsprechtag.absage_lehrer' => 'Elternsprechtag: Termin von der Lehrkraft abgesagt',
             ]);
         }
     }
@@ -57,7 +60,8 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
         }
 
         $this->app->booted(function (): void {
-            $this->app->make(\App\Mail\Vorlagen\VorlagenRegister::class)->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+            $register = $this->app->make(\App\Mail\Vorlagen\VorlagenRegister::class);
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_INFO,
                 titel: 'Elternsprechtag: Info an die Eltern',
                 beschreibung: 'Geht über den Knopf „Eltern informieren" an alle Eltern der beteiligten Klassen.',
@@ -81,6 +85,30 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Info',
             ));
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                schluessel: self::VORLAGE_ABSAGE,
+                titel: 'Elternsprechtag: Absage durch die Lehrkraft',
+                beschreibung: 'Geht an das Elternteil, das gebucht hat, wenn die Lehrkraft den Termin absagt.',
+                platzhalter: [
+                    'name' => 'Name des Elternteils',
+                    'sprechtag' => 'Titel des Sprechtags',
+                    'lehrer' => 'Name der Lehrkraft',
+                    'kind' => 'Name des Kindes',
+                    'termin' => 'Der abgesagte Termin, z. B. „Do 12.11.2026, 14:00–14:15 Uhr"',
+                    'link' => 'Link zur Terminbuchung im Intranet',
+                ],
+                betreff: 'Elternsprechtag: Termin bei {{ lehrer }} abgesagt',
+                html: self::ABSAGE_HTML,
+                text: self::ABSAGE_TEXT,
+                beispiele: [
+                    'sprechtag' => 'Elternsprechtag Herbst',
+                    'lehrer' => 'Frau Muster',
+                    'kind' => 'Max Muster',
+                    'termin' => 'Do 12.11.2026, 14:00–14:15 Uhr',
+                ],
+                modul: 'Elternsprechtag',
+                ausloeser: 'Elternsprechtag-Absage',
+            ));
         });
     }
 
@@ -95,6 +123,30 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 </p>
 <p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
 HTML;
+
+    private const ABSAGE_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;">Liebe Eltern, hallo {{ name }}!</p>
+<p style="margin:0 0 16px;">Leider muss {{ lehrer }} Ihren Gesprächstermin zum {{ sprechtag }} absagen:</p>
+<p style="margin:0 0 16px;"><strong>{{ termin }}</strong> (für {{ kind }})</p>
+<p style="margin:0 0 16px;">Bitte buchen Sie bei Bedarf einen neuen Termin:</p>
+<p style="margin:0 0 24px;">
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Neuen Termin buchen</a>
+</p>
+<p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
+HTML;
+
+    private const ABSAGE_TEXT = <<<'TEXT'
+Liebe Eltern, hallo {{ name }}!
+
+Leider muss {{ lehrer }} Ihren Gesprächstermin zum {{ sprechtag }} absagen:
+
+{{ termin }} (für {{ kind }})
+
+Bitte buchen Sie bei Bedarf einen neuen Termin: {{ link }}
+
+Mit freundlichen Grüßen
+Ihr Kollegium
+TEXT;
 
     private const INFO_TEXT = <<<'TEXT'
 Liebe Eltern, hallo {{ name }}!
