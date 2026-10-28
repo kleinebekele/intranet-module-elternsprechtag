@@ -207,7 +207,8 @@ class PlanController
 
         if (class_exists(\App\Support\Audit::class)) {
             \App\Support\Audit::schreiben('elternsprechtag.plan', $sprechtag->titel, betroffener: $lehrer,
-                daten: ['sprechtag' => $sprechtag->id, 'wuensche' => count($wuensche)], ziel: "Elternsprechtag {$sprechtag->id}");
+                daten: ['sprechtag' => $sprechtag->id, 'wuensche' => count($wuensche), 'klassen' => $klassen, 'freigegeben' => $request->boolean('freigeben')],
+                ziel: "Elternsprechtag {$sprechtag->id}");
         }
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $request->boolean('freigeben')
@@ -223,6 +224,11 @@ class PlanController
 
         $plan = Plan::where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
         $plan->update(['abgeschlossen_am' => $plan->abgeschlossen_am ? null : now()]);
+
+        if (class_exists(\App\Support\Audit::class)) {
+            \App\Support\Audit::schreiben('elternsprechtag.freigabe', $sprechtag->titel, betroffener: $lehrer,
+                daten: ['sprechtag' => $sprechtag->id, 'freigegeben' => $plan->abgeschlossen_am !== null], ziel: "Elternsprechtag {$sprechtag->id}");
+        }
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
             ->with('status', $plan->abgeschlossen_am ? 'Terminplan freigegeben.' : 'Freigabe zurückgenommen.');

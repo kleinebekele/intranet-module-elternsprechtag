@@ -39,3 +39,8 @@ wählt er im Terminplan selbst; seine Linear-Klassen sind nur die Vorauswahl.
 Wer „Einstellungen" aufrufen darf, sieht auf „Mein Terminplan" und „Sprechtermine" eine Auswahl
 „Handeln als" (`?lehrer=` bzw. `?eltern=`) – zum Prüfen und für Telefonbuchungen. Die Verwaltung
 bucht auch vor dem Öffnen der Buchung.
+
+## Hilfe
+
+Anleitungen für Eltern, Lehrer und Verwaltung liegen unter `resources/hilfe/` und kommen mit
+`php artisan wiki:hilfe-sync` ins Wiki (läuft im Deploy mit).
