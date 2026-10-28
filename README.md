@@ -11,7 +11,8 @@ Modul für die modulare Intranet-Plattform (Waldorfschule).
   Vorbereitungszeit, Raum. Die Termine werden live berechnet. Dazu die Schüler der eigenen
   Klassen, deren Eltern man unbedingt sprechen möchte. **„Speichern und freigeben"** meldet den
   Plan der Verwaltung als fertig. Nach der Frist oder dem Veröffentlichen nur noch lesbar; die
-  Verwaltung kann jeden Plan ändern (`?lehrer=<id>`). Standard je Gespräch: 15 Minuten. Gebuchte Termine kann die Lehrkraft absagen (auch nach der Frist); das
+  Verwaltung kann jeden Plan ändern (`?lehrer=<id>`). Standard je Gespräch: 15 Minuten.
+  **„Terminliste als PDF"**: alle Slots je Tag mit Kind, Klasse, Eltern und Notizspalte zum Ausdrucken. Gebuchte Termine kann die Lehrkraft absagen (auch nach der Frist); das
   Elternteil bekommt die Mailvorlage `elternsprechtag_absage` über den Ausgangskorb.
   **„Teilnahme absagen"** (mit Grund für die Verwaltung): Plan verschwindet für die Eltern, alle
   gebuchten Termine werden mit Mail abgesagt; „Doch teilnehmen" macht es rückgängig.

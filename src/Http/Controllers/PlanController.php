@@ -94,6 +94,41 @@ class PlanController
         ]);
     }
 
+    /** Terminliste zum Ausdrucken: je Tag alle Slots mit Kind und Eltern, dazu offene Gesprächswünsche. */
+    public function pdf(Request $request, Sprechtag $sprechtag)
+    {
+        $lehrer = $this->lehrer($request, $sprechtag);
+        $plan = Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
+            ->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
+
+        $tage = $plan->tage->filter(fn ($pt) => $pt->tag !== null)->sortBy(fn ($pt) => $pt->tag->datum)->map(function ($pt) use ($plan) {
+            $termine = $plan->termine->where('tag_id', $pt->tag_id)->keyBy('von');
+            $zeilen = collect(Slots::fuer($plan, $pt))->map(fn ($s) => $s + ['termin' => $termine->get($s['von']), 'pause' => false])
+                ->concat(collect($pt->pausenListe())->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis'], 'termin' => null, 'pause' => true]))
+                // Termine, die nicht mehr zu den Zeiten passen, trotzdem aufführen.
+                ->concat($termine->reject(fn ($t, $von) => collect(Slots::fuer($plan, $pt))->contains('von', $von))
+                    ->map(fn ($t) => ['von' => $t->von, 'bis' => $t->bis, 'termin' => $t, 'pause' => false]))
+                ->sortBy('von')->values();
+
+            return ['tag' => $pt->tag, 'von' => $pt->von, 'bis' => $pt->bis, 'zeilen' => $zeilen];
+        })->values();
+
+        $gebucht = $plan->termine->pluck('kind_user_id')->all();
+        $offeneWuensche = $plan->wuensche->filter(fn ($w) => $w->kind && ! in_array($w->kind_user_id, $gebucht))
+            ->sortBy(fn ($w) => mb_strtolower($w->kind->name))->values();
+
+        $datei = 'elternsprechtag-'.str($lehrer->name)->slug().'.pdf';
+
+        return \Barryvdh\DomPDF\Facade\Pdf::setOption('isFontSubsettingEnabled', true)->loadView('elternsprechtag::plan.pdf', [
+            'sprechtag' => $sprechtag,
+            'lehrer' => $lehrer,
+            'plan' => $plan,
+            'tage' => $tage,
+            'wuensche' => $plan->wuensche->pluck('kind_user_id')->all(),
+            'offeneWuensche' => $offeneWuensche,
+        ])->download($datei);
+    }
+
     public function speichern(Request $request, Sprechtag $sprechtag): RedirectResponse
     {
         $lehrer = $this->lehrer($request, $sprechtag);

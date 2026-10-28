@@ -29,6 +29,7 @@ Route::middleware(['web', 'auth'])
         Route::get('plan/{sprechtag}', [PlanController::class, 'zeigen'])->name('plan.zeigen');
         Route::post('plan/{sprechtag}', [PlanController::class, 'speichern'])->name('plan.speichern');
         Route::post('plan/{sprechtag}/abschliessen', [PlanController::class, 'abschliessen'])->name('plan.abschliessen');
+        Route::get('plan/{sprechtag}/pdf', [PlanController::class, 'pdf'])->name('plan.pdf');
         Route::post('plan/{sprechtag}/teilnahme', [PlanController::class, 'teilnahme'])->name('plan.teilnahme');
         Route::delete('plan/termin/{termin}', [PlanController::class, 'absagen'])->name('plan.absagen');
 

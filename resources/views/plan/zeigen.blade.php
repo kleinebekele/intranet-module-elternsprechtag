@@ -31,8 +31,14 @@
             <h1 class="text-xl font-semibold text-gray-800">
                 Terminplan · {{ $sprechtag->titel }}@if ($fremd) · <span class="text-indigo-700">{{ $lehrer->name }}</span>@endif
             </h1>
-            <a href="{{ $fremd ? route('module.elternsprechtag.sprechtage.show', $sprechtag) : route('module.elternsprechtag.plan.index') }}"
-               class="text-sm text-indigo-700 hover:underline">← zurück</a>
+            <div class="flex flex-wrap items-center gap-3">
+                @if ($plan->exists && ! $plan->abgesagt())
+                    <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}"
+                       class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Terminliste als PDF</a>
+                @endif
+                <a href="{{ $fremd ? route('module.elternsprechtag.sprechtage.show', $sprechtag) : route('module.elternsprechtag.plan.index') }}"
+                   class="text-sm text-indigo-700 hover:underline">← zurück</a>
+            </div>
         </div>
     </x-slot>
 
