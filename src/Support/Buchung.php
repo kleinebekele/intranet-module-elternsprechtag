@@ -34,11 +34,13 @@ class Buchung
     }
 
     /**
-     * Je Kind die Lehrer mit Termin, Gesprächswunsch und Slots.
+     * Je Kind die Lehrer mit Termin, Gesprächswunsch und Slots. Eltern sehen nur
+     * veröffentlichte Pläne (und solche, bei denen sie schon einen Termin haben);
+     * mit `$alle` (Verwaltung) auch die unveröffentlichten.
      *
      * @return Collection<int, array{kind: User, klassen: list<string>, lehrer: Collection}>
      */
-    public static function angebot(User $eltern, Sprechtag $sprechtag): Collection
+    public static function angebot(User $eltern, Sprechtag $sprechtag, bool $alle = false): Collection
     {
         $kinder = self::kinder($eltern, $sprechtag);
         if ($kinder->isEmpty()) {
@@ -52,13 +54,14 @@ class Buchung
 
         $familie = self::familienTermine($kinder->pluck('kind.id')->all(), $sprechtag);
 
-        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie) {
+        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie, $alle) {
             $kid = $z['kind']->id;
 
             $lehrer = $plaene
                 ->filter(fn (Plan $p) => array_intersect($z['klassen'], Plan::klassenVon($p, $p->user, $sprechtag)) !== [])
+                ->filter(fn (Plan $p) => $alle || $p->veroeffentlicht() || $p->termine->contains('kind_user_id', $kid))
                 ->sortBy(fn (Plan $p) => mb_strtolower($p->user->name))
-                ->map(function (Plan $p) use ($kid, $familie) {
+                ->map(function (Plan $p) use ($kid, $familie, $alle) {
                     $termin = $p->termine->firstWhere('kind_user_id', $kid);
                     $andere = $familie->reject(fn (Termin $t) => $termin && $t->id === $termin->id);
 
@@ -66,7 +69,8 @@ class Buchung
                         'plan' => $p,
                         'termin' => $termin,
                         'wunsch' => $p->wuensche->firstWhere('kind_user_id', $kid),
-                        'slots' => self::slots($p, $andere),
+                        'veroeffentlicht' => $p->veroeffentlicht(),
+                        'slots' => $alle || $p->veroeffentlicht() ? self::slots($p, $andere) : [],
                     ];
                 })
                 ->values();

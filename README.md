@@ -10,6 +10,9 @@ Modul für die modulare Intranet-Plattform (Waldorfschule).
   Vorbereitung zwischen den Gesprächen, Raum. Die Termine werden live berechnet. Dazu die
   Schüler der eigenen Klassen, deren Eltern man unbedingt sprechen möchte. Nach der Frist
   nur noch lesbar; die Verwaltung kann jeden Plan ändern (`?lehrer=<id>`).
+  **„Speichern und veröffentlichen"** gibt den Plan für die Eltern frei; vorher sehen sie die
+  Lehrkraft nicht. Zurückziehen sperrt neue Buchungen, gebuchte Termine bleiben. Standard je
+  Gespräch: 15 Minuten.
 
 ## Datenquelle
 

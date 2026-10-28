@@ -45,7 +45,7 @@
                     </div>
                 </template>
             </div>
-            <button type="button" @click="tage.push({ id: null, datum: '', von: tage.at(-1)?.von ?? '14:00', bis: tage.at(-1)?.bis ?? '18:00' })"
+            <button type="button" @click="tage.push({ id: null, datum: '', von: tage.at(-1)?.von ?? '08:00', bis: tage.at(-1)?.bis ?? '15:00' })"
                     class="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">+ weiterer Tag</button>
         </div>
 

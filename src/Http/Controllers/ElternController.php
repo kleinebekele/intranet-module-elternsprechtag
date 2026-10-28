@@ -24,20 +24,21 @@ class ElternController
     public function index(Request $request): View
     {
         $eltern = $this->eltern($request);
+        $verwaltung = Rechte::istVerwaltung($request->user());
 
         $sprechtage = Sprechtag::with('tage')->get()
             ->reject->vorbei()
             ->sortBy(fn (Sprechtag $s) => $s->tage->first()?->datum)
-            ->map(fn (Sprechtag $s) => ['sprechtag' => $s, 'kinder' => Buchung::angebot($eltern, $s)])
+            ->map(fn (Sprechtag $s) => ['sprechtag' => $s, 'kinder' => Buchung::angebot($eltern, $s, $verwaltung)])
             ->filter(fn (array $z) => $z['kinder']->isNotEmpty())
             ->values();
 
         return view('elternsprechtag::eltern.index', [
             'eltern' => $eltern,
             'fremd' => ! $eltern->is($request->user()),
-            'verwaltung' => Rechte::istVerwaltung($request->user()),
+            'verwaltung' => $verwaltung,
             'sprechtage' => $sprechtage,
-            'personen' => Rechte::istVerwaltung($request->user()) ? $this->alleEltern() : collect(),
+            'personen' => $verwaltung ? $this->alleEltern() : collect(),
         ]);
     }
 
@@ -61,6 +62,9 @@ class ElternController
             ->where('sprechtag_id', $sprechtag->id)->find((int) $daten['plan_id']);
         abort_if($kind === null || $plan === null || $plan->user === null, 404);
         abort_unless(array_intersect($kind['klassen'], Plan::klassenVon($plan, $plan->user, $sprechtag)) !== [], 404);
+        if (! $verwaltung && ! $plan->veroeffentlicht()) {
+            return $this->zurueck($request, $eltern)->with('error', 'Diese Lehrkraft hat ihre Termine noch nicht freigegeben.');
+        }
 
         [$tagId, $von] = explode('|', $daten['slot']);
         $tagId = (int) $tagId;

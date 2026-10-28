@@ -1,7 +1,7 @@
 @php
     $ziel = $fremd ? [$sprechtag, 'lehrer' => $lehrer->id] : [$sprechtag];
     $start = [
-        'slot' => (int) old('slot_minuten', $plan->slot_minuten ?? 10),
+        'slot' => (int) old('slot_minuten', $plan->slot_minuten ?? 15),
         'vorb' => (int) old('vorbereitung_minuten', $plan->vorbereitung_minuten ?? 0),
         'klassen' => array_map('strval', old('klassen', $klassen)),
         'tage' => $sprechtag->tage->mapWithKeys(function ($t) use ($planTage, $plan) {
@@ -16,8 +16,8 @@
             ] : [
                 // Neuer Plan: alle Tage mit den Vorschlagszeiten angehakt.
                 'dabei' => $pt !== null || ! $plan->exists,
-                'von' => $pt->von ?? $t->standard_von ?? '14:00',
-                'bis' => $pt->bis ?? $t->standard_bis ?? '18:00',
+                'von' => $pt->von ?? $t->standard_von ?? '08:00',
+                'bis' => $pt->bis ?? $t->standard_bis ?? '15:00',
                 'pausen' => $pt?->pausenListe() ?? [],
             ]];
         }),
@@ -82,9 +82,9 @@
             @if (! $plan->exists)
                 <span class="text-red-600">noch nicht gespeichert</span>
             @elseif ($plan->abgeschlossen_am)
-                <span class="text-green-700">✓ als fertig gemeldet am {{ $plan->abgeschlossen_am->format('d.m.Y H:i') }}</span>
+                <span class="text-green-700">✓ veröffentlicht am {{ $plan->abgeschlossen_am->format('d.m.Y H:i') }}</span>
             @else
-                <span class="text-amber-700">gespeichert, noch nicht als fertig gemeldet</span>
+                <span class="text-amber-700">gespeichert, noch nicht veröffentlicht – Eltern sehen ihn noch nicht</span>
             @endif
         </span>
     </div>
@@ -120,12 +120,12 @@
                 @endif
             </p>
 
-            <h2 class="mt-5 text-base font-semibold text-gray-800">Termine</h2>
+            <h2 class="mt-5 text-base font-semibold text-gray-800">Termine (in Minuten)</h2>
             <div class="mt-3 grid grid-cols-2 gap-3">
-                <label class="block text-sm"><span class="text-gray-600">Länge eines Gesprächs (Min.)</span>
+                <label class="block text-sm"><span class="text-gray-600">Gesprächsdauer</span>
                     <input type="number" name="slot_minuten" min="5" max="120" step="5" x-model.number="slot" required
                            class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
-                <label class="block text-sm"><span class="text-gray-600">Vorbereitung zwischen Gesprächen (Min.)</span>
+                <label class="block text-sm"><span class="text-gray-600">Vorbereitungszeit</span>
                     <input type="number" name="vorbereitung_minuten" min="0" max="60" x-model.number="vorb" required
                            class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
             </div>
@@ -250,16 +250,20 @@
         @if ($darfAendern)
             <div class="flex flex-wrap gap-2 xl:col-span-3">
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Speichern</button>
+                @unless ($plan->abgeschlossen_am)
+                    <button type="submit" name="veroeffentlichen" value="1"
+                            class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Speichern und veröffentlichen</button>
+                @endunless
             </div>
         @endif
     </form>
 
-    @if ($darfAendern && $plan->exists)
-        <form method="POST" action="{{ route('module.elternsprechtag.plan.abschliessen', $ziel) }}" class="mt-2">
+    @if ($darfAendern && $plan->abgeschlossen_am)
+        <form method="POST" action="{{ route('module.elternsprechtag.plan.abschliessen', $ziel) }}" class="mt-2"
+              data-bestaetigen="Eltern können dann keine neuen Termine mehr buchen. Schon gebuchte Termine bleiben bestehen."
+              data-titel="Veröffentlichung zurückziehen" data-knopf="Zurückziehen">
             @csrf
-            <button type="submit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                {{ $plan->abgeschlossen_am ? 'Wieder öffnen' : 'Fertig – Plan an die Verwaltung melden' }}
-            </button>
+            <button type="submit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Veröffentlichung zurückziehen</button>
         </form>
     @endif
 

@@ -36,6 +36,12 @@ class Plan extends Model
         return array_values($klassen);
     }
 
+    /** Veröffentlicht = für Eltern buchbar (Spalte `abgeschlossen_am`). */
+    public function veroeffentlicht(): bool
+    {
+        return $this->abgeschlossen_am !== null;
+    }
+
     public function sprechtag(): BelongsTo
     {
         return $this->belongsTo(Sprechtag::class, 'sprechtag_id');

@@ -62,6 +62,9 @@
                                             <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
                                         @endif
                                     </div>
+                                    @unless ($l['veroeffentlicht'])
+                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">noch nicht veröffentlicht</span>
+                                    @endunless
                                     @if ($l['wunsch'] && ! $termin)
                                         <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">möchte Sie gern sprechen</span>
                                     @endif
@@ -81,7 +84,7 @@
                                     </div>
                                 @endif
 
-                                @if ($darfBuchen)
+                                @if ($darfBuchen && ($l['veroeffentlicht'] || $verwaltung))
                                     @if ($freie->isEmpty())
                                         <p class="mt-2 text-sm text-gray-500">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
                                     @else

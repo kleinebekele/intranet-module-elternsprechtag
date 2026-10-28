@@ -99,9 +99,9 @@
                                     @if (! $plan)
                                         <span class="text-red-600">noch nichts eingetragen</span>
                                     @elseif ($plan->abgeschlossen_am)
-                                        <span class="text-green-700">✓ fertig</span>
+                                        <span class="text-green-700">✓ veröffentlicht</span>
                                     @else
-                                        <span class="text-amber-700">in Arbeit</span>
+                                        <span class="text-amber-700">nicht veröffentlicht</span>
                                     @endif
                                 </td>
                                 <td class="py-2 pr-4">{{ $plan?->tage->count() ?? '–' }}</td>

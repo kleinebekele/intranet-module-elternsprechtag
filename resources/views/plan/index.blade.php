@@ -24,7 +24,7 @@
                     @if (! $plan)
                         <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700">offen</span>
                     @elseif ($plan->abgeschlossen_am)
-                        <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">fertig</span>
+                        <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">veröffentlicht</span>
                     @else
                         <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">in Arbeit</span>
                     @endif

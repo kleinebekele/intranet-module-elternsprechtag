@@ -134,9 +134,10 @@ class PlanController
         $erlaubt = Klassen::kinder($klassen)->map(fn ($z) => $z['kind']->id)->all();
         $wuensche = array_values(array_intersect(array_map('intval', $daten['wuensche'] ?? []), $erlaubt));
 
-        DB::transaction(function () use ($sprechtag, $lehrer, $daten, $tagIds, $wuensche, $klassen) {
+        DB::transaction(function () use ($sprechtag, $lehrer, $daten, $tagIds, $wuensche, $klassen, $request) {
             $plan = Plan::firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
             $plan->fill([
+                'abgeschlossen_am' => $request->boolean('veroeffentlichen') ? ($plan->abgeschlossen_am ?? now()) : $plan->abgeschlossen_am,
                 'klassen' => $klassen,
                 'slot_minuten' => $daten['slot_minuten'],
                 'vorbereitung_minuten' => $daten['vorbereitung_minuten'],
@@ -170,10 +171,12 @@ class PlanController
                 daten: ['sprechtag' => $sprechtag->id, 'wuensche' => count($wuensche)], ziel: "Elternsprechtag {$sprechtag->id}");
         }
 
-        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', 'Terminplan gespeichert.');
+        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $request->boolean('veroeffentlichen')
+            ? 'Terminplan gespeichert und veröffentlicht – Eltern können jetzt buchen, sobald sie informiert wurden.'
+            : 'Terminplan gespeichert.');
     }
 
-    /** „Fertig" melden bzw. wieder öffnen – damit die Verwaltung den Stand sieht. */
+    /** Veröffentlichen bzw. zurückziehen; gebuchte Termine bleiben bestehen. */
     public function abschliessen(Request $request, Sprechtag $sprechtag): RedirectResponse
     {
         $lehrer = $this->lehrer($request, $sprechtag);
@@ -183,7 +186,7 @@ class PlanController
         $plan->update(['abgeschlossen_am' => $plan->abgeschlossen_am ? null : now()]);
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
-            ->with('status', $plan->abgeschlossen_am ? 'Terminplan als fertig gemeldet.' : 'Terminplan wieder geöffnet.');
+            ->with('status', $plan->abgeschlossen_am ? 'Terminplan veröffentlicht.' : 'Veröffentlichung zurückgezogen – Eltern können keine neuen Termine mehr buchen.');
     }
 
     /**

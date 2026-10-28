@@ -158,7 +158,7 @@ class SprechtagController
             'alleKlassen' => array_values($alle),
             'tage' => $sprechtag->exists
                 ? $sprechtag->tage->map(fn ($t) => ['id' => $t->id, 'datum' => $t->datum->toDateString(), 'von' => $t->standard_von, 'bis' => $t->standard_bis])->values()
-                : collect([['id' => null, 'datum' => '', 'von' => '14:00', 'bis' => '18:00']]),
+                : collect([['id' => null, 'datum' => '', 'von' => '08:00', 'bis' => '15:00']]),
         ]);
     }
 
