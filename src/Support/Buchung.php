@@ -18,10 +18,10 @@ use Intranet\Modules\Elternsprechtag\Models\Termin;
  */
 class Buchung
 {
-    /** Eltern buchen selbst, sobald sie informiert wurden und bis der Termin beginnt. */
+    /** Eltern buchen selbst, sobald der Sprechtag veröffentlicht ist und bis er vorbei ist. */
     public static function offen(Sprechtag $sprechtag): bool
     {
-        return $sprechtag->info_versendet_am !== null && ! $sprechtag->vorbei();
+        return $sprechtag->veroeffentlicht() && ! $sprechtag->vorbei();
     }
 
     /** Kinder des Elternteils, die in einer Klasse des Sprechtags sind. */
@@ -34,13 +34,13 @@ class Buchung
     }
 
     /**
-     * Je Kind die Lehrer mit Termin, Gesprächswunsch und Slots. Eltern sehen nur
-     * veröffentlichte Pläne (und solche, bei denen sie schon einen Termin haben);
-     * mit `$alle` (Verwaltung) auch die unveröffentlichten.
+     * Je Kind die Lehrer mit Termin, Gesprächswunsch und Slots – alle Pläne des
+     * Sprechtags außer denen, deren Lehrer abgesagt hat. Wann Eltern das sehen,
+     * regelt offen() (Veröffentlichung des Sprechtags).
      *
      * @return Collection<int, array{kind: User, klassen: list<string>, lehrer: Collection}>
      */
-    public static function angebot(User $eltern, Sprechtag $sprechtag, bool $alle = false): Collection
+    public static function angebot(User $eltern, Sprechtag $sprechtag): Collection
     {
         $kinder = self::kinder($eltern, $sprechtag);
         if ($kinder->isEmpty()) {
@@ -54,14 +54,13 @@ class Buchung
 
         $familie = self::familienTermine($kinder->pluck('kind.id')->all(), $sprechtag);
 
-        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie, $alle) {
+        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie) {
             $kid = $z['kind']->id;
 
             $lehrer = $plaene
                 ->filter(fn (Plan $p) => array_intersect($z['klassen'], Plan::klassenVon($p, $p->user, $sprechtag)) !== [])
-                ->filter(fn (Plan $p) => $alle || $p->veroeffentlicht() || $p->termine->contains('kind_user_id', $kid))
                 ->sortBy(fn (Plan $p) => mb_strtolower($p->user->name))
-                ->map(function (Plan $p) use ($kid, $familie, $alle) {
+                ->map(function (Plan $p) use ($kid, $familie) {
                     $termin = $p->termine->firstWhere('kind_user_id', $kid);
                     $andere = $familie->reject(fn (Termin $t) => $termin && $t->id === $termin->id);
 
@@ -69,8 +68,7 @@ class Buchung
                         'plan' => $p,
                         'termin' => $termin,
                         'wunsch' => $p->wuensche->firstWhere('kind_user_id', $kid),
-                        'veroeffentlicht' => $p->veroeffentlicht(),
-                        'slots' => $alle || $p->veroeffentlicht() ? self::slots($p, $andere) : [],
+                        'slots' => self::slots($p, $andere),
                     ];
                 })
                 ->values();

@@ -97,7 +97,7 @@ class PlanController
     public function speichern(Request $request, Sprechtag $sprechtag): RedirectResponse
     {
         $lehrer = $this->lehrer($request, $sprechtag);
-        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Die Frist für den Terminplan ist abgelaufen.');
+        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
 
         $daten = $request->validate([
             'slot_minuten' => ['required', 'integer', 'min:5', 'max:120'],
@@ -141,7 +141,7 @@ class PlanController
         DB::transaction(function () use ($sprechtag, $lehrer, $daten, $tagIds, $wuensche, $klassen, $request) {
             $plan = Plan::firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
             $plan->fill([
-                'abgeschlossen_am' => $request->boolean('veroeffentlichen') ? ($plan->abgeschlossen_am ?? now()) : $plan->abgeschlossen_am,
+                'abgeschlossen_am' => $request->boolean('freigeben') ? ($plan->abgeschlossen_am ?? now()) : $plan->abgeschlossen_am,
                 'klassen' => $klassen,
                 'slot_minuten' => $daten['slot_minuten'],
                 'vorbereitung_minuten' => $daten['vorbereitung_minuten'],
@@ -175,22 +175,22 @@ class PlanController
                 daten: ['sprechtag' => $sprechtag->id, 'wuensche' => count($wuensche)], ziel: "Elternsprechtag {$sprechtag->id}");
         }
 
-        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $request->boolean('veroeffentlichen')
-            ? 'Terminplan gespeichert und veröffentlicht – Eltern können jetzt buchen, sobald sie informiert wurden.'
+        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $request->boolean('freigeben')
+            ? 'Terminplan gespeichert und freigegeben. Die Verwaltung veröffentlicht die Termine für die Eltern.'
             : 'Terminplan gespeichert.');
     }
 
-    /** Veröffentlichen bzw. zurückziehen; gebuchte Termine bleiben bestehen. */
+    /** Freigeben bzw. Freigabe zurücknehmen – damit die Verwaltung den Stand sieht. */
     public function abschliessen(Request $request, Sprechtag $sprechtag): RedirectResponse
     {
         $lehrer = $this->lehrer($request, $sprechtag);
-        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Die Frist für den Terminplan ist abgelaufen.');
+        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
 
         $plan = Plan::where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
         $plan->update(['abgeschlossen_am' => $plan->abgeschlossen_am ? null : now()]);
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
-            ->with('status', $plan->abgeschlossen_am ? 'Terminplan veröffentlicht.' : 'Veröffentlichung zurückgezogen – Eltern können keine neuen Termine mehr buchen.');
+            ->with('status', $plan->abgeschlossen_am ? 'Terminplan freigegeben.' : 'Freigabe zurückgenommen.');
     }
 
     /**
@@ -224,7 +224,7 @@ class PlanController
     public function teilnahme(Request $request, Sprechtag $sprechtag, VorlagenMailer $mailer): RedirectResponse
     {
         $lehrer = $this->lehrer($request, $sprechtag);
-        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Die Frist für den Terminplan ist abgelaufen.');
+        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
 
         $daten = $request->validate(['absagen' => ['boolean'], 'grund' => ['nullable', 'string', 'max:500']]);
         $plan = Plan::with(['termine.tag', 'termine.kind', 'termine.eltern'])
@@ -247,7 +247,7 @@ class PlanController
                 ziel: "Elternsprechtag {$sprechtag->id}");
         }
 
-        $meldung = ! $absagen ? 'Teilnahme wieder zugesagt. Bitte den Plan prüfen und veröffentlichen.'
+        $meldung = ! $absagen ? 'Teilnahme wieder zugesagt. Bitte den Plan prüfen und freigeben.'
             : 'Teilnahme abgesagt.'.($plan->termine->isNotEmpty() ? ($plan->termine->count() === 1 ? ' Der gebuchte Termin wurde' : ' Die '.$plan->termine->count().' gebuchten Termine wurden').' abgesagt, die Eltern bekommen eine Mail.' : '')
                 .($ohneMail > 0 ? " {$ohneMail} Eltern ohne Mailadresse – bitte selbst Bescheid geben." : '');
 

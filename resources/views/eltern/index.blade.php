@@ -31,7 +31,7 @@
             @endif
             @unless ($offen)
                 <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                    Die Terminbuchung ist noch nicht geöffnet. Sie erhalten eine Nachricht, sobald es losgeht.
+                    Die Termine sind noch nicht veröffentlicht. Sie erhalten eine Nachricht, sobald es losgeht.
                     @if ($verwaltung)
                         <span class="text-amber-800">(Als Verwaltung kannst du trotzdem buchen.)</span>
                     @endif
@@ -62,9 +62,6 @@
                                             <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
                                         @endif
                                     </div>
-                                    @unless ($l['veroeffentlicht'])
-                                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">noch nicht veröffentlicht</span>
-                                    @endunless
                                     @if ($l['wunsch'] && ! $termin)
                                         <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">möchte Sie gern sprechen</span>
                                     @endif
@@ -84,7 +81,7 @@
                                     </div>
                                 @endif
 
-                                @if ($darfBuchen && ($l['veroeffentlicht'] || $verwaltung))
+                                @if ($darfBuchen)
                                     @if ($freie->isEmpty())
                                         <p class="mt-2 text-sm text-gray-500">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
                                     @else

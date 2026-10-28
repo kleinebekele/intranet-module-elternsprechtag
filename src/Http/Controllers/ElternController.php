@@ -29,7 +29,7 @@ class ElternController
         $sprechtage = Sprechtag::with('tage')->get()
             ->reject->vorbei()
             ->sortBy(fn (Sprechtag $s) => $s->tage->first()?->datum)
-            ->map(fn (Sprechtag $s) => ['sprechtag' => $s, 'kinder' => Buchung::angebot($eltern, $s, $verwaltung)])
+            ->map(fn (Sprechtag $s) => ['sprechtag' => $s, 'kinder' => Buchung::angebot($eltern, $s)])
             ->filter(fn (array $z) => $z['kinder']->isNotEmpty())
             ->values();
 
@@ -54,7 +54,7 @@ class ElternController
         ], ['slot.required' => 'Bitte eine Uhrzeit auswählen.']);
 
         if (! $verwaltung && ! Buchung::offen($sprechtag)) {
-            return $this->zurueck($request, $eltern)->with('error', 'Die Buchung ist noch nicht geöffnet.');
+            return $this->zurueck($request, $eltern)->with('error', 'Die Termine sind noch nicht veröffentlicht.');
         }
 
         $kind = Buchung::kinder($eltern, $sprechtag)->first(fn ($z) => $z['kind']->id === (int) $daten['kind_id']);
@@ -62,9 +62,6 @@ class ElternController
             ->where('sprechtag_id', $sprechtag->id)->find((int) $daten['plan_id']);
         abort_if($kind === null || $plan === null || $plan->user === null || $plan->abgesagt(), 404);
         abort_unless(array_intersect($kind['klassen'], Plan::klassenVon($plan, $plan->user, $sprechtag)) !== [], 404);
-        if (! $verwaltung && ! $plan->veroeffentlicht()) {
-            return $this->zurueck($request, $eltern)->with('error', 'Diese Lehrkraft hat ihre Termine noch nicht freigegeben.');
-        }
 
         [$tagId, $von] = explode('|', $daten['slot']);
         $tagId = (int) $tagId;

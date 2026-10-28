@@ -26,7 +26,7 @@
                     @elseif ($plan->abgesagt())
                         <span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700">abgesagt</span>
                     @elseif ($plan->abgeschlossen_am)
-                        <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">veröffentlicht</span>
+                        <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">freigegeben</span>
                     @else
                         <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">in Arbeit</span>
                     @endif

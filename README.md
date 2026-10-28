@@ -3,16 +3,15 @@
 Modul für die modulare Intranet-Plattform (Waldorfschule).
 
 - **Einstellungen** (Verwaltung): ein oder mehrere Tage mit Vorschlagszeiten, beteiligte
-  Klassen, Frist für die Lehrer, Hinweistext. Knopf **„Eltern informieren"** schickt die
-  Mailvorlage `elternsprechtag_info` an alle Eltern der Klassen (über den Ausgangskorb).
-  Übersicht je Lehrer: Stand, Tage, Termine, Gesprächswünsche, Raum.
-- **Mein Terminplan** (Lehrer): je Tag dabei ja/nein, Beginn, Ende, Pausen; Gesprächslänge,
-  Vorbereitung zwischen den Gesprächen, Raum. Die Termine werden live berechnet. Dazu die
-  Schüler der eigenen Klassen, deren Eltern man unbedingt sprechen möchte. Nach der Frist
-  nur noch lesbar; die Verwaltung kann jeden Plan ändern (`?lehrer=<id>`).
-  **„Speichern und veröffentlichen"** gibt den Plan für die Eltern frei; vorher sehen sie die
-  Lehrkraft nicht. Zurückziehen sperrt neue Buchungen, gebuchte Termine bleiben. Standard je
-  Gespräch: 15 Minuten. Gebuchte Termine kann die Lehrkraft absagen (auch nach der Frist); das
+  Klassen, Frist für die Lehrer, Hinweistext. Knopf **„Veröffentlichen"** gibt die Termine aller
+  Lehrer für die Eltern frei und schickt die Mailvorlage `elternsprechtag_info` an alle Eltern
+  der Klassen (über den Ausgangskorb). Übersicht je Lehrer: Stand, Tage, Termine,
+  Gesprächswünsche, Raum.
+- **Mein Terminplan** (Lehrer): je Tag dabei ja/nein, Beginn, Ende, Pausen; Gesprächsdauer,
+  Vorbereitungszeit, Raum. Die Termine werden live berechnet. Dazu die Schüler der eigenen
+  Klassen, deren Eltern man unbedingt sprechen möchte. **„Speichern und freigeben"** meldet den
+  Plan der Verwaltung als fertig. Nach der Frist oder dem Veröffentlichen nur noch lesbar; die
+  Verwaltung kann jeden Plan ändern (`?lehrer=<id>`). Standard je Gespräch: 15 Minuten. Gebuchte Termine kann die Lehrkraft absagen (auch nach der Frist); das
   Elternteil bekommt die Mailvorlage `elternsprechtag_absage` über den Ausgangskorb.
   **„Teilnahme absagen"** (mit Grund für die Verwaltung): Plan verschwindet für die Eltern, alle
   gebuchten Termine werden mit Mail abgesagt; „Doch teilnehmen" macht es rückgängig.

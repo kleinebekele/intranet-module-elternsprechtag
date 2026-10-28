@@ -36,14 +36,14 @@ class Rechte
             || Plan::where(['sprechtag_id' => $sprechtag->id, 'user_id' => $user->id])->exists();
     }
 
-    /** Lehrer selbst bis zum Ende des Fristtags, die Verwaltung immer. */
+    /** Lehrer selbst bis zum Ende des Fristtags und bis zur Veröffentlichung, die Verwaltung immer. */
     public static function darfPlanAendern(User $user, Sprechtag $sprechtag, User $lehrer): bool
     {
         if (self::istVerwaltung($user)) {
             return true;
         }
 
-        return $user->is($lehrer) && ! $sprechtag->fristVorbei();
+        return $user->is($lehrer) && ! $sprechtag->fristVorbei() && ! $sprechtag->veroeffentlicht();
     }
 
     /** Für den Menüpunkt „Mein Terminplan": irgendeine Linear-Lehrerrolle. */

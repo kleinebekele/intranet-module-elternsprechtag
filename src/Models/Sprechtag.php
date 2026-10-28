@@ -41,6 +41,12 @@ class Sprechtag extends Model
     }
 
     /** Frist abgelaufen? Der Fristtag selbst zählt noch mit. */
+    /** Veröffentlicht = Eltern informiert; ab dann ändern Lehrer nichts mehr. */
+    public function veroeffentlicht(): bool
+    {
+        return $this->info_versendet_am !== null;
+    }
+
     public function fristVorbei(): bool
     {
         return $this->lehrer_frist !== null && $this->lehrer_frist->endOfDay()->isPast();

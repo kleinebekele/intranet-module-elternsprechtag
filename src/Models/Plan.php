@@ -42,8 +42,8 @@ class Plan extends Model
         return array_values($klassen);
     }
 
-    /** Veröffentlicht = für Eltern buchbar (Spalte `abgeschlossen_am`). */
-    public function veroeffentlicht(): bool
+    /** Vom Lehrer freigegeben = fertig für die Verwaltung (Spalte `abgeschlossen_am`). */
+    public function freigegeben(): bool
     {
         return $this->abgeschlossen_am !== null && ! $this->abgesagt();
     }

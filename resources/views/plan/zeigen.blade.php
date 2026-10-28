@@ -92,16 +92,16 @@
             @elseif ($plan->abgesagt())
                 <span class="text-gray-700">✗ Teilnahme abgesagt</span>
             @elseif ($plan->abgeschlossen_am)
-                <span class="text-green-700">✓ veröffentlicht am {{ $plan->abgeschlossen_am->format('d.m.Y H:i') }}</span>
+                <span class="text-green-700">✓ freigegeben am {{ $plan->abgeschlossen_am->format('d.m.Y H:i') }}</span>
             @else
-                <span class="text-amber-700">gespeichert, noch nicht veröffentlicht – Eltern sehen ihn noch nicht</span>
+                <span class="text-amber-700">gespeichert, noch nicht freigegeben</span>
             @endif
         </span>
     </div>
 
     @unless ($darfAendern)
         <div class="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-            Die Frist ist abgelaufen – der Plan ist nur noch lesbar. Änderungen bitte über die Verwaltung.
+            {{ $sprechtag->veroeffentlicht() ? 'Die Termine sind für die Eltern veröffentlicht' : 'Die Frist ist abgelaufen' }} – der Plan ist nur noch lesbar. Änderungen bitte über die Verwaltung.
         </div>
     @endunless
 
@@ -274,8 +274,8 @@
             <div class="flex flex-wrap gap-2 xl:col-span-3">
                 <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Speichern</button>
                 @unless ($plan->abgeschlossen_am)
-                    <button type="submit" name="veroeffentlichen" value="1"
-                            class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Speichern und veröffentlichen</button>
+                    <button type="submit" name="freigeben" value="1"
+                            class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Speichern und freigeben</button>
                 @endunless
             </div>
         @endif
@@ -283,10 +283,10 @@
 
     @if ($darfAendern && $plan->abgeschlossen_am)
         <form method="POST" action="{{ route('module.elternsprechtag.plan.abschliessen', $ziel) }}" class="mt-2"
-              data-bestaetigen="Eltern können dann keine neuen Termine mehr buchen. Schon gebuchte Termine bleiben bestehen."
-              data-titel="Veröffentlichung zurückziehen" data-knopf="Zurückziehen">
+              data-bestaetigen="Der Plan gilt dann für die Verwaltung wieder als in Arbeit."
+              data-titel="Freigabe zurücknehmen" data-knopf="Zurücknehmen">
             @csrf
-            <button type="submit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Veröffentlichung zurückziehen</button>
+            <button type="submit" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Freigabe zurücknehmen</button>
         </form>
     @endif
 

@@ -44,7 +44,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.angelegt' => 'Elternsprechtag: angelegt',
                 'elternsprechtag.geaendert' => 'Elternsprechtag: geändert',
                 'elternsprechtag.geloescht' => 'Elternsprechtag: gelöscht',
-                'elternsprechtag.info' => 'Elternsprechtag: Eltern informiert',
+                'elternsprechtag.info' => 'Elternsprechtag: veröffentlicht (Eltern informiert)',
                 'elternsprechtag.plan' => 'Elternsprechtag: Terminplan gespeichert',
                 'elternsprechtag.termin' => 'Elternsprechtag: Termin gebucht',
                 'elternsprechtag.absage' => 'Elternsprechtag: Termin abgesagt',
@@ -65,7 +65,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_INFO,
                 titel: 'Elternsprechtag: Info an die Eltern',
-                beschreibung: 'Geht über den Knopf „Eltern informieren" an alle Eltern der beteiligten Klassen.',
+                beschreibung: 'Geht über den Knopf „Veröffentlichen" an alle Eltern der beteiligten Klassen.',
                 platzhalter: [
                     'name' => 'Name des Elternteils',
                     'sprechtag' => 'Titel des Sprechtags',

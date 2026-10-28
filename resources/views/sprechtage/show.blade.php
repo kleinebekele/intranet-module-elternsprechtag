@@ -41,9 +41,13 @@
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
-            <h2 class="text-base font-semibold text-gray-800">Eltern informieren</h2>
+            <h2 class="text-base font-semibold text-gray-800">Veröffentlichen</h2>
+            @php
+                $offeneLehrer = $lehrer->filter(fn ($z) => ! ($pl = $plaene->get($z['user']->id)) || (! $pl->freigegeben() && ! $pl->abgesagt()))->count();
+            @endphp
             <p class="mt-1 text-sm text-gray-500">
-                Mail an alle Eltern der beteiligten Klassen ({{ $eltern->count() }} Personen,
+                Gibt die Termine aller Lehrer für die Eltern zur Buchung frei – danach können Lehrer ihre Pläne nicht mehr ändern.
+                Dazu geht eine Mail an alle Eltern der beteiligten Klassen ({{ $eltern->count() }} Personen,
                 {{ $eltern->reject(fn ($u) => $u->istGesperrt() || blank($u->email))->count() }} mit Adresse und nicht gesperrt).
                 Den Wortlaut gibt es unter Verwaltung → Mailvorlagen („Elternsprechtag: Info an die Eltern"); der Hinweistext vom Sprechtag wird eingesetzt.
             </p>
@@ -53,17 +57,17 @@
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 @darfRoute('module.elternsprechtag.sprechtage.info')
                     <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
-                          data-bestaetigen="{{ $sprechtag->info_versendet_am ? 'Die Info ging schon am '.$sprechtag->info_versendet_am->format('d.m.Y').' raus. Wirklich NOCHMAL' : 'Jetzt' }} an {{ $eltern->count() }} Eltern verschicken?"
-                          data-titel="Eltern informieren" data-knopf="Verschicken">
+                          data-bestaetigen="{{ $sprechtag->info_versendet_am ? 'Die Info ging schon am '.$sprechtag->info_versendet_am->format('d.m.Y').' raus. Wirklich NOCHMAL an '.$eltern->count().' Eltern verschicken?' : 'Termine veröffentlichen und '.$eltern->count().' Eltern informieren?'.($offeneLehrer > 0 ? ' '.$offeneLehrer.' Lehrer haben ihren Plan noch nicht freigegeben.' : '').' Danach können Lehrer nichts mehr ändern.' }}"
+                          data-titel="Veröffentlichen" data-knopf="Veröffentlichen">
                         @csrf
                         <button type="submit" @disabled($eltern->isEmpty() || $sprechtag->tage->isEmpty())
                                 class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
-                            {{ $sprechtag->info_versendet_am ? 'Info erneut senden' : 'Eltern informieren' }}
+                            {{ $sprechtag->info_versendet_am ? 'Info erneut senden' : 'Veröffentlichen' }}
                         </button>
                     </form>
                 @enddarfRoute
                 @if ($sprechtag->info_versendet_am)
-                    <span class="text-sm text-green-700">✓ am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }} an {{ $sprechtag->info_empfaenger }} Eltern</span>
+                    <span class="text-sm text-green-700">✓ veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern</span>
                 @endif
             </div>
         </div>
@@ -104,9 +108,9 @@
                                             <div class="text-xs text-gray-500">{{ $plan->absage_grund }}</div>
                                         @endif
                                     @elseif ($plan->abgeschlossen_am)
-                                        <span class="text-green-700">✓ veröffentlicht</span>
+                                        <span class="text-green-700">✓ freigegeben</span>
                                     @else
-                                        <span class="text-amber-700">nicht veröffentlicht</span>
+                                        <span class="text-amber-700">nicht freigegeben</span>
                                     @endif
                                 </td>
                                 <td class="py-2 pr-4">{{ $plan?->tage->count() ?? '–' }}</td>

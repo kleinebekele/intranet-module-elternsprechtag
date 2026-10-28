@@ -142,7 +142,7 @@ class SprechtagController
         $sprechtag->update(['info_versendet_am' => now(), 'info_empfaenger' => $gesendet]);
         $this->audit('elternsprechtag.info', $sprechtag, ['empfaenger' => $gesendet, 'fehler' => $fehler]);
 
-        return back()->with('status', "Info an {$gesendet} Eltern in den Ausgangskorb gelegt."
+        return back()->with('status', "Termine veröffentlicht. Info an {$gesendet} Eltern in den Ausgangskorb gelegt."
             .($fehler > 0 ? " {$fehler} fehlgeschlagen (siehe Log)." : ''));
     }
 
