@@ -59,6 +59,7 @@
                     this.wert = String(o.wert);
                     this.schliessen();
                     this.$refs.feld.blur();
+                    this.$dispatch('suchauswahl-gewaehlt', { wert: this.wert });
                     if (absenden) this.$nextTick(() => this.$root.closest('form').submit());
                 },
             };

@@ -4,6 +4,7 @@ namespace Intranet\Modules\Elternsprechtag\Http\Controllers;
 
 use App\Mail\Vorlagen\VorlagenMailer;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,7 @@ use Illuminate\View\View;
 use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
+use Intranet\Modules\Elternsprechtag\Support\InfoMail;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Namen;
 
@@ -98,6 +100,7 @@ class SprechtagController
             'lehrer' => $lehrer,
             'plaene' => $plaene,
             'eltern' => Klassen::eltern($klassen),
+            'einladungen' => InfoMail::einladungen($sprechtag),
         ]);
     }
 
@@ -113,20 +116,12 @@ class SprechtagController
         $empfaenger = Klassen::eltern($sprechtag->klassenListe())
             ->reject(fn (User $u) => $u->istGesperrt() || blank($u->email));
 
-        $werte = [
-            'sprechtag' => $sprechtag->titel,
-            'tage' => $sprechtag->tageText(),
-            'klassen' => implode(', ', $sprechtag->klassenListe()),
-            'link' => route('module.elternsprechtag.eltern.index'),
-        ];
-        $hinweis = (string) $sprechtag->hinweis;
+        $einladungen = InfoMail::einladungen($sprechtag);
 
         $gesendet = 0;
         $fehler = 0;
         foreach ($empfaenger as $u) {
-            $text = $werte + ['name' => $u->name, 'hinweis' => $hinweis];
-            $html = array_map('e', $text);
-            $html['hinweis'] = nl2br(e($hinweis));
+            [$html, $text] = InfoMail::werte($sprechtag, $u, $einladungen->get($u->id, []));
 
             try {
                 $mailer->senden(
@@ -145,6 +140,24 @@ class SprechtagController
 
         return back()->with('status', "Termine veröffentlicht. Info an {$gesendet} Eltern in den Ausgangskorb gelegt."
             .($fehler > 0 ? " {$fehler} fehlgeschlagen (siehe Log)." : ''));
+    }
+
+    /** Vorschau der Info-Mail, wie sie ein bestimmtes Elternteil bekäme (JSON für die Übersicht). */
+    public function vorschau(Request $request, Sprechtag $sprechtag, VorlagenMailer $mailer): JsonResponse
+    {
+        $sprechtag->load('tage');
+        $eltern = User::findOrFail((int) $request->query('eltern'));
+        abort_unless(Klassen::eltern($sprechtag->klassenListe())->contains('id', $eltern->id), 404);
+
+        [$html, $text] = InfoMail::werte($sprechtag, $eltern, InfoMail::einladungen($sprechtag)->get($eltern->id, []));
+        $mail = $mailer->rendern(ElternsprechtagServiceProvider::VORLAGE_INFO, $html, $text);
+
+        return response()->json([
+            'an' => $eltern->email ?: '(keine Mailadresse)',
+            'betreff' => $mail['betreff'],
+            'html' => $mail['html'],
+            'gesperrt' => $eltern->istGesperrt(),
+        ]);
     }
 
     private function formular(Sprechtag $sprechtag): View

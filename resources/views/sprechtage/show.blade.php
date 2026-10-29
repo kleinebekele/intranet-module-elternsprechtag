@@ -70,6 +70,59 @@
                     <span class="text-sm text-green-700">✓ veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern</span>
                 @endif
             </div>
+
+            {{-- Vorschau der Info-Mail für ein bestimmtes Elternteil; eingeladene Eltern stehen oben. --}}
+            @if ($eltern->isNotEmpty() && $sprechtag->tage->isNotEmpty())
+                @php
+                    $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
+                    $optionen = $eltern->sortBy(fn ($u) => $einladungen->has($u->id) ? 0 : 1, SORT_REGULAR, false)
+                        ->map(fn ($u) => [
+                            'wert' => (string) $u->id,
+                            'text' => $nv($u->name).($einladungen->has($u->id) ? ' ('.count($einladungen->get($u->id)).'× eingeladen)' : ''),
+                            'gruppe' => $einladungen->has($u->id) ? 'Persönlich eingeladen' : 'Alle anderen Eltern',
+                        ])->values();
+                    $erste = $optionen->first()['wert'];
+                @endphp
+                <div class="mt-5 border-t border-gray-100 pt-4"
+                     x-data="mailVorschau(@js(route('module.elternsprechtag.sprechtage.vorschau', $sprechtag)), @js($erste))"
+                     @suchauswahl-gewaehlt="laden($event.detail.wert)">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h3 class="text-sm font-semibold text-gray-800">Vorschau der Mail für</h3>
+                        @include('elternsprechtag::partials.suchauswahl', [
+                            'name' => 'vorschau_eltern',
+                            'optionen' => $optionen->all(),
+                            'wert' => $erste,
+                            'leer' => 'Elternteil suchen …',
+                            'breite' => 'w-80',
+                        ])
+                        <span class="text-sm text-gray-500">{{ $einladungen->count() }} Eltern persönlich eingeladen</span>
+                    </div>
+                    <div class="mt-3 rounded-lg border border-gray-200">
+                        <div class="space-y-0.5 border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+                            <div><span class="text-gray-500">An:</span> <span x-text="an"></span>
+                                <span x-show="gesperrt" class="text-red-700">(gesperrt – bekommt keine Mail)</span></div>
+                            <div><span class="text-gray-500">Betreff:</span> <span class="font-medium" x-text="betreff"></span></div>
+                        </div>
+                        <iframe x-ref="rahmen" class="h-[32rem] w-full rounded-b-lg" title="Vorschau der Mail"></iframe>
+                    </div>
+                </div>
+                <script>
+                    function mailVorschau(url, erste) {
+                        return {
+                            an: '', betreff: '', gesperrt: false,
+                            init() { this.laden(erste); },
+                            async laden(id) {
+                                if (! id) return;
+                                const antwort = await fetch(url + '?eltern=' + encodeURIComponent(id), { headers: { Accept: 'application/json' } });
+                                if (! antwort.ok) return;
+                                const d = await antwort.json();
+                                this.an = d.an; this.betreff = d.betreff; this.gesperrt = d.gesperrt;
+                                this.$refs.rahmen.srcdoc = d.html;
+                            },
+                        };
+                    }
+                </script>
+            @endif
         </div>
 
         <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3">

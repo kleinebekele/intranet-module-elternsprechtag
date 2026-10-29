@@ -73,6 +73,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
                     'klassen' => 'Beteiligte Klassen',
                     'hinweis' => 'Hinweistext, der beim Sprechtag eingetragen ist',
+                    'einladung' => 'Persönliche Einladung: Lehrkräfte, die diese Eltern gern sprechen möchten (bei allen anderen leer)',
                     'link' => 'Link zur Terminbuchung im Intranet',
                 ],
                 betreff: 'Elternsprechtag: {{ sprechtag }}',
@@ -83,6 +84,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'tage' => 'Do 12.11.2026, Fr 13.11.2026',
                     'klassen' => '5a, 6a, 7a',
                     'hinweis' => 'Die Terminbuchung öffnet in Kürze im Intranet.',
+                    'einladung' => '<div style="margin:0 0 16px;padding:12px 16px;background:#eef2ff;border-left:4px solid #4f46e5;border-radius:4px;"><p style="margin:0 0 8px;"><strong>Persönliche Einladung:</strong> Folgende Lehrkräfte möchten Sie gern sprechen:</p><ul style="margin:0 0 8px;padding-left:20px;"><li>Frau Muster – für Max Muster</li></ul><p style="margin:0;">Bitte buchen Sie dort möglichst einen Termin.</p></div>',
                 ],
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Info',
@@ -120,6 +122,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 <p style="margin:0 0 8px;"><strong>Termine:</strong> {{ tage }}</p>
 <p style="margin:0 0 16px;"><strong>Klassen:</strong> {{ klassen }}</p>
 <p style="margin:0 0 16px;">{{ hinweis }}</p>
+{{ einladung }}
 <p style="margin:0 0 24px;">
   <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Termine buchen</a>
 </p>
@@ -159,6 +162,8 @@ Termine: {{ tage }}
 Klassen: {{ klassen }}
 
 {{ hinweis }}
+
+{{ einladung }}
 
 Termine buchen: {{ link }}
 

@@ -51,6 +51,17 @@ veröffentlicht. Wer abgesagt hat, erscheint bei den Eltern nicht.
 
 Danach heißt der Knopf **Info erneut senden** und verschickt die Mail noch einmal an alle.
 
+### Vorschau und persönliche Einladung
+
+Unter dem Knopf steht die **Vorschau der Mail** – mit Empfänger, Betreff und Inhalt, genau so,
+wie ein bestimmtes Elternteil sie bekäme. Das Elternteil wählen Sie im Suchfeld; oben stehen die
+**persönlich eingeladenen** Eltern.
+
+Persönlich eingeladen ist, wessen Kind eine Lehrkraft unter „Mit diesen Eltern möchte ich
+unbedingt sprechen“ angehakt hat. Diese Eltern bekommen in der Mail einen hervorgehobenen
+Abschnitt mit den Lehrkräften, die sie sprechen möchten. Die Notiz der Lehrkraft steht nicht in
+der Mail. Wer seine Teilnahme abgesagt hat, zählt nicht.
+
 Den Wortlaut der Mails ändern Sie unter Verwaltung → Mailvorlagen:
 
 - „Elternsprechtag: Info an die Eltern“
