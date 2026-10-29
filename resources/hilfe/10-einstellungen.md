@@ -53,7 +53,7 @@ Danach heißt der Knopf **Info erneut senden** und verschickt die Mail noch einm
 
 ### Vorschau und persönliche Einladung
 
-Unter dem Knopf steht die **Vorschau der Mail** – mit Empfänger, Betreff und Inhalt, genau so,
+Unter dem Knopf lässt sich die **Vorschau der Mail** aufklappen – mit Empfänger, Betreff und Inhalt, genau so,
 wie ein bestimmtes Elternteil sie bekäme. Das Elternteil wählen Sie im Suchfeld; oben stehen die
 **persönlich eingeladenen** Eltern.
 

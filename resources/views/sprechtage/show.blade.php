@@ -86,8 +86,15 @@
                 <div class="mt-5 border-t border-gray-100 pt-4"
                      x-data="mailVorschau(@js(route('module.elternsprechtag.sprechtage.vorschau', $sprechtag)), @js($erste))"
                      @suchauswahl-gewaehlt="laden($event.detail.wert)">
+                    <div role="button" tabindex="0" :aria-expanded="offen" @click="umschalten()" @keydown.enter.prevent="umschalten()" @keydown.space.prevent="umschalten()"
+                         class="flex cursor-pointer items-center justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-gray-800">Vorschau der Mail an die Eltern
+                            <span class="font-normal text-gray-500">· {{ $einladungen->count() }} Eltern persönlich eingeladen</span></h3>
+                        <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
+                    </div>
+                    <div x-show="offen" x-cloak class="mt-3">
                     <div class="flex flex-wrap items-center gap-3">
-                        <h3 class="text-sm font-semibold text-gray-800">Vorschau der Mail für</h3>
+                        <span class="text-sm text-gray-600">Mail für</span>
                         @include('elternsprechtag::partials.suchauswahl', [
                             'name' => 'vorschau_eltern',
                             'optionen' => $optionen->all(),
@@ -95,7 +102,6 @@
                             'leer' => 'Elternteil suchen …',
                             'breite' => 'w-80',
                         ])
-                        <span class="text-sm text-gray-500">{{ $einladungen->count() }} Eltern persönlich eingeladen</span>
                     </div>
                     <div class="mt-3 rounded-lg border border-gray-200">
                         <div class="space-y-0.5 border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm">
@@ -105,12 +111,17 @@
                         </div>
                         <iframe x-ref="rahmen" class="h-[32rem] w-full rounded-b-lg" title="Vorschau der Mail"></iframe>
                     </div>
+                    </div>
                 </div>
                 <script>
                     function mailVorschau(url, erste) {
                         return {
-                            an: '', betreff: '', gesperrt: false,
-                            init() { this.laden(erste); },
+                            an: '', betreff: '', gesperrt: false, offen: false, geladen: false,
+                            // Erst beim ersten Aufklappen laden.
+                            umschalten() {
+                                this.offen = ! this.offen;
+                                if (this.offen && ! this.geladen) { this.geladen = true; this.laden(erste); }
+                            },
                             async laden(id) {
                                 if (! id) return;
                                 const antwort = await fetch(url + '?eltern=' + encodeURIComponent(id), { headers: { Accept: 'application/json' } });
