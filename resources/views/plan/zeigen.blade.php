@@ -306,6 +306,8 @@
                     <button type="submit" name="freigeben" value="1"
                             class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Speichern und freigeben</button>
                 @endunless
+                <button type="button" @click="$dispatch('teilnahme-absagen')"
+                        class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50">Teilnahme absagen</button>
             </div>
         @endif
     </form>
@@ -319,17 +321,33 @@
         </form>
     @endif
 
+    {{-- Teilnahme absagen: öffnet sich über den Knopf neben „Speichern". Eigenes Formular, daher außerhalb des Plan-Formulars. --}}
     @if ($darfAendern)
-        <form method="POST" action="{{ route('module.elternsprechtag.plan.teilnahme', $ziel) }}"
-              class="mt-6 flex flex-wrap items-end gap-2 rounded-xl border border-red-200 bg-white p-4"
-              data-bestaetigen="{{ $fremd ? $lehrer->name.' nimmt' : 'Du nimmst' }} an diesem Elternsprechtag nicht teil?{{ $plan->termine->isNotEmpty() ? ' Die '.$plan->termine->count().' gebuchten Termine werden abgesagt, die Eltern bekommen eine Mail.' : '' }}"
-              data-titel="Teilnahme absagen" data-knopf="Absagen">
-            @csrf
-            <input type="hidden" name="absagen" value="1">
-            <label class="block grow text-sm"><span class="text-gray-600">Nicht dabei? Grund (für die Verwaltung, optional)</span>
-                <input type="text" name="grund" maxlength="500" class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
-            <button type="submit" class="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50">Teilnahme absagen</button>
-        </form>
+        <div x-data="{ offen: false }" @teilnahme-absagen.window="offen = true; $nextTick(() => $refs.grund.focus())" @keydown.escape.window="offen = false">
+            <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+                 @click.self="offen = false">
+                <form method="POST" action="{{ route('module.elternsprechtag.plan.teilnahme', $ziel) }}" class="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+                    @csrf
+                    <input type="hidden" name="absagen" value="1">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-base font-semibold text-gray-800">Teilnahme absagen</h2>
+                        <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-600">
+                        {{ $fremd ? $lehrer->name.' nimmt' : 'Du nimmst' }} an diesem Elternsprechtag nicht teil. Die Eltern sehen {{ $fremd ? 'die Lehrkraft' : 'dich' }} dann nicht mehr.
+                        @if ($plan->termine->isNotEmpty())
+                            <strong class="text-red-700">{{ $plan->termine->count() === 1 ? 'Der gebuchte Termin wird' : 'Die '.$plan->termine->count().' gebuchten Termine werden' }} abgesagt, die Eltern bekommen eine Mail.</strong>
+                        @endif
+                    </p>
+                    <label class="mt-4 block text-sm"><span class="text-gray-600">Grund (für das Sekretariat, optional)</span>
+                        <textarea name="grund" rows="3" maxlength="500" x-ref="grund" class="mt-1 w-full rounded-lg border-gray-300 text-sm"></textarea></label>
+                    <div class="mt-4 flex justify-end gap-2">
+                        <button type="button" @click="offen = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Abbrechen</button>
+                        <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Teilnahme absagen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     @endif
     @endif
 

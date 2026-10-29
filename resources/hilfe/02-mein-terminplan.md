@@ -72,7 +72,8 @@ gebucht ist.
 
 ## Nicht dabei?
 
-Ganz unten kannst du deine **Teilnahme absagen**, auf Wunsch mit Grund für das Sekretariat. Die
+Neben „Speichern“ steht **Teilnahme absagen**. Es öffnet sich ein Fenster, in dem du einen Grund
+für das Sekretariat angeben kannst (optional). Die
 Eltern sehen dich dann nicht mehr; schon gebuchte Termine werden abgesagt und die Eltern per
 E-Mail informiert. Mit **Doch teilnehmen** machst du das rückgängig – danach den Plan bitte prüfen
 und wieder freigeben.
