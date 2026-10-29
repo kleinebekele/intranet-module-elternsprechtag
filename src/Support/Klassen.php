@@ -70,8 +70,9 @@ class Klassen
     {
         return User::query()
             ->whereHas('roles', fn ($q) => $q->where('roles.role_id', 'like', self::PRAEFIX.'%-lehrer'))
-            ->orderBy('name')
-            ->get();
+            ->get()
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
+            ->values();
     }
 
     /**
@@ -89,7 +90,7 @@ class Klassen
                 'user' => $u,
                 'klassen' => array_values(array_intersect(self::vonLehrer($u), $klassen)),
             ])
-            ->sortBy(fn (array $z) => mb_strtolower($z['user']->name))
+            ->sortBy(fn (array $z) => Namen::schluessel($z['user']->name))
             ->values();
     }
 
@@ -106,12 +107,12 @@ class Klassen
         foreach ($klassen as $klasse) {
             foreach (self::mitglieder([self::rolle($klasse, 'schueler')]) as $kind) {
                 $kind->loadMissing('parents');
-                $zeilen->push(['kind' => $kind, 'klasse' => $klasse, 'eltern' => $kind->parents->sortBy('name')->values()]);
+                $zeilen->push(['kind' => $kind, 'klasse' => $klasse, 'eltern' => $kind->parents->sortBy(fn (User $u) => Namen::schluessel($u->name))->values()]);
             }
         }
 
         return $zeilen
-            ->sort(fn ($a, $b) => strnatcasecmp($a['klasse'], $b['klasse']) ?: strcasecmp($a['kind']->name, $b['kind']->name))
+            ->sort(fn ($a, $b) => strnatcasecmp($a['klasse'], $b['klasse']) ?: strcmp(Namen::schluessel($a['kind']->name), Namen::schluessel($b['kind']->name)))
             ->values();
     }
 
@@ -129,7 +130,7 @@ class Klassen
 
         return $ueberRolle->concat($ueberKinder)
             ->unique('id')
-            ->sortBy(fn (User $u) => mb_strtolower($u->name))
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
             ->values();
     }
 

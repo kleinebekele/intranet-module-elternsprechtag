@@ -306,8 +306,10 @@
                     <button type="submit" name="freigeben" value="1"
                             class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Speichern und freigeben</button>
                 @endunless
-                <button type="button" @click="$dispatch('teilnahme-absagen')"
-                        class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50">Teilnahme absagen</button>
+                {{-- Nach der Freigabe erst die Freigabe zurücknehmen, dann absagen. --}}
+                <button type="button" @click="$dispatch('teilnahme-absagen')" @disabled($plan->abgeschlossen_am)
+                        @if ($plan->abgeschlossen_am) title="Erst die Freigabe zurücknehmen, dann absagen." @endif
+                        class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">Teilnahme absagen</button>
             </div>
         @endif
     </form>

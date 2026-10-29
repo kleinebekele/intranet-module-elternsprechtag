@@ -15,6 +15,7 @@ use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Termin;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
+use Intranet\Modules\Elternsprechtag\Support\Namen;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
 use Intranet\Modules\Elternsprechtag\Support\Slots;
 
@@ -64,7 +65,7 @@ class PlanController
         return Klassen::alleLehrer()
             ->concat(User::whereIn('id', Plan::query()->select('user_id'))->get())
             ->unique('id')
-            ->sortBy(fn (User $u) => mb_strtolower($u->name))
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
             ->values();
     }
 
@@ -115,7 +116,7 @@ class PlanController
 
         $gebucht = $plan->termine->pluck('kind_user_id')->all();
         $offeneWuensche = $plan->wuensche->filter(fn ($w) => $w->kind && ! in_array($w->kind_user_id, $gebucht))
-            ->sortBy(fn ($w) => mb_strtolower($w->kind->name))->values();
+            ->sortBy(fn ($w) => Namen::schluessel($w->kind->name))->values();
 
         $datei = 'elternsprechtag-'.str($lehrer->name)->slug().'.pdf';
 
@@ -271,6 +272,11 @@ class PlanController
         $plan = Plan::with(['termine.tag', 'termine.kind', 'termine.eltern'])
             ->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id], ['slot_minuten' => 15, 'vorbereitung_minuten' => 0]);
         $absagen = (bool) ($daten['absagen'] ?? false);
+
+        if ($absagen && $plan->abgeschlossen_am) {
+            return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
+                ->with('error', 'Der Plan ist freigegeben. Bitte zuerst die Freigabe zurücknehmen, dann die Teilnahme absagen.');
+        }
 
         $ohneMail = 0;
         if ($absagen) {

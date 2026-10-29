@@ -13,6 +13,7 @@ use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
+use Intranet\Modules\Elternsprechtag\Support\Namen;
 
 /** Verwaltung: Sprechtage anlegen, Eltern informieren, Stand der Lehrer. */
 class SprechtagController
@@ -88,7 +89,7 @@ class SprechtagController
         $lehrer = Klassen::lehrer($klassen)->pluck('user')
             ->concat($plaene->pluck('user')->filter())
             ->unique('id')
-            ->sortBy(fn (User $u) => mb_strtolower($u->name))
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
             ->map(fn (User $u) => ['user' => $u, 'klassen' => Plan::klassenVon($plaene->get($u->id), $u, $sprechtag)])
             ->values();
 

@@ -90,16 +90,14 @@
                                             @csrf
                                             <input type="hidden" name="plan_id" value="{{ $plan->id }}">
                                             <input type="hidden" name="kind_id" value="{{ $z['kind']->id }}">
-                                            <select name="slot" required class="rounded-lg border-gray-300 text-sm">
-                                                <option value="">Uhrzeit wählen …</option>
-                                                @foreach ($freie->groupBy('tag') as $tag => $slots)
-                                                    <optgroup label="{{ $tag }}">
-                                                        @foreach ($slots as $sl)
-                                                            <option value="{{ $sl['tag_id'] }}|{{ $sl['von'] }}">{{ $sl['von'] }}–{{ $sl['bis'] }}</option>
-                                                        @endforeach
-                                                    </optgroup>
-                                                @endforeach
-                                            </select>
+                                            @include('elternsprechtag::partials.suchauswahl', [
+                                                'name' => 'slot',
+                                                'optionen' => $freie->map(fn ($sl) => [
+                                                    'wert' => $sl['tag_id'].'|'.$sl['von'], 'text' => $sl['von'].'–'.$sl['bis'].' Uhr', 'gruppe' => $sl['tag'],
+                                                ])->values()->all(),
+                                                'leer' => 'Uhrzeit wählen …',
+                                                'breite' => 'w-56',
+                                            ])
                                             <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
                                                 {{ $termin ? 'Umbuchen' : 'Buchen' }}
                                             </button>

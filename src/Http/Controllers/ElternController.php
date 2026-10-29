@@ -13,6 +13,7 @@ use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Termin;
 use Intranet\Modules\Elternsprechtag\Support\Buchung;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
+use Intranet\Modules\Elternsprechtag\Support\Namen;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
 
 /**
@@ -138,8 +139,9 @@ class ElternController
         return User::query()
             ->where(fn ($q) => $q->whereHas('children')
                 ->orWhereHas('roles', fn ($r) => $r->where('roles.role_id', 'like', 'linear-klasse-%-eltern')))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name'])
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
+            ->values();
     }
 
     private function zurueck(Request $request, User $eltern): RedirectResponse

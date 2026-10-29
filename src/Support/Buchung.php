@@ -27,7 +27,8 @@ class Buchung
     /** Kinder des Elternteils, die in einer Klasse des Sprechtags sind. */
     public static function kinder(User $eltern, Sprechtag $sprechtag): Collection
     {
-        return $eltern->children()->with('roles')->orderBy('name')->get()
+        return $eltern->children()->with('roles')->get()
+            ->sortBy(fn (User $k) => Namen::schluessel($k->name))
             ->map(fn (User $k) => ['kind' => $k, 'klassen' => array_values(array_intersect(Klassen::vonKind($k), $sprechtag->klassenListe()))])
             ->filter(fn (array $z) => $z['klassen'] !== [])
             ->values();
@@ -59,7 +60,7 @@ class Buchung
 
             $lehrer = $plaene
                 ->filter(fn (Plan $p) => array_intersect($z['klassen'], Plan::klassenVon($p, $p->user, $sprechtag)) !== [])
-                ->sortBy(fn (Plan $p) => mb_strtolower($p->user->name))
+                ->sortBy(fn (Plan $p) => Namen::schluessel($p->user->name))
                 ->map(function (Plan $p) use ($kid, $familie) {
                     $termin = $p->termine->firstWhere('kind_user_id', $kid);
                     $andere = $familie->reject(fn (Termin $t) => $termin && $t->id === $termin->id);
