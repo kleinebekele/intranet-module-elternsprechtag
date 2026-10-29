@@ -5,7 +5,7 @@
     @include('elternsprechtag::partials.suchauswahl', [
         'name' => $param,
         'optionen' => collect([['wert' => '', 'text' => '– mich selbst –']])
-            ->concat($personen->map(fn ($p) => ['wert' => (string) $p->id, 'text' => $p->name]))->all(),
+            ->concat($personen->map(fn ($p) => ['wert' => (string) $p->id, 'text' => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($p->name)]))->all(),
         'wert' => $aktuell->is(auth()->user()) ? '' : (string) $aktuell->id,
         'leer' => 'Name suchen …',
         'absenden' => true,

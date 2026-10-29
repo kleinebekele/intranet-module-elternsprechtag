@@ -40,7 +40,7 @@
 
             @foreach ($eintrag['kinder'] as $z)
                 <h3 class="mt-5 text-base font-semibold text-gray-800">
-                    {{ $z['kind']->name }} <span class="font-normal text-gray-500">· Klasse {{ implode(', ', $z['klassen']) }}</span>
+                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['kind']->name) }} <span class="font-normal text-gray-500">· Klasse {{ implode(', ', $z['klassen']) }}</span>
                 </h3>
 
                 @if ($z['lehrer']->isEmpty())
@@ -57,7 +57,7 @@
                             <div class="rounded-lg border px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : 'border-gray-200' }}">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        <div class="font-medium text-gray-800">{{ $plan->user->name }}</div>
+                                        <div class="font-medium text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($plan->user->name) }}</div>
                                         @if ($plan->raum)
                                             <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
                                         @endif

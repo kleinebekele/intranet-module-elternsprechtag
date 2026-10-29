@@ -96,7 +96,7 @@
                             <tr class="hover:bg-gray-50">
                                 <td class="py-2 pr-4">
                                     <a href="{{ route('module.elternsprechtag.plan.zeigen', [$sprechtag, 'lehrer' => $z['user']->id]) }}"
-                                       class="font-medium text-indigo-700 hover:underline">{{ $z['user']->name }}</a>
+                                       class="font-medium text-indigo-700 hover:underline">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['user']->name) }}</a>
                                 </td>
                                 <td class="py-2 pr-4">{{ implode(', ', $z['klassen']) ?: 'keine' }}</td>
                                 <td class="py-2 pr-4">

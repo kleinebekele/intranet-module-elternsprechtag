@@ -1,4 +1,5 @@
 @php
+    $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
     $ziel = $fremd ? [$sprechtag, 'lehrer' => $lehrer->id] : [$sprechtag];
     $start = [
         'slot' => (int) old('slot_minuten', $plan->slot_minuten ?? 15),
@@ -23,7 +24,7 @@
         }),
         // Gebuchte Slots je Tag: von → „Kind (Eltern)" fürs Einfärben.
         'gebucht' => $plan->termine->groupBy('tag_id')->map(fn ($ts) => $ts->mapWithKeys(fn ($t) => [
-            $t->von => trim(($t->kind?->name ?? '').' ('.($t->eltern?->name ?? 'Eltern').')'),
+            $t->von => trim($nv($t->kind?->name).' ('.($t->eltern ? $nv($t->eltern->name) : 'Eltern').')'),
         ])),
     ];
     $gewaehlt = array_map('intval', old('wuensche', $wuensche->keys()->all()));
@@ -73,8 +74,8 @@
                         @foreach ($plan->termine->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von) as $t)
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                                 <span class="font-medium tabular-nums text-gray-800">{{ $t->tag?->beschriftung() }} · {{ $t->von }}–{{ $t->bis }}</span>
-                                <span>{{ $t->kind?->name }}</span>
-                                <span class="text-gray-500">({{ $t->eltern?->name ?? 'Eltern' }})</span>
+                                <span>{{ $nv($t->kind?->name) }}</span>
+                                <span class="text-gray-500">({{ $t->eltern ? $nv($t->eltern->name) : 'Eltern' }})</span>
                                 @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
                                     <span class="text-amber-700">passt nicht mehr zu den Zeiten</span>
                                 @endunless
@@ -272,15 +273,15 @@
                             @php
                                 $kid = $z['kind']->id;
                                 $an = in_array($kid, $gewaehlt, true);
-                                $elternNamen = $z['eltern']->pluck('name')->join(', ');
+                                $elternNamen = $z['eltern']->map(fn ($e) => $nv($e->name))->join(' · ');
                             @endphp
                             <div x-data="{ an: @js($an) }"
-                                 x-show="suche === '' || @js(mb_strtolower($z['kind']->name.' '.$elternNamen)).includes(suche.toLowerCase())"
+                                 x-show="suche === '' || @js(mb_strtolower($z['kind']->name.' '.$nv($z['kind']->name).' '.$elternNamen)).includes(suche.toLowerCase())"
                                  class="rounded-lg border px-3 py-2" :class="an ? 'border-indigo-300 bg-indigo-50/60' : 'border-gray-200'">
                                 <label class="flex items-start gap-2">
                                     <input type="checkbox" name="wuensche[]" value="{{ $kid }}" x-model="an" @change="anzahl += $event.target.checked ? 1 : -1" class="mt-0.5 rounded border-gray-300">
                                     <span class="text-sm">
-                                        <span class="font-medium text-gray-800">{{ $z['kind']->name }}</span>
+                                        <span class="font-medium text-gray-800">{{ $nv($z['kind']->name) }}</span>
                                         <span class="block text-xs {{ $elternNamen === '' ? 'text-amber-700' : 'text-gray-500' }}">
                                             {{ $elternNamen === '' ? 'keine Eltern verknüpft' : 'Eltern: '.$elternNamen }}
                                         </span>

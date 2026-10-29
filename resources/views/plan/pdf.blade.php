@@ -1,5 +1,6 @@
 @php
     use Intranet\Modules\Elternsprechtag\Support\Klassen;
+    $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
     $klasse = fn ($kind) => $kind ? implode(', ', Klassen::vonKind($kind)) : '';
 @endphp
 <!DOCTYPE html>
@@ -52,11 +53,11 @@
                     @elseif ($z['termin'])
                         <tr>
                             <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
-                            <td>{{ $z['termin']->kind?->name }}
+                            <td>{{ $nv($z['termin']->kind?->name) }}
                                 @if (in_array($z['termin']->kind_user_id, $wuensche)) <span class="wunsch">(Wunsch)</span> @endif
                             </td>
                             <td class="klasse">{{ $klasse($z['termin']->kind) }}</td>
-                            <td>{{ $z['termin']->eltern?->name }}</td>
+                            <td>{{ $nv($z['termin']->eltern?->name) }}</td>
                             <td class="notiz"></td>
                         </tr>
                     @else
@@ -79,7 +80,7 @@
             <thead><tr><th>Kind</th><th>Klasse</th><th>Notiz</th></tr></thead>
             <tbody>
                 @foreach ($offeneWuensche as $w)
-                    <tr><td>{{ $w->kind->name }}</td><td class="klasse">{{ $klasse($w->kind) }}</td><td>{{ $w->notiz }}</td></tr>
+                    <tr><td>{{ $nv($w->kind->name) }}</td><td class="klasse">{{ $klasse($w->kind) }}</td><td>{{ $w->notiz }}</td></tr>
                 @endforeach
             </tbody>
         </table>

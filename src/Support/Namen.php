@@ -11,6 +11,20 @@ use Illuminate\Support\Str;
  */
 class Namen
 {
+    /** Für Listen: „Nachname, Vorname“. Einzelne Wörter und schon umgedrehte Namen bleiben, wie sie sind. */
+    public static function anzeige(?string $name): string
+    {
+        $name = trim((string) $name);
+        if ($name === '' || str_contains($name, ',')) {
+            return $name;
+        }
+
+        $teile = preg_split('/\s+/', $name) ?: [];
+        $nach = (string) array_pop($teile);
+
+        return $teile === [] ? $nach : $nach.', '.implode(' ', $teile);
+    }
+
     /** Schlüssel „nachname vorname“, ohne Umlaute und Groß/Klein – für sortBy(). */
     public static function schluessel(?string $name): string
     {
