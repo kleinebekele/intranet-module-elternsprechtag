@@ -38,6 +38,10 @@
                 </div>
             @endunless
 
+            @if ($offen || $verwaltung)
+                @include('elternsprechtag::eltern.assistent', ['vorschlag' => $vorschlaege[$s->id] ?? null])
+            @endif
+
             @foreach ($eintrag['kinder'] as $z)
                 <h3 class="mt-5 text-base font-semibold text-gray-800">
                     {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['kind']->name) }} <span class="font-normal text-gray-500">· Klasse {{ implode(', ', $z['klassen']) }}</span>

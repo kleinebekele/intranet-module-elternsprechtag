@@ -24,6 +24,27 @@ veröffentlicht“.
 Steht bei einer Lehrkraft **„möchte Sie gern sprechen“**, wünscht sie sich ausdrücklich ein
 Gespräch mit Ihnen. Bitte buchen Sie dort möglichst einen Termin.
 
+## Termin-Assistent
+
+Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Klappen Sie den
+**Termin-Assistenten** auf:
+
+1. **Mit wem?** Geben Sie je Lehrkraft eine Priorität: 1 = unbedingt, 2 = gern, 3 = wenn es
+   passt. Lehrkräfte, die Sie gern sprechen möchten, stehen schon auf 1.
+2. **Wann?** Freiwillig. Ohne Angabe entscheidet der Assistent frei. Mit einem Haken begrenzen
+   Sie ihn auf diesen Tag, mit Uhrzeiten auf Ihr Zeitfenster.
+3. Auf Wunsch etwas **Zeit für den Raumwechsel** zwischen zwei Gesprächen einplanen.
+4. **Vorschlag berechnen.**
+
+Der Assistent bringt zuerst alle Gespräche mit Priorität 1 unter, dann 2, dann 3 – möglichst an
+einem Tag und mit möglichst wenig Wartezeit. Was nicht passt, steht unter „Nicht
+unterzubringen“.
+
+Den Vorschlag buchen Sie mit **Alle buchen** auf einmal oder mit **Nur diesen buchen** einzeln.
+Ist eine Uhrzeit in der Zwischenzeit vergeben worden, meldet die Seite das; starten Sie den
+Assistenten dann für die übrigen Gespräche einfach erneut. Schon gebuchte Termine verschiebt der
+Assistent nicht.
+
 ## Regeln
 
 - Je Kind und Lehrkraft gibt es **einen** Termin.

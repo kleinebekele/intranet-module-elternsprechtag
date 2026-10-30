@@ -37,5 +37,7 @@ Route::middleware(['web', 'auth'])
         // Eltern: Termine buchen (Verwaltung auch für andere über ?eltern=).
         Route::get('termine', [ElternController::class, 'index'])->name('eltern.index');
         Route::post('termine/{sprechtag}', [ElternController::class, 'buchen'])->name('eltern.buchen');
+        Route::post('termine/{sprechtag}/assistent', [ElternController::class, 'assistent'])->name('eltern.assistent');
+        Route::post('termine/{sprechtag}/assistent/buchen', [ElternController::class, 'vorschlagBuchen'])->name('eltern.vorschlag');
         Route::delete('termine/termin/{termin}', [ElternController::class, 'absagen'])->name('eltern.absagen');
     });
