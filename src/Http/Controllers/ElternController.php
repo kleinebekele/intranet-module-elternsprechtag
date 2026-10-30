@@ -64,7 +64,7 @@ class ElternController
         $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, (int) $daten['plan_id'], (int) $daten['kind_id'], (int) $tagId, $von);
         abort_if($ergebnis === null, 404);
 
-        return $this->zurueck($request, $eltern)->with($ergebnis[0] ? 'status' : 'error', $ergebnis[1]);
+        return $this->zurueckManuell($request, $eltern, $sprechtag)->with($ergebnis[0] ? 'status' : 'error', $ergebnis[1]);
     }
 
     /**
@@ -237,14 +237,14 @@ class ElternController
         abort_unless($eigen, 404);
 
         if (! Rechte::istVerwaltung($request->user()) && $termin->beginn()->isPast()) {
-            return $this->zurueck($request, $eltern)->with('error', 'Der Termin hat schon begonnen.');
+            return $this->zurueckManuell($request, $eltern, $sprechtag)->with('error', 'Der Termin hat schon begonnen.');
         }
 
         $text = $termin->beschriftung();
         $termin->delete();
         $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $termin->plan->user_id, 'kind' => $termin->kind_user_id]);
 
-        return $this->zurueck($request, $eltern)->with('status', 'Termin abgesagt: '.$text.'.');
+        return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', 'Termin abgesagt: '.$text.'.');
     }
 
     /** Wer bucht? Man selbst – oder für die Verwaltung das Elternteil aus `?eltern=`. */
@@ -274,6 +274,12 @@ class ElternController
     private function zurueck(Request $request, User $eltern, string $anker = ''): RedirectResponse
     {
         return redirect()->to(route('module.elternsprechtag.eltern.index', $eltern->is($request->user()) ? [] : ['eltern' => $eltern->id]).$anker);
+    }
+
+    /** Wie zurueck(), aber die Seite öffnet wieder auf dem Reiter „Manuelle Termine". */
+    private function zurueckManuell(Request $request, User $eltern, Sprechtag $sprechtag): RedirectResponse
+    {
+        return $this->zurueck($request, $eltern)->with('elternsprechtag_reiter', $sprechtag->id);
     }
 
     private function audit(string $aktion, Sprechtag $sprechtag, User $eltern, array $daten): void

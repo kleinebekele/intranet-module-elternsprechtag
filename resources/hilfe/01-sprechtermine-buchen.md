@@ -16,6 +16,9 @@ veröffentlicht“.
 
 ## So buchen Sie einen Termin
 
+Die Seite öffnet mit dem **Termin-Assistenten** (siehe unten). Einzelne Termine buchen Sie selbst
+auf dem Reiter **Manuelle Termine**:
+
 1. Unter dem Namen Ihres Kindes sehen Sie alle Lehrkräfte, die für seine Klasse da sind – mit
    Raum. Die **Klassenlehrkraft** steht vorn und ist hervorgehoben.
 2. Wählen Sie im Auswahlfeld eine freie Uhrzeit und klicken Sie auf **Buchen**.
@@ -26,8 +29,8 @@ Gespräch mit Ihnen. Bitte buchen Sie dort möglichst einen Termin.
 
 ## Termin-Assistent
 
-Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Klappen Sie den
-**Termin-Assistenten** auf:
+Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Dafür ist der
+**Termin-Assistent** da:
 
 1. **Mit wem?** Geben Sie je Lehrkraft eine Priorität: 1 = unbedingt, 2 = gern, 3 = wenn es
    passt. Die Klassenlehrkraft und Lehrkräfte, die Sie gern sprechen möchten, stehen schon auf 1.
@@ -55,6 +58,8 @@ Assistent nicht.
   Sie eine Meldung und wählen eine andere.
 
 ## Umbuchen und absagen
+
+Beides finden Sie auf dem Reiter **Manuelle Termine**.
 
 - **Umbuchen:** Bei einem gebuchten Termin eine andere Uhrzeit wählen und auf **Umbuchen**
   klicken. Der alte Termin wird dabei freigegeben.

@@ -16,17 +16,12 @@
     $tagMitSlots = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->flatMap(fn ($l) => collect($l['slots'])->pluck('tag_id')))->unique()->all();
 @endphp
 
-<div id="assistent-{{ $s->id }}" x-data="{ offen: @js((bool) $vorschlag) }" class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/40">
-    <div role="button" tabindex="0" :aria-expanded="offen" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen"
-         class="flex cursor-pointer items-center justify-between gap-2 px-4 py-3">
-        <div>
-            <div class="font-semibold text-indigo-900">Termin-Assistent</div>
-            <div class="text-sm text-indigo-900/80">Sagen Sie, mit wem Sie sprechen möchten – der Assistent schlägt eine Abfolge mit möglichst wenig Wartezeit vor.</div>
-        </div>
-        <i class="bx bx-chevron-down text-2xl text-indigo-700 transition-transform" :class="offen && 'rotate-180'"></i>
-    </div>
+<div id="assistent-{{ $s->id }}" class="mt-4">
+    <p class="mb-4 text-sm text-gray-600">Sagen Sie, mit wem Sie sprechen möchten – der Assistent schlägt eine Abfolge mit möglichst wenig Wartezeit vor.</p>
 
-    <div x-show="offen" x-cloak class="border-t border-indigo-100 bg-white px-4 py-4">
+    @if ($paare->isEmpty())
+        <p class="text-sm text-gray-400">Für die Klassen Ihrer Kinder hat noch keine Lehrkraft Gesprächszeiten eingetragen.</p>
+    @else
         <form method="POST" action="{{ route('module.elternsprechtag.eltern.assistent', [$s] + $als) }}">
             @csrf
             <h4 class="text-sm font-semibold text-gray-800">1. Mit wem möchten Sie sprechen?</h4>
@@ -168,5 +163,5 @@
                 </div>
             </div>
         @endif
-    </div>
+    @endif
 </div>

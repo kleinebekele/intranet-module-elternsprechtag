@@ -32,8 +32,8 @@ Eltern vorn, sind hervorgehoben und im Assistenten mit Prio 1 vorbelegt.
 - Menüpunkt „Einstellungen": Rolle `elternsprechtag_verwaltung` (bzw. Admin) im Admin zuordnen.
 - Menüpunkt „Mein Terminplan": einer Rolle zuordnen, die alle Lehrer haben (z. B. `user`).
   Sichtbar ist er allein nach dieser Zuordnung; Inhalt hat er nur für Lehrer (Linear-Lehrerrolle).
-- **Sprechtermine** (Eltern): je Kind die Lehrer, die für dessen Klasse da sind, mit ihren freien
-  Uhrzeiten. Buchen, umbuchen, absagen. Offen, sobald die Eltern informiert wurden; je Lehrer und
+- **Sprechtermine** (Eltern): Reiter „Termin-Assistent" (Start) und „Manuelle Termine". Dort je
+  Kind die Lehrer, die für dessen Klasse da sind, mit ihren freien Uhrzeiten. Buchen, umbuchen, absagen. Offen, sobald die Eltern informiert wurden; je Lehrer und
   Kind ein Termin, die Termine einer Familie überschneiden sich nicht.
 
 ## Handeln als

@@ -20,6 +20,10 @@
         @php
             $s = $eintrag['sprechtag'];
             $offen = \Intranet\Modules\Elternsprechtag\Support\Buchung::offen($s);
+            $mitReitern = $offen || $verwaltung;
+            // Start ist der Assistent; wer gerade von Hand gebucht oder abgesagt hat, bleibt auf „Manuelle Termine".
+            $start = ! $mitReitern || session('elternsprechtag_reiter') === $s->id || old('plan_id') ? 'manuell' : 'assistent';
+            $reiterKlasse = 'whitespace-nowrap border-b-2 -mb-px px-4 py-2 text-sm font-medium transition';
         @endphp
         <section class="mb-6 rounded-xl border border-gray-200 bg-white p-5">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -38,10 +42,21 @@
                 </div>
             @endunless
 
-            @if ($offen || $verwaltung)
-                @include('elternsprechtag::eltern.assistent', ['vorschlag' => $vorschlaege[$s->id] ?? null])
+            <div x-data="{ reiter: @js($start) }">
+            @if ($mitReitern)
+                <nav class="mt-4 flex flex-wrap gap-1 border-b border-gray-200" role="tablist">
+                    <button type="button" role="tab" :aria-selected="reiter === 'assistent'" @click="reiter = 'assistent'" class="{{ $reiterKlasse }}"
+                            :class="reiter === 'assistent' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'">Termin-Assistent</button>
+                    <button type="button" role="tab" :aria-selected="reiter === 'manuell'" @click="reiter = 'manuell'" class="{{ $reiterKlasse }}"
+                            :class="reiter === 'manuell' ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-gray-500 hover:text-gray-700'">Manuelle Termine</button>
+                </nav>
+
+                <div x-show="reiter === 'assistent'" x-cloak>
+                    @include('elternsprechtag::eltern.assistent', ['vorschlag' => $vorschlaege[$s->id] ?? null])
+                </div>
             @endif
 
+            <div x-show="reiter === 'manuell'" x-cloak>
             @foreach ($eintrag['kinder'] as $z)
                 <h3 class="mt-5 text-base font-semibold text-gray-800">
                     {{ \Intranet\Modules\Elternsprechtag\Support\Namen::vorname($z['kind']->name) }} <span class="font-normal text-gray-500">· Klasse {{ implode(', ', $z['klassen']) }}</span>
@@ -117,6 +132,8 @@
                     </div>
                 @endif
             @endforeach
+            </div>
+            </div>
         </section>
     @empty
         <p class="text-sm text-gray-400">
