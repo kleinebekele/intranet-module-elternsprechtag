@@ -9,7 +9,8 @@
     $eingaben = $vorschlag['eingaben'] ?? [];
     $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->map(fn ($l) => [
         'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
-    ]))->keyBy('key');
+        'klassenlehrer' => $l['klassenlehrer'],
+    ]))->sortBy(fn ($p) => $p['klassenlehrer'] ? 0 : 1)->keyBy('key');
     $prioText = [1 => 'unbedingt', 2 => 'gern', 3 => 'wenn es passt'];
     $prioFarbe = [1 => 'bg-indigo-600 text-white', 2 => 'bg-indigo-100 text-indigo-800', 3 => 'bg-gray-100 text-gray-700'];
     $tagMitSlots = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->flatMap(fn ($l) => collect($l['slots'])->pluck('tag_id')))->unique()->all();
@@ -32,16 +33,21 @@
             <p class="mt-1 text-xs text-gray-500">1 = unbedingt · 2 = gern · 3 = wenn es passt. Wichtigere Gespräche haben Vorrang, wenn nicht alle unterzubringen sind.</p>
             <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
                 @foreach ($paare as $key => $p)
-                    <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 {{ $p['termin'] ? 'border-green-200 bg-green-50/60' : 'border-gray-200' }}">
+                    <div class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 {{ $p['termin'] ? 'border border-green-200 bg-green-50/60' : ($p['klassenlehrer'] ? 'border-2 border-indigo-400 bg-indigo-50/60' : 'border border-gray-200') }}">
                         <div class="min-w-0 text-sm">
-                            <div class="font-medium text-gray-800">{{ $nv($p['plan']->user->name) }}</div>
+                            <div class="font-medium text-gray-800">{{ $nv($p['plan']->user->name) }}
+                                @if ($p['klassenlehrer'])
+                                    <span class="ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">Klassenlehrkraft</span>
+                                @endif
+                            </div>
                             <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
                                 @if ($p['wunsch'] && ! $p['termin']) · <span class="text-indigo-700">möchte Sie gern sprechen</span>@endif</div>
                         </div>
                         @if ($p['termin'])
                             <span class="whitespace-nowrap text-xs font-medium text-green-800">gebucht {{ $p['termin']->von }} Uhr</span>
                         @else
-                            @php $wert = (int) ($eingaben['prio'][$key] ?? ($p['wunsch'] ? 1 : 0)); @endphp
+                            {{-- Vorbelegt mit 1: Gesprächswunsch der Lehrkraft und Klassenlehrkraft. --}}
+                            @php $wert = (int) ($eingaben['prio'][$key] ?? ($p['wunsch'] || $p['klassenlehrer'] ? 1 : 0)); @endphp
                             <select name="prio[{{ $key }}]" class="rounded-lg border-gray-300 py-1 text-sm">
                                 <option value="0" @selected($wert === 0)>–</option>
                                 @foreach ($prioText as $n => $t)

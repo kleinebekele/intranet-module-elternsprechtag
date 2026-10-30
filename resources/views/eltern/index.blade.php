@@ -58,10 +58,14 @@
                                 $freie = collect($l['slots'])->where('frei', true);
                                 $darfBuchen = $offen || $verwaltung;
                             @endphp
-                            <div class="rounded-lg border px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : 'border-gray-200' }}">
+                            {{-- Klassenlehrer stehen vorn und sind kräftiger gerahmt – sie sind der erste Ansprechpartner. --}}
+                            <div class="rounded-lg px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : ($l['klassenlehrer'] ? 'bg-indigo-50/60' : '') }} {{ $l['klassenlehrer'] ? 'border-2 border-indigo-400 shadow-sm' : 'border '.($termin ? '' : 'border-gray-200') }}">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        <div class="font-medium text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($plan->user->name) }}</div>
+                                        @if ($l['klassenlehrer'])
+                                            <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Klassenlehrkraft</div>
+                                        @endif
+                                        <div class="{{ $l['klassenlehrer'] ? 'text-base font-semibold' : 'font-medium' }} text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($plan->user->name) }}</div>
                                         @if ($plan->raum)
                                             <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
                                         @endif

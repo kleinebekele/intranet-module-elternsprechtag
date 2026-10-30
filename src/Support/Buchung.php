@@ -60,14 +60,15 @@ class Buchung
 
             $lehrer = $plaene
                 ->filter(fn (Plan $p) => array_intersect($z['klassen'], Plan::klassenVon($p, $p->user, $sprechtag)) !== [])
-                ->sortBy(fn (Plan $p) => Namen::schluessel($p->user->name))
-                ->map(function (Plan $p) use ($kid, $familie) {
+                ->sortBy(fn (Plan $p) => (Klassen::istKlassenlehrer($p->user, $z['klassen']) ? '0' : '1').Namen::schluessel($p->user->name))
+                ->map(function (Plan $p) use ($kid, $familie, $z) {
                     $termin = $p->termine->firstWhere('kind_user_id', $kid);
                     $andere = $familie->reject(fn (Termin $t) => $termin && $t->id === $termin->id);
 
                     return [
                         'plan' => $p,
                         'termin' => $termin,
+                        'klassenlehrer' => Klassen::istKlassenlehrer($p->user, $z['klassen']),
                         'wunsch' => $p->wuensche->firstWhere('kind_user_id', $kid),
                         'slots' => self::slots($p, $andere),
                     ];

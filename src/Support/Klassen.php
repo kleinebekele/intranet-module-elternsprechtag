@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
  *   linear-klasse-<klasse>-lehrer    Lehrer, die in der Klasse unterrichten (WD_Lehrer)
  *   linear-klasse-<klasse>-schueler  Schüler der Klasse
  *   linear-klasse-<klasse>-eltern    Eltern der Schüler
+ *   linear-klasse-<klasse>-klassenlehrer  Klassenlehrer (WD_Lehrer.Funktion, bis zu zwei)
  *
  * plus `users_parents` für „wer sind die Eltern dieses Kindes".
  */
@@ -47,6 +48,19 @@ class Klassen
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * Ist der Benutzer laut Linear Klassenlehrer einer dieser Klassen? Rolle
+     * `linear-klasse-<klasse>-klassenlehrer` (WD_Lehrer.Funktion, GruppenAbgleich).
+     *
+     * @param  list<string>  $klassen
+     */
+    public static function istKlassenlehrer(User $user, array $klassen): bool
+    {
+        $rollen = array_map(fn (string $k) => self::PRAEFIX.$k.'-klassenlehrer', $klassen);
+
+        return $user->roles->pluck('role_id')->intersect($rollen)->isNotEmpty();
     }
 
     /** Klassen eines Schülers laut Linear. */

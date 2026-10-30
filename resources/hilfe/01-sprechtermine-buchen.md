@@ -17,7 +17,7 @@ veröffentlicht“.
 ## So buchen Sie einen Termin
 
 1. Unter dem Namen Ihres Kindes sehen Sie alle Lehrkräfte, die für seine Klasse da sind – mit
-   Raum.
+   Raum. Die **Klassenlehrkraft** steht vorn und ist hervorgehoben.
 2. Wählen Sie im Auswahlfeld eine freie Uhrzeit und klicken Sie auf **Buchen**.
 3. Der Termin erscheint grün hinterlegt als „Ihr Termin“.
 
@@ -30,7 +30,7 @@ Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Kla
 **Termin-Assistenten** auf:
 
 1. **Mit wem?** Geben Sie je Lehrkraft eine Priorität: 1 = unbedingt, 2 = gern, 3 = wenn es
-   passt. Lehrkräfte, die Sie gern sprechen möchten, stehen schon auf 1.
+   passt. Die Klassenlehrkraft und Lehrkräfte, die Sie gern sprechen möchten, stehen schon auf 1.
 2. **Wann?** Freiwillig. Ohne Angabe entscheidet der Assistent frei. Mit einem Haken begrenzen
    Sie ihn auf diesen Tag, mit Uhrzeiten auf Ihr Zeitfenster.
 3. Auf Wunsch etwas **Zeit für den Raumwechsel** zwischen zwei Gesprächen einplanen.

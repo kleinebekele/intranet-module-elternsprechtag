@@ -24,6 +24,8 @@ Klassen, Lehrer, Schüler und Eltern kommen aus den Rollen des Linear-Abgleichs
 (`linear-klasse-<klasse>-lehrer|schueler|eltern`, Modul Verwaltung) und `users_parents`.
 Lehrer ist, wer irgendeine Linear-Lehrerrolle hat. Für welche Klassen eines Sprechtags er da ist,
 wählt er im Terminplan selbst; seine Linear-Klassen sind nur die Vorauswahl.
+Klassenlehrer (`linear-klasse-<klasse>-klassenlehrer`, aus `WD_Lehrer.Funktion`) stehen bei den
+Eltern vorn, sind hervorgehoben und im Assistenten mit Prio 1 vorbelegt.
 
 ## Rechte
 
