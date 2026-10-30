@@ -42,6 +42,28 @@ class InfoMail
     }
 
     /**
+     * Die Klassen des Sprechtags, die dieses Elternteil betreffen: über die Kinder
+     * und über die Elternrolle – dieselben beiden Quellen wie Klassen::eltern().
+     *
+     * @return list<string>
+     */
+    public static function klassenVon(Sprechtag $sprechtag, User $eltern): array
+    {
+        $klassen = Buchung::kinder($eltern, $sprechtag)->flatMap(fn (array $z) => $z['klassen'])->all();
+
+        foreach ($sprechtag->klassenListe() as $klasse) {
+            if ($eltern->roles->contains('role_id', Klassen::rolle($klasse, 'eltern'))) {
+                $klassen[] = $klasse;
+            }
+        }
+
+        $klassen = array_values(array_unique($klassen));
+        natcasesort($klassen);
+
+        return array_values($klassen);
+    }
+
+    /**
      * HTML- und Textwerte für VorlagenMailer.
      *
      * @param  list<array{lehrer: User, kind: User}>  $einladung
@@ -49,17 +71,23 @@ class InfoMail
      */
     public static function werte(Sprechtag $sprechtag, User $eltern, array $einladung): array
     {
+        $klassen = self::klassenVon($sprechtag, $eltern);
+        $klassenText = implode(', ', $klassen);
+
         $text = [
             'name' => $eltern->name,
             'sprechtag' => $sprechtag->titel,
             'tage' => $sprechtag->tageText(),
-            'klassen' => implode(', ', $sprechtag->klassenListe()),
+            'klassen' => $klassenText,
+            'klassen_zeile' => count($klassen) > 1 ? "
+Klassen: {$klassenText}" : '',
             'link' => route('module.elternsprechtag.eltern.index'),
             'hinweis' => (string) $sprechtag->hinweis,
             'einladung' => '',
         ];
         $html = array_map('e', $text);
         $html['hinweis'] = nl2br(e((string) $sprechtag->hinweis));
+        $html['klassen_zeile'] = count($klassen) > 1 ? '<br><strong>Klassen:</strong> '.e($klassenText) : '';
         $html['einladung'] = '';
 
         if ($einladung !== []) {

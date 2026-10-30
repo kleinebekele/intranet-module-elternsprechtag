@@ -62,6 +62,8 @@ unbedingt sprechen“ angehakt hat. Diese Eltern bekommen in der Mail einen herv
 Abschnitt mit den Lehrkräften, die sie sprechen möchten. Die Notiz der Lehrkraft steht nicht in
 der Mail. Wer seine Teilnahme abgesagt hat, zählt nicht.
 
+Die Mail nennt nur die Klassen der eigenen Kinder. Bei nur einer Klasse entfällt die Zeile.
+
 Den Wortlaut der Mails ändern Sie unter Verwaltung → Mailvorlagen:
 
 - „Elternsprechtag: Info an die Eltern“
