@@ -1,6 +1,11 @@
 {{-- Termin-Assistent je Sprechtag. Erwartet: $s (Sprechtag), $eintrag (Angebot), $vorschlag (aus der Sitzung oder null), $als --}}
 @php
     $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
+    // Kinder nur mit Vornamen; bei mehreren Kindern unterstrichen, damit man sie auseinanderhält.
+    $mehrereKinder = $eintrag['kinder']->count() > 1;
+    $kn = fn ($kind) => $mehrereKinder
+        ? '<span class="text-gray-800 underline">'.e(\Intranet\Modules\Elternsprechtag\Support\Namen::vorname($kind->name)).'</span>'
+        : e(\Intranet\Modules\Elternsprechtag\Support\Namen::vorname($kind->name));
     $eingaben = $vorschlag['eingaben'] ?? [];
     $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->map(fn ($l) => [
         'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
@@ -30,7 +35,7 @@
                     <div class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 {{ $p['termin'] ? 'border-green-200 bg-green-50/60' : 'border-gray-200' }}">
                         <div class="min-w-0 text-sm">
                             <div class="font-medium text-gray-800">{{ $nv($p['plan']->user->name) }}</div>
-                            <div class="text-xs text-gray-500">für {{ $nv($p['kind']->name) }}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
+                            <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
                                 @if ($p['wunsch'] && ! $p['termin']) · <span class="text-indigo-700">möchte Sie gern sprechen</span>@endif</div>
                         </div>
                         @if ($p['termin'])
@@ -116,7 +121,7 @@
                                 <span class="w-56 whitespace-nowrap font-medium tabular-nums text-gray-800">{{ $z['slot']['tag'] }} · {{ $z['slot']['von'] }}–{{ $z['slot']['bis'] }}</span>
                                 <span class="min-w-48 flex-1">
                                     <span class="font-medium text-gray-800">{{ $p ? $nv($p['plan']->user->name) : '?' }}</span>
-                                    <span class="text-gray-500">für {{ $p ? $nv($p['kind']->name) : '' }}@if ($p && $p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif</span>
+                                    <span class="text-gray-500">für {!! $p ? $kn($p['kind']) : '' !!}@if ($p && $p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif</span>
                                 </span>
                                 <span class="rounded-full px-2 py-0.5 text-xs {{ $prioFarbe[$z['prio']] }}">Prio {{ $z['prio'] }}</span>
                                 @if ($gebucht)
@@ -138,7 +143,7 @@
                 @if ($vorschlag['offen'] !== [])
                     <div class="border-t border-amber-100 bg-amber-50 px-4 py-2 text-sm text-amber-900">
                         Nicht unterzubringen:
-                        {{ collect($vorschlag['offen'])->map(fn ($k) => $paare->has($k) ? $nv($paare[$k]['plan']->user->name).' (für '.$nv($paare[$k]['kind']->name).')' : null)->filter()->join(' · ') }}
+                        {!! collect($vorschlag['offen'])->map(fn ($k) => $paare->has($k) ? e($nv($paare[$k]['plan']->user->name)).' (für '.$kn($paare[$k]['kind']).')' : null)->filter()->join(' · ') !!}
                         – dort sind im gewählten Zeitraum keine passenden Uhrzeiten frei.
                     </div>
                 @endif

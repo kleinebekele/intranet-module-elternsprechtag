@@ -44,7 +44,7 @@
 
             @foreach ($eintrag['kinder'] as $z)
                 <h3 class="mt-5 text-base font-semibold text-gray-800">
-                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['kind']->name) }} <span class="font-normal text-gray-500">· Klasse {{ implode(', ', $z['klassen']) }}</span>
+                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::vorname($z['kind']->name) }} <span class="font-normal text-gray-500">· Klasse {{ implode(', ', $z['klassen']) }}</span>
                 </h3>
 
                 @if ($z['lehrer']->isEmpty())
