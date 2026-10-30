@@ -37,10 +37,11 @@ Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Kla
 4. **Vorschlag berechnen.**
 
 Der Assistent bringt zuerst alle Gespräche mit Priorität 1 unter, dann 2, dann 3 – möglichst an
-einem Tag und mit möglichst wenig Wartezeit. Was nicht passt, steht unter „Nicht
-unterzubringen“.
+einem Tag und mit möglichst wenig Wartezeit. Zwei Gespräche bei derselben Lehrkraft (etwa für
+Geschwister) legt er direkt hintereinander. Was nicht passt, steht unter „Nicht unterzubringen“.
 
-Den Vorschlag buchen Sie mit **Alle buchen** auf einmal oder mit **Nur diesen buchen** einzeln.
+Im Vorschlag sind alle Termine angehakt. Entfernen Sie den Haken bei allem, was Sie nicht
+möchten, und klicken Sie auf **Buchen** – gebucht werden nur die angehakten Termine.
 Ist eine Uhrzeit in der Zwischenzeit vergeben worden, meldet die Seite das; starten Sie den
 Assistenten dann für die übrigen Gespräche einfach erneut. Schon gebuchte Termine verschiebt der
 Assistent nicht.

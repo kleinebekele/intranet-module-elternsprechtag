@@ -116,7 +116,7 @@ class ElternController
 
                     return (! $f[0] || $s['von'] >= $f[0]) && (! $f[1] || $s['bis'] <= $f[1]);
                 })->map(fn ($s) => array_intersect_key($s, array_flip(['tag_id', 'tag', 'von', 'bis'])))->values()->all();
-                $wuensche[] = ['key' => $key, 'prio' => $prio, 'slots' => $slots];
+                $wuensche[] = ['key' => $key, 'prio' => $prio, 'lehrer' => $l['plan']->user_id, 'slots' => $slots];
             }
         }
 
@@ -130,7 +130,7 @@ class ElternController
         return $this->zurueck($request, $eltern, '#assistent-'.$sprechtag->id);
     }
 
-    /** Den ganzen Vorschlag des Assistenten buchen – was inzwischen vergeben ist, wird übersprungen und gemeldet. */
+    /** Die angehakten Termine des Vorschlags buchen – was inzwischen vergeben ist, wird übersprungen und gemeldet. */
     public function vorschlagBuchen(Request $request, Sprechtag $sprechtag): RedirectResponse
     {
         $eltern = $this->eltern($request);
@@ -141,14 +141,20 @@ class ElternController
         $vorschlag = session($this->vorschlagSchluessel($sprechtag, $eltern));
         abort_if(! $vorschlag || $vorschlag['plan'] === [], 404);
 
+        $auswahl = array_map('intval', (array) $request->input('auswahl', []));
+        if ($auswahl === []) {
+            return $this->zurueck($request, $eltern, '#assistent-'.$sprechtag->id)->with('error', 'Bitte haken Sie mindestens einen Termin an.');
+        }
+
         $gebucht = 0;
         $fehler = [];
-        foreach ($vorschlag['plan'] as $p) {
+        foreach ($vorschlag['plan'] as $nr => $p) {
+            if (! in_array($nr, $auswahl, true)) {
+                continue;
+            }
             [$planId, $kindId] = array_map('intval', explode('-', $p['key']));
-            // Schon einzeln gebucht? Dann nicht noch einmal anfassen.
+            // Schon gebucht (z. B. zweimal abgeschickt)? Dann nicht noch einmal anfassen.
             if (Termin::where(['plan_id' => $planId, 'kind_user_id' => $kindId, 'tag_id' => (int) $p['slot']['tag_id'], 'von' => $p['slot']['von']])->exists()) {
-                $gebucht++;
-
                 continue;
             }
             $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, $planId, $kindId, (int) $p['slot']['tag_id'], $p['slot']['von']);

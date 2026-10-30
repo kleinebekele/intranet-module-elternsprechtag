@@ -117,7 +117,13 @@
                             @if ($pause > 0)
                                 <div class="bg-gray-50 px-4 py-1 text-xs italic text-gray-500">{{ $pause }} Min. Wartezeit</div>
                             @endif
-                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-sm">
+                            <label class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-sm {{ $gebucht ? '' : 'cursor-pointer hover:bg-gray-50' }}">
+                                @if ($gebucht)
+                                    <span class="w-4 text-green-700">✓</span>
+                                @else
+                                    {{-- Gehört zum Formular „Buchen" unten (form-Attribut), angehakt = wird gebucht. --}}
+                                    <input type="checkbox" name="auswahl[]" value="{{ $i }}" form="vorschlag-{{ $s->id }}" checked class="rounded border-gray-300">
+                                @endif
                                 <span class="w-56 whitespace-nowrap font-medium tabular-nums text-gray-800">{{ $z['slot']['tag'] }} · {{ $z['slot']['von'] }}–{{ $z['slot']['bis'] }}</span>
                                 <span class="min-w-48 flex-1">
                                     <span class="font-medium text-gray-800">{{ $p ? $nv($p['plan']->user->name) : '?' }}</span>
@@ -125,17 +131,9 @@
                                 </span>
                                 <span class="rounded-full px-2 py-0.5 text-xs {{ $prioFarbe[$z['prio']] }}">Prio {{ $z['prio'] }}</span>
                                 @if ($gebucht)
-                                    <span class="text-sm font-medium text-green-700">✓ gebucht</span>
-                                @elseif ($p)
-                                    <form method="POST" action="{{ route('module.elternsprechtag.eltern.buchen', [$s] + $als) }}">
-                                        @csrf
-                                        <input type="hidden" name="plan_id" value="{{ $p['plan']->id }}">
-                                        <input type="hidden" name="kind_id" value="{{ $p['kind']->id }}">
-                                        <input type="hidden" name="slot" value="{{ $z['slot']['tag_id'] }}|{{ $z['slot']['von'] }}">
-                                        <button type="submit" class="rounded-lg border border-indigo-300 px-3 py-1 text-sm text-indigo-700 hover:bg-indigo-50">Nur diesen buchen</button>
-                                    </form>
+                                    <span class="text-sm font-medium text-green-700">gebucht</span>
                                 @endif
-                            </div>
+                            </label>
                         @endforeach
                     </div>
                 @endif
@@ -150,10 +148,11 @@
 
                 <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 px-4 py-3">
                     @if ($zeilen->isNotEmpty())
-                        <form method="POST" action="{{ route('module.elternsprechtag.eltern.vorschlag', [$s] + $als) }}">
+                        <form method="POST" action="{{ route('module.elternsprechtag.eltern.vorschlag', [$s] + $als) }}" id="vorschlag-{{ $s->id }}">
                             @csrf
-                            <button type="submit" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Alle buchen</button>
+                            <button type="submit" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Buchen</button>
                         </form>
+                        <span class="text-xs text-gray-500">Gebucht werden die angehakten Termine.</span>
                     @endif
                     <form method="POST" action="{{ route('module.elternsprechtag.eltern.assistent', [$s] + $als) }}">
                         @csrf
