@@ -63,6 +63,28 @@ class Klassen
         return $user->roles->pluck('role_id')->intersect($rollen)->isNotEmpty();
     }
 
+    /**
+     * Die Klassen aus $klassen, für die der Benutzer laut Linear Klassenlehrer ist.
+     *
+     * @param  list<string>  $klassen
+     * @return list<string>
+     */
+    public static function alsKlassenlehrer(User $user, array $klassen): array
+    {
+        return array_values(array_filter($klassen, fn (string $k) => $user->roles->contains('role_id', self::rolle($k, 'klassenlehrer'))));
+    }
+
+    /**
+     * Alle Klassenlehrer der Klassen.
+     *
+     * @param  list<string>  $klassen
+     * @return Collection<int, User>
+     */
+    public static function klassenlehrer(array $klassen): Collection
+    {
+        return self::mitglieder(array_map(fn (string $k) => self::rolle($k, 'klassenlehrer'), $klassen));
+    }
+
     /** Klassen eines Schülers laut Linear. */
     public static function vonKind(User $kind): array
     {

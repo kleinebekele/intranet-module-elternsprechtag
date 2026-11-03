@@ -35,7 +35,10 @@ diesem Tag – ohne Mail an die Eltern.
 Auf der Seite eines Sprechtags stehen alle Lehrkräfte laut Linear und alle, die selbst einen
 Plan angelegt haben:
 
-- **Klassen**: wofür die Lehrkraft da ist (ihre eigene Wahl, sonst die Linear-Vorauswahl).
+- **Klassenlehrer**: die beteiligten Klassen, für die die Lehrkraft laut Linear Klassenlehrkraft
+  ist (sonst „–“).
+- **Klassen**: wofür die Lehrkraft sonst noch da ist (ihre eigene Wahl, sonst die
+  Linear-Vorauswahl) – ohne die Klassen aus der Spalte Klassenlehrer.
 - **Stand**: noch nichts eingetragen · nicht freigegeben · ✓ freigegeben · ✗ nimmt nicht teil
   (mit Grund).
 - **Gebucht / Termine**: wie viele Termine schon vergeben sind.
@@ -45,9 +48,16 @@ Plan angelegt haben:
 ## Veröffentlichen
 
 Der Knopf **Veröffentlichen** gibt die Termine aller Lehrkräfte für die Eltern frei und legt die
-Info-Mail für alle Eltern der Klassen in den Ausgangskorb. Die Rückfrage nennt, wie viele
-Lehrkräfte ihren Plan noch nicht freigegeben haben – deren Termine werden trotzdem
-veröffentlicht. Wer abgesagt hat, erscheint bei den Eltern nicht.
+Info-Mail für alle Eltern der Klassen in den Ausgangskorb.
+
+**Pflicht für Klassenlehrkräfte:** Wer Klassenlehrkraft einer beteiligten Klasse ist, muss vorher
+seinen Plan freigeben oder seine Teilnahme absagen. Solange das fehlt, ist der Knopf gesperrt;
+darunter steht, wer noch fehlt, und in der Übersicht steht bei ihnen „Pflicht als
+Klassenlehrkraft“. Alle anderen Lehrkräfte dürfen fehlen.
+
+Die Rückfrage nennt, wer noch keine Angabe gemacht hat – diese Kollegen können sich nach dem
+Veröffentlichen nicht mehr anmelden. Gespeicherte, aber nicht freigegebene Pläne werden so
+veröffentlicht, wie sie sind. Wer abgesagt hat, erscheint bei den Eltern nicht.
 
 Danach heißt der Knopf **Info erneut senden** und verschickt die Mail noch einmal an alle.
 

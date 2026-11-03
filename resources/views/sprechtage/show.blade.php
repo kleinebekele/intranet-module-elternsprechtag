@@ -43,7 +43,13 @@
         <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
             <h2 class="text-base font-semibold text-gray-800">Veröffentlichen</h2>
             @php
-                $offeneLehrer = $lehrer->filter(fn ($z) => ! ($pl = $plaene->get($z['user']->id)) || (! $pl->freigegeben() && ! $pl->abgesagt()))->count();
+                // Pflicht: Klassenlehrer der beteiligten Klassen (freigegeben oder abgesagt). Alle anderen dürfen fehlen.
+                $pflichtFehlt = $sprechtag->info_versendet_am ? collect() : $lehrer->filter(fn ($z) => $z['pflichtFehlt']);
+                $ohnePlan = $lehrer->reject(fn ($z) => $plaene->has($z['user']->id))->count();
+                $nichtFreigegeben = $lehrer->filter(fn ($z) => $plaene->has($z['user']->id) && ! $z['angabe'])->count();
+                $frage = 'Mit der Veröffentlichung werden '.$eltern->count().' Eltern benachrichtigt. Danach können Lehrkräfte nichts mehr ändern.'
+                    .($ohnePlan > 0 ? ' '.$ohnePlan.' '.($ohnePlan === 1 ? 'Kollege hat' : 'Kollegen haben').' noch keine Angabe gemacht und '.($ohnePlan === 1 ? 'kann sich' : 'können sich').' dann nicht mehr für diesen Elternsprechtag anmelden.' : '')
+                    .($nichtFreigegeben > 0 ? ' '.$nichtFreigegeben.' '.($nichtFreigegeben === 1 ? 'Plan ist' : 'Pläne sind').' nicht freigegeben und '.($nichtFreigegeben === 1 ? 'wird' : 'werden').' so veröffentlicht, wie '.($nichtFreigegeben === 1 ? 'er gespeichert ist' : 'sie gespeichert sind').'.' : '');
             @endphp
             <p class="mt-1 text-sm text-gray-500">
                 Gibt die Termine aller Lehrer für die Eltern zur Buchung frei – danach können Lehrer ihre Pläne nicht mehr ändern.
@@ -57,10 +63,10 @@
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 @darfRoute('module.elternsprechtag.sprechtage.info')
                     <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
-                          data-bestaetigen="{{ $sprechtag->info_versendet_am ? 'Die Info ging schon am '.$sprechtag->info_versendet_am->format('d.m.Y').' raus. Wirklich NOCHMAL an '.$eltern->count().' Eltern verschicken?' : 'Termine veröffentlichen und '.$eltern->count().' Eltern informieren?'.($offeneLehrer > 0 ? ' '.$offeneLehrer.' Lehrer haben ihren Plan noch nicht freigegeben.' : '').' Danach können Lehrer nichts mehr ändern.' }}"
+                          data-bestaetigen="{{ $sprechtag->info_versendet_am ? 'Die Info ging schon am '.$sprechtag->info_versendet_am->format('d.m.Y').' raus. Wirklich NOCHMAL an '.$eltern->count().' Eltern verschicken?' : $frage }}"
                           data-titel="Veröffentlichen" data-knopf="Veröffentlichen">
                         @csrf
-                        <button type="submit" @disabled($eltern->isEmpty() || $sprechtag->tage->isEmpty())
+                        <button type="submit" @disabled($eltern->isEmpty() || $sprechtag->tage->isEmpty() || $pflichtFehlt->isNotEmpty())
                                 class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
                             {{ $sprechtag->info_versendet_am ? 'Info erneut senden' : 'Veröffentlichen' }}
                         </button>
@@ -70,6 +76,12 @@
                     <span class="text-sm text-green-700">✓ veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern</span>
                 @endif
             </div>
+            @if ($pflichtFehlt->isNotEmpty())
+                <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    Veröffentlichen geht erst, wenn alle Klassenlehrkräfte ihren Plan freigegeben oder ihre Teilnahme abgesagt haben. Es fehlen noch:
+                    <span class="font-medium">{{ $pflichtFehlt->map(fn ($z) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['user']->name).' ('.implode(', ', $z['klassenlehrer']).')')->join(' · ') }}</span>
+                </div>
+            @endif
 
             {{-- Vorschau der Info-Mail für ein bestimmtes Elternteil; eingeladene Eltern stehen oben. --}}
             @if ($eltern->isNotEmpty() && $sprechtag->tage->isNotEmpty())
@@ -144,6 +156,7 @@
                     <thead class="text-left text-xs uppercase text-gray-500">
                         <tr>
                             <th class="py-2 pr-4">Lehrer</th>
+                            <th class="py-2 pr-4">Klassenlehrer</th>
                             <th class="py-2 pr-4">Klassen</th>
                             <th class="py-2 pr-4">Stand</th>
                             <th class="py-2 pr-4">Tage</th>
@@ -162,7 +175,8 @@
                                     <a href="{{ route('module.elternsprechtag.plan.zeigen', [$sprechtag, 'lehrer' => $z['user']->id]) }}"
                                        class="font-medium text-indigo-700 hover:underline">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['user']->name) }}</a>
                                 </td>
-                                <td class="py-2 pr-4">{{ implode(', ', $z['klassen']) ?: 'keine' }}</td>
+                                <td class="py-2 pr-4 {{ $z['klassenlehrer'] ? 'font-medium text-gray-800' : 'text-gray-400' }}">{{ implode(', ', $z['klassenlehrer']) ?: '–' }}</td>
+                                <td class="py-2 pr-4">{{ implode(', ', $z['klassen']) ?: '–' }}</td>
                                 <td class="py-2 pr-4">
                                     @if (! $plan)
                                         <span class="text-red-600">noch nichts eingetragen</span>
@@ -176,6 +190,9 @@
                                     @else
                                         <span class="text-amber-700">nicht freigegeben</span>
                                     @endif
+                                    @if ($z['pflichtFehlt'] && ! $sprechtag->info_versendet_am)
+                                        <div class="text-xs font-medium text-red-700">Pflicht als Klassenlehrkraft</div>
+                                    @endif
                                 </td>
                                 <td class="py-2 pr-4">{{ $plan?->tage->count() ?? '–' }}</td>
                                 <td class="py-2 pr-4">{{ $plan ? $plan->termine->count().' / '.$plan->anzahlTermine() : '–' }}</td>
@@ -183,7 +200,7 @@
                                 <td class="py-2 pr-4">{{ $plan?->raum ?: '–' }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="py-3 text-gray-400">Keine Lehrer – Klassen wählen oder Linear-Abgleich prüfen.</td></tr>
+                            <tr><td colspan="8" class="py-3 text-gray-400">Keine Lehrer – Klassen wählen oder Linear-Abgleich prüfen.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

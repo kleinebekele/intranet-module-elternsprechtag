@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -79,27 +80,13 @@ class SprechtagController
     public function show(Sprechtag $sprechtag): View
     {
         $sprechtag->load('tage');
-        $klassen = $sprechtag->klassenListe();
-
-        $plaene = Plan::with(['tage', 'wuensche', 'termine', 'user.roles'])
-            ->where('sprechtag_id', $sprechtag->id)
-            ->get()
-            ->keyBy('user_id');
-
-        // Lehrer laut Linear plus alle, die selbst einen Plan angelegt haben;
-        // die Klassen je Lehrer sind seine eigene Wahl, sonst die Linear-Vorauswahl.
-        $lehrer = Klassen::lehrer($klassen)->pluck('user')
-            ->concat($plaene->pluck('user')->filter())
-            ->unique('id')
-            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
-            ->map(fn (User $u) => ['user' => $u, 'klassen' => Plan::klassenVon($plaene->get($u->id), $u, $sprechtag)])
-            ->values();
+        $plaene = $this->plaene($sprechtag);
 
         return view('elternsprechtag::sprechtage.show', [
             'sprechtag' => $sprechtag,
-            'lehrer' => $lehrer,
+            'lehrer' => $this->lehrer($sprechtag, $plaene),
             'plaene' => $plaene,
-            'eltern' => Klassen::eltern($klassen),
+            'eltern' => Klassen::eltern($sprechtag->klassenListe()),
             'einladungen' => InfoMail::einladungen($sprechtag),
         ]);
     }
@@ -111,6 +98,14 @@ class SprechtagController
 
         if ($sprechtag->tage->isEmpty() || $sprechtag->klassenListe() === []) {
             return back()->with('error', 'Erst Tage und Klassen eintragen.');
+        }
+
+        // Klassenlehrer der beteiligten Klassen müssen vor dem ersten Veröffentlichen
+        // freigegeben oder abgesagt haben; alle anderen dürfen fehlen.
+        $fehlend = $this->lehrer($sprechtag, $this->plaene($sprechtag))->filter(fn (array $z) => $z['pflichtFehlt']);
+        if (! $sprechtag->info_versendet_am && $fehlend->isNotEmpty()) {
+            return back()->with('error', 'Noch nicht möglich: Diese Klassenlehrkräfte haben ihren Plan weder freigegeben noch abgesagt – '
+                .$fehlend->map(fn (array $z) => Namen::anzeige($z['user']->name))->join(' · ').'.');
         }
 
         $empfaenger = Klassen::eltern($sprechtag->klassenListe())
@@ -158,6 +153,50 @@ class SprechtagController
             'html' => $mail['html'],
             'gesperrt' => $eltern->istGesperrt(),
         ]);
+    }
+
+    /** @return Collection<int, Plan>  Schlüssel = Lehrer-ID */
+    private function plaene(Sprechtag $sprechtag): Collection
+    {
+        return Plan::with(['tage', 'wuensche', 'termine', 'user.roles'])
+            ->where('sprechtag_id', $sprechtag->id)
+            ->get()
+            ->keyBy('user_id');
+    }
+
+    /**
+     * Lehrer laut Linear, Klassenlehrer der Klassen und alle, die selbst einen
+     * Plan angelegt haben. `klassen` ist die eigene Wahl (sonst die Linear-
+     * Vorauswahl) ohne die Klassen, für die er Klassenlehrer ist – die stehen in
+     * `klassenlehrer`. Für Klassenlehrer ist eine Angabe Pflicht: freigegeben
+     * oder abgesagt.
+     *
+     * @param  Collection<int, Plan>  $plaene
+     * @return Collection<int, array{user: User, klassen: list<string>, klassenlehrer: list<string>, angabe: bool, pflichtFehlt: bool}>
+     */
+    private function lehrer(Sprechtag $sprechtag, Collection $plaene): Collection
+    {
+        $klassen = $sprechtag->klassenListe();
+
+        return Klassen::lehrer($klassen)->pluck('user')
+            ->concat(Klassen::klassenlehrer($klassen))
+            ->concat($plaene->pluck('user')->filter())
+            ->unique('id')
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
+            ->map(function (User $u) use ($plaene, $sprechtag, $klassen) {
+                $plan = $plaene->get($u->id);
+                $klassenlehrer = Klassen::alsKlassenlehrer($u, $klassen);
+                $angabe = $plan !== null && ($plan->freigegeben() || $plan->abgesagt());
+
+                return [
+                    'user' => $u,
+                    'klassen' => array_values(array_diff(Plan::klassenVon($plan, $u, $sprechtag), $klassenlehrer)),
+                    'klassenlehrer' => $klassenlehrer,
+                    'angabe' => $angabe,
+                    'pflichtFehlt' => $klassenlehrer !== [] && ! $angabe,
+                ];
+            })
+            ->values();
     }
 
     private function formular(Sprechtag $sprechtag): View
