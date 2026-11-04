@@ -24,7 +24,9 @@
         }),
         // Gebuchte Slots je Tag: von → „Kind (Eltern)" fürs Einfärben.
         'gebucht' => $plan->termine->groupBy('tag_id')->map(fn ($ts) => $ts->mapWithKeys(fn ($t) => [
-            $t->von => trim($nv($t->kind?->name).' ('.($t->eltern ? $nv($t->eltern->name) : 'Eltern').')'),
+            $t->von => trim($nv($t->kind?->name).' ('.($t->eltern ? $nv($t->eltern->name) : 'Eltern').')')
+                .($t->gruppe ? ' · gemeinsam mit '.($team['partnerVon'][$t->gruppe] ?? '') : '')
+                .($t->allein ? ' · nur bei '.($fremd ? $nv($lehrer->name) : 'dir') : ''),
         ])),
     ];
     $gewaehlt = array_map('intval', old('wuensche', $wuensche->keys()->all()));
@@ -76,6 +78,11 @@
                                 <span class="font-medium tabular-nums text-gray-800">{{ $t->tag?->beschriftung() }} · {{ $t->von }}–{{ $t->bis }}</span>
                                 <span>{{ $nv($t->kind?->name) }}</span>
                                 <span class="text-gray-500">({{ $t->eltern ? $nv($t->eltern->name) : 'Eltern' }})</span>
+                                @if ($t->gruppe)
+                                    <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">gemeinsam mit {{ $team['partnerVon'][$t->gruppe] ?? '' }}</span>
+                                @elseif ($t->allein)
+                                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">nur hier – gemeinsam war nichts mehr frei</span>
+                                @endif
                                 @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
                                     <span class="text-amber-700">passt nicht mehr zu den Zeiten</span>
                                 @endunless
@@ -118,6 +125,23 @@
             @endif
         </span>
     </div>
+
+    {{-- Gemeinsam gedachte Gespräche, die nur bei einer Klassenlehrkraft frei waren – Hinweis für beide. --}}
+    @php $allein = $plan->termine->where('allein', true); @endphp
+    @if ($allein->isNotEmpty() || $team['beiPartner']->isNotEmpty())
+        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div class="font-semibold">Gemeinsame Gespräche, die nur bei einer Klassenlehrkraft möglich waren</div>
+            <p class="mt-0.5 text-xs">Es war keine Uhrzeit mehr frei, zu der alle Klassenlehrkräfte konnten – die Eltern haben deshalb bei einer gebucht.</p>
+            <ul class="mt-2 space-y-0.5">
+                @foreach ($allein->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von) as $t)
+                    <li>{{ $t->tag?->beschriftung() }}, {{ $t->von }} Uhr · {{ $nv($t->kind?->name) }} – <strong>bei {{ $fremd ? $nv($lehrer->name) : 'dir' }}</strong></li>
+                @endforeach
+                @foreach ($team['beiPartner'] as $t)
+                    <li>{{ $t->tag?->beschriftung() }}, {{ $t->von }} Uhr · {{ $nv($t->kind?->name) }} – <strong>nur bei {{ $nv($t->plan?->user?->name) }}</strong></li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     @unless ($darfAendern)
         <div class="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
@@ -172,6 +196,28 @@
                     <input type="number" name="vorbereitung_minuten" min="0" max="60" x-model.number="vorb" required
                            class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
             </div>
+            @foreach ($team['klassen'] as $klasse => $tk)
+                <div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 text-sm">
+                    <div class="font-semibold text-indigo-900">Gemeinsame Gespräche · Klasse {{ $klasse }}</div>
+                    <div class="text-gray-700">mit {{ $tk['partner']->map(fn ($u) => $nv($u->name))->join(' & ') }}</div>
+                    <div class="mt-2 space-y-1">
+                        @foreach (\Intranet\Modules\Elternsprechtag\Support\Team::MODI as $wert => $text)
+                            <label class="flex items-center gap-2">
+                                <input type="radio" name="team[{{ $klasse }}]" value="{{ $wert }}" @checked(old('team.'.$klasse, $tk['modus']) === $wert) class="border-gray-300">
+                                {{ $text }}
+                            </label>
+                        @endforeach
+                    </div>
+                    <p class="mt-2 text-xs text-gray-600">Gesprächsdauer und Vorbereitungszeit gelten für alle Klassenlehrkräfte der Klasse und werden beim Speichern übernommen. Beginn, Ende und Pausen bleiben eigene Sache – gemeinsam buchbar sind die Uhrzeiten, die bei allen gleich liegen.</p>
+                    <p class="mt-1 text-xs">
+                        @if ($tk['ohnePlan']->isNotEmpty())
+                            <span class="text-amber-700">{{ $tk['ohnePlan']->map(fn ($u) => $nv($u->name))->join(', ') }} {{ $tk['ohnePlan']->count() === 1 ? 'hat' : 'haben' }} noch keinen Plan.</span>
+                        @elseif ($tk['gemeinsam'] !== null)
+                            <span class="{{ $tk['gemeinsam'] > 0 ? 'text-gray-700' : 'text-amber-700' }}">Gemeinsame Uhrzeiten (gespeicherter Stand): <strong>{{ $tk['gemeinsam'] }}</strong></span>
+                        @endif
+                    </p>
+                </div>
+            @endforeach
             <label class="mt-3 block text-sm"><span class="text-gray-600">Raum</span>
                 <input type="text" name="raum" maxlength="255" value="{{ old('raum', $plan->raum) }}" placeholder="z. B. Klassenraum 7a"
                        class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>

@@ -19,7 +19,7 @@
     @forelse ($sprechtage as $eintrag)
         @php
             $s = $eintrag['sprechtag'];
-            $offen = \Intranet\Modules\Elternsprechtag\Support\Buchung::offen($s);
+            $offen = \Intranet\Modules\Elternsprechtag\Support\Buchung::offen($s, $eltern);
             $mitReitern = $offen || $verwaltung;
             // Start ist der Assistent; wer gerade von Hand gebucht oder abgesagt hat, bleibt auf „Manuelle Termine".
             $start = ! $mitReitern || session('elternsprechtag_reiter') === $s->id || old('plan_id') ? 'manuell' : 'assistent';
@@ -35,7 +35,11 @@
             @endif
             @unless ($offen)
                 <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                    Die Termine sind noch nicht veröffentlicht. Sie erhalten eine Nachricht, sobald es losgeht.
+                    @if ($s->veroeffentlicht() && $s->restFaelligAm())
+                        Die Buchung öffnet für Sie am {{ $s->restFaelligAm()->format('d.m.Y') }} um {{ $s->restFaelligAm()->format('H:i') }} Uhr.
+                    @else
+                        Die Termine sind noch nicht veröffentlicht. Sie erhalten eine Nachricht, sobald es losgeht.
+                    @endif
                     @if ($verwaltung)
                         <span class="text-amber-800">(Als Verwaltung kannst du trotzdem buchen.)</span>
                     @endif
@@ -77,25 +81,31 @@
                             <div class="rounded-lg px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : ($l['klassenlehrer'] ? 'bg-indigo-50/60' : '') }} {{ $l['klassenlehrer'] ? 'border-2 border-indigo-400 shadow-sm' : 'border '.($termin ? '' : 'border-gray-200') }}">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        @if ($l['klassenlehrer'])
+                                        @if ($l['klassenlehrer'] && ! $l['team'])
                                             <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Klassenlehrkraft</div>
                                         @endif
-                                        <div class="{{ $l['klassenlehrer'] ? 'text-base font-semibold' : 'font-medium' }} text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($plan->user->name) }}</div>
+                                        @if ($l['team'])
+                                            <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Klassenlehrkräfte · gemeinsames Gespräch</div>
+                                        @endif
+                                        <div class="{{ $l['klassenlehrer'] ? 'text-base font-semibold' : 'font-medium' }} text-gray-800">{{ $l['namen'] }}</div>
                                         @if ($plan->raum)
                                             <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
                                         @endif
                                     </div>
                                     @if ($l['wunsch'] && ! $termin)
-                                        <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">möchte Sie gern sprechen</span>
+                                        <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">{{ $l['team'] ? 'möchten' : 'möchte' }} Sie gern sprechen</span>
                                     @endif
                                 </div>
+                                @if ($l['ausweichen'] && ! $termin)
+                                    <p class="mt-2 text-xs text-amber-800">Ein gemeinsamer Termin ist nicht mehr frei. Sie können bei einer der Klassenlehrkräfte buchen – beide erfahren davon.</p>
+                                @endif
 
                                 @if ($termin)
                                     <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                                        <span class="font-medium text-green-800">Ihr Termin: {{ $termin->tag?->beschriftung() }}, {{ $termin->von }}–{{ $termin->bis }} Uhr</span>
+                                        <span class="font-medium text-green-800">Ihr Termin: {{ $termin->tag?->beschriftung() }}, {{ $termin->von }}–{{ $termin->bis }} Uhr @if ($l['team'] && ! $termin->gruppe) <span class="font-normal">(nur bei {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($l['team']->firstWhere('id', $termin->plan_id)?->user?->name) }})</span>@endif</span>
                                         @if ($darfBuchen)
                                             <form method="POST" action="{{ route('module.elternsprechtag.eltern.absagen', [$termin] + $als) }}"
-                                                  data-bestaetigen="Den Termin bei {{ $plan->user->name }} wirklich absagen?"
+                                                  data-bestaetigen="Den Termin bei {{ $l['namen'] }} wirklich absagen?"
                                                   data-titel="Termin absagen" data-knopf="Absagen">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
@@ -116,7 +126,8 @@
                                             @include('elternsprechtag::partials.suchauswahl', [
                                                 'name' => 'slot',
                                                 'optionen' => $freie->map(fn ($sl) => [
-                                                    'wert' => $sl['tag_id'].'|'.$sl['von'], 'text' => $sl['von'].'–'.$sl['bis'].' Uhr', 'gruppe' => $sl['tag'],
+                                                    'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
+                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''), 'gruppe' => $sl['tag'],
                                                 ])->values()->all(),
                                                 'leer' => 'Uhrzeit wählen …',
                                                 'breite' => 'w-56',

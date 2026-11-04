@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
+use Intranet\Modules\Elternsprechtag\Models\Klassenteam;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Termin;
@@ -18,6 +19,7 @@ use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Namen;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
 use Intranet\Modules\Elternsprechtag\Support\Slots;
+use Intranet\Modules\Elternsprechtag\Support\Team;
 
 /**
  * Terminplan eines Lehrers: Zeiten je Tag, Pausen, Gesprächslänge,
@@ -74,9 +76,16 @@ class PlanController
         $lehrer = $this->lehrer($request, $sprechtag);
         $sprechtag->load('tage');
 
-        $plan = Plan::with(['tage', 'wuensche', 'termine.tag', 'termine.kind', 'termine.eltern'])->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
+        $plan = Plan::with(['tage.tag', 'wuensche', 'termine.tag', 'termine.kind', 'termine.eltern'])->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
         $klassen = Plan::klassenVon($plan->exists ? $plan : null, $lehrer, $sprechtag);
         $planTage = $plan->tage->keyBy('tag_id');
+        $team = $this->teamDaten($plan, $lehrer, $sprechtag);
+
+        // Neuer Plan eines Klassenlehrers: Gesprächsdauer und Vorbereitung wie beim Partner.
+        if (! $plan->exists && ($vorlage = $team['partnerPlaene']->first())) {
+            $plan->slot_minuten = $vorlage->slot_minuten;
+            $plan->vorbereitung_minuten = $vorlage->vorbereitung_minuten;
+        }
 
         return view('elternsprechtag::plan.zeigen', [
             'sprechtag' => $sprechtag,
@@ -92,7 +101,48 @@ class PlanController
             'darfAendern' => Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer),
             'verwaltung' => Rechte::istVerwaltung($request->user()),
             'personen' => $this->allePersonen($request),
+            'team' => $team,
         ]);
+    }
+
+    /**
+     * Klassenlehrer-Team des Lehrers: Partner je Klasse, deren Pläne, Modus,
+     * Anzahl gemeinsamer Uhrzeiten, Partner-Namen je Termingruppe und die
+     * Termine, die nur bei einem Partner gebucht werden konnten.
+     *
+     * @return array{klassen: array, partnerPlaene: \Illuminate\Support\Collection, partnerVon: \Illuminate\Support\Collection, beiPartner: \Illuminate\Support\Collection}
+     */
+    private function teamDaten(Plan $plan, User $lehrer, Sprechtag $sprechtag): array
+    {
+        $partner = Team::partner($lehrer, $sprechtag);
+        $ids = collect($partner)->flatten()->pluck('id')->unique()->all();
+        $partnerPlaene = Plan::with(['tage.tag', 'termine', 'user'])
+            ->where('sprechtag_id', $sprechtag->id)->whereIn('user_id', $ids)->get();
+        $modi = Team::modi($sprechtag);
+
+        $klassen = [];
+        foreach ($partner as $klasse => $users) {
+            $plaene = $partnerPlaene->whereIn('user_id', $users->pluck('id'))->reject->abgesagt()->values();
+            $klassen[$klasse] = [
+                'partner' => $users,
+                'modus' => $modi[$klasse] ?? 'wunsch',
+                'ohnePlan' => $users->reject(fn (User $u) => $partnerPlaene->contains('user_id', $u->id)),
+                'gemeinsam' => $plan->exists && $plaene->isNotEmpty() ? count(Team::slots(collect([$plan])->concat($plaene), collect())) : null,
+            ];
+        }
+
+        $gruppen = $plan->termine->pluck('gruppe')->filter()->unique();
+        $partnerVon = $gruppen->isEmpty() ? collect() : Termin::with('plan.user')->whereIn('gruppe', $gruppen)->where('plan_id', '!=', $plan->id ?? 0)->get()
+            ->groupBy('gruppe')->map(fn ($ts) => $ts->map(fn ($t) => Namen::anzeige($t->plan?->user?->name))->join(' & '));
+
+        return [
+            'klassen' => $klassen,
+            'partnerPlaene' => $partnerPlaene,
+            'partnerVon' => $partnerVon,
+            'beiPartner' => Termin::with(['tag', 'kind', 'eltern', 'plan.user'])->where('allein', true)
+                ->whereIn('plan_id', $partnerPlaene->pluck('id'))->get()
+                ->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von)->values(),
+        ];
     }
 
     /** Terminliste zum Ausdrucken: je Tag alle Slots mit Kind und Eltern, dazu offene Gesprächswünsche. */
@@ -119,6 +169,7 @@ class PlanController
             ->sortBy(fn ($w) => Namen::schluessel($w->kind->name))->values();
 
         $datei = 'elternsprechtag-'.str($lehrer->name)->slug().'.pdf';
+        $team = $this->teamDaten($plan, $lehrer, $sprechtag);
 
         return \Barryvdh\DomPDF\Facade\Pdf::setOption('isFontSubsettingEnabled', true)->loadView('elternsprechtag::plan.pdf', [
             'sprechtag' => $sprechtag,
@@ -127,6 +178,8 @@ class PlanController
             'tage' => $tage,
             'wuensche' => $plan->wuensche->pluck('kind_user_id')->all(),
             'offeneWuensche' => $offeneWuensche,
+            'partnerVon' => $team['partnerVon'],
+            'beiPartner' => $team['beiPartner'],
         ])->download($datei);
     }
 
@@ -153,6 +206,8 @@ class PlanController
             'wuensche.*' => ['integer'],
             'notiz' => ['array'],
             'notiz.*' => ['nullable', 'string', 'max:255'],
+            'team' => ['array'],
+            'team.*' => [Rule::in(array_keys(Team::MODI))],
         ], [
             '*.date_format' => 'Uhrzeiten bitte als HH:MM.',
         ]);
@@ -168,13 +223,25 @@ class PlanController
             return back()->withErrors($fehler)->withInput();
         }
 
+        // Klassenlehrer-Team: Gesprächsdauer und Vorbereitung gelten für alle Partner.
+        $partner = Team::partner($lehrer, $sprechtag);
+        $partnerPlaene = Plan::with(['termine', 'user'])->where('sprechtag_id', $sprechtag->id)
+            ->whereIn('user_id', collect($partner)->flatten()->pluck('id')->unique())->get();
+        $anders = $partnerPlaene->filter(fn (Plan $p) => (int) $p->slot_minuten !== (int) $daten['slot_minuten']
+            || (int) $p->vorbereitung_minuten !== (int) $daten['vorbereitung_minuten']);
+        if ($gebucht = $anders->first(fn (Plan $p) => $p->termine->isNotEmpty())) {
+            return back()->withInput()->withErrors(['slot_minuten' => 'Gesprächsdauer und Vorbereitungszeit gelten auch für '
+                .Namen::anzeige($gebucht->user?->name).' – dort sind schon Termine gebucht. Bitte die bisherigen Werte lassen ('
+                .$gebucht->slot_minuten.' / '.$gebucht->vorbereitung_minuten.' Min.).']);
+        }
+
         $klassen = array_values(array_unique($daten['klassen'] ?? []));
 
         // Wünsche nur für Kinder aus den gewählten Klassen.
         $erlaubt = Klassen::kinder($klassen)->map(fn ($z) => $z['kind']->id)->all();
         $wuensche = array_values(array_intersect(array_map('intval', $daten['wuensche'] ?? []), $erlaubt));
 
-        DB::transaction(function () use ($sprechtag, $lehrer, $daten, $tagIds, $wuensche, $klassen, $request) {
+        DB::transaction(function () use ($sprechtag, $lehrer, $daten, $tagIds, $wuensche, $klassen, $request, $partner, $anders) {
             $plan = Plan::firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
             $plan->fill([
                 'abgeschlossen_am' => $request->boolean('freigeben') ? ($plan->abgeschlossen_am ?? now()) : $plan->abgeschlossen_am,
@@ -203,6 +270,13 @@ class PlanController
             $plan->wuensche()->whereNotIn('kind_user_id', $wuensche)->delete();
             foreach ($wuensche as $kindId) {
                 $plan->wuensche()->updateOrCreate(['kind_user_id' => $kindId], ['notiz' => $daten['notiz'][$kindId] ?? null]);
+            }
+
+            foreach ($anders as $p) {
+                $p->update(['slot_minuten' => $daten['slot_minuten'], 'vorbereitung_minuten' => $daten['vorbereitung_minuten']]);
+            }
+            foreach (array_intersect_key($daten['team'] ?? [], $partner) as $klasse => $modus) {
+                Klassenteam::updateOrCreate(['sprechtag_id' => $sprechtag->id, 'klasse' => (string) $klasse], ['modus' => $modus]);
             }
         });
 
@@ -301,11 +375,15 @@ class PlanController
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $meldung);
     }
 
-    /** Termin löschen, Eltern per Mail benachrichtigen; true, wenn die Mail rausging. */
+    /**
+     * Termin löschen – bei einem gemeinsamen Gespräch für alle Klassenlehrer –
+     * und die Eltern per Mail benachrichtigen; true, wenn die Mail rausging.
+     */
     private function terminAbsagen(Termin $termin, Sprechtag $sprechtag, User $lehrer, VorlagenMailer $mailer): bool
     {
         $text = $termin->beschriftung();
-        $termin->delete();
+        $namen = $termin->gruppeTermine()->map(fn (Termin $t) => $t->plan?->user?->name)->filter()->join(' und ') ?: $lehrer->name;
+        $termin->absagenMitGruppe();
 
         $eltern = $termin->eltern;
         $benachrichtigt = false;
@@ -313,7 +391,7 @@ class PlanController
             $werte = [
                 'name' => $eltern->name,
                 'sprechtag' => $sprechtag->titel,
-                'lehrer' => $lehrer->name,
+                'lehrer' => $namen,
                 'kind' => (string) $termin->kind?->name,
                 'termin' => $text,
                 'link' => route('module.elternsprechtag.eltern.index'),

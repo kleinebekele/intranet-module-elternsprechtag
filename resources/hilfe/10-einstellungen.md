@@ -55,11 +55,22 @@ seinen Plan freigeben oder seine Teilnahme absagen. Solange das fehlt, ist der K
 darunter steht, wer noch fehlt, und in der Übersicht steht bei ihnen „Pflicht als
 Klassenlehrkraft“. Alle anderen Lehrkräfte dürfen fehlen.
 
+**Vorsprung für persönlich eingeladene Eltern** (Standard 60 Minuten): Eltern, mit denen eine
+Lehrkraft unbedingt sprechen möchte, bekommen die Mail sofort und können so lange allein buchen.
+Alle anderen Eltern bekommen die Mail danach automatisch, und erst dann öffnet die Buchung für
+sie. 0 = alle sofort. Neben „veröffentlicht“ steht, wann die übrigen Eltern folgen.
+
 Die Rückfrage nennt, wer noch keine Angabe gemacht hat – diese Kollegen können sich nach dem
 Veröffentlichen nicht mehr anmelden. Gespeicherte, aber nicht freigegebene Pläne werden so
 veröffentlicht, wie sie sind. Wer abgesagt hat, erscheint bei den Eltern nicht.
 
-Danach heißt der Knopf **Info erneut senden** und verschickt die Mail noch einmal an alle.
+Danach heißt der Knopf **Info erneut senden** und verschickt die Mail sofort noch einmal an alle.
+
+## Gemeinsame Gespräche der Klassenlehrkräfte
+
+Hat eine Klasse zwei Klassenlehrkräfte, führen sie gewünschte Gespräche (oder auf Wunsch alle)
+gemeinsam. Das stellen die beiden in ihrem Terminplan ein; Eltern buchen sie dann als einen
+Termin. Einzelheiten stehen in der Hilfe zu „Mein Terminplan“.
 
 ### Vorschau und persönliche Einladung
 

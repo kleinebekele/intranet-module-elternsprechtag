@@ -18,10 +18,18 @@ use Intranet\Modules\Elternsprechtag\Models\Termin;
  */
 class Buchung
 {
-    /** Eltern buchen selbst, sobald der Sprechtag veröffentlicht ist und bis er vorbei ist. */
-    public static function offen(Sprechtag $sprechtag): bool
+    /**
+     * Eltern buchen selbst, sobald der Sprechtag veröffentlicht ist und bis er
+     * vorbei ist. Persönlich eingeladene Eltern sofort, alle anderen erst nach
+     * dem Vorsprung (Sprechtag::fuerAlleOffen()).
+     */
+    public static function offen(Sprechtag $sprechtag, ?User $eltern = null): bool
     {
-        return $sprechtag->veroeffentlicht() && ! $sprechtag->vorbei();
+        if (! $sprechtag->veroeffentlicht() || $sprechtag->vorbei()) {
+            return false;
+        }
+
+        return $sprechtag->fuerAlleOffen() || ($eltern !== null && InfoMail::einladungen($sprechtag)->has($eltern->id));
     }
 
     /** Kinder des Elternteils, die in einer Klasse des Sprechtags sind. */
@@ -54,12 +62,15 @@ class Buchung
             ->filter(fn (Plan $p) => $p->user !== null && $p->tage->isNotEmpty() && ! $p->abgesagt());
 
         $familie = self::familienTermine($kinder->pluck('kind.id')->all(), $sprechtag);
+        $teams = Team::alle($sprechtag, $plaene);
 
-        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie) {
+        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie, $teams) {
             $kid = $z['kind']->id;
+            $team = self::team($z, $teams);
 
             $lehrer = $plaene
                 ->filter(fn (Plan $p) => array_intersect($z['klassen'], Plan::klassenVon($p, $p->user, $sprechtag)) !== [])
+                ->reject(fn (Plan $p) => $team && $team->contains('id', $p->id))
                 ->sortBy(fn (Plan $p) => (Klassen::istKlassenlehrer($p->user, $z['klassen']) ? '0' : '1').Namen::schluessel($p->user->name))
                 ->map(function (Plan $p) use ($kid, $familie, $z) {
                     $termin = $p->termine->firstWhere('kind_user_id', $kid);
@@ -67,16 +78,61 @@ class Buchung
 
                     return [
                         'plan' => $p,
+                        'team' => null,
+                        'namen' => Namen::anzeige($p->user->name),
                         'termin' => $termin,
                         'klassenlehrer' => Klassen::istKlassenlehrer($p->user, $z['klassen']),
                         'wunsch' => $p->wuensche->firstWhere('kind_user_id', $kid),
                         'slots' => self::slots($p, $andere),
+                        'ausweichen' => false,
                     ];
                 })
                 ->values();
 
+            if ($team) {
+                $termine = $team->map(fn (Plan $p) => $p->termine->firstWhere('kind_user_id', $kid))->filter();
+                $andere = $familie->reject(fn (Termin $t) => $termine->contains('id', $t->id));
+                $slots = Team::slots($team, $andere);
+                // Keine gemeinsame Uhrzeit mehr frei: die freien Zeiten jedes
+                // Einzelnen anbieten – gebucht wird dann nur bei diesem.
+                $ausweichen = ! collect($slots)->contains('frei', true);
+                if ($ausweichen) {
+                    $slots = Team::einzelSlots($team, $andere);
+                }
+                $lehrer->prepend([
+                    'plan' => $team->first(),
+                    'team' => $team,
+                    'namen' => Team::namen($team),
+                    'termin' => $termine->first(),
+                    'klassenlehrer' => true,
+                    'wunsch' => $team->map(fn (Plan $p) => $p->wuensche->firstWhere('kind_user_id', $kid))->filter()->first(),
+                    'slots' => $slots,
+                    'ausweichen' => $ausweichen,
+                ]);
+            }
+
             return $z + ['lehrer' => $lehrer];
         });
+    }
+
+    /**
+     * Die Klassenlehrer-Pläne, wenn das Gespräch über dieses Kind gemeinsam
+     * geführt wird (Modus `alle` oder ein Gesprächswunsch eines von ihnen).
+     *
+     * @param  array<string, array{modus: string, plaene: Collection<int, Plan>}>  $teams
+     * @return Collection<int, Plan>|null
+     */
+    private static function team(array $z, array $teams): ?Collection
+    {
+        $kid = $z['kind']->id;
+        foreach ($z['klassen'] as $klasse) {
+            $t = $teams[$klasse] ?? null;
+            if ($t && ($t['modus'] === 'alle' || $t['plaene']->contains(fn (Plan $p) => $p->wuensche->contains('kind_user_id', $kid)))) {
+                return $t['plaene'];
+            }
+        }
+
+        return null;
     }
 
     /**

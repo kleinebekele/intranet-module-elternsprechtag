@@ -7,6 +7,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
@@ -53,15 +54,15 @@ class ElternController
         $daten = $request->validate([
             'plan_id' => ['required', 'integer'],
             'kind_id' => ['required', 'integer'],
-            'slot' => ['required', 'string', 'regex:/^\d+\|\d{2}:\d{2}$/'],
+            'slot' => ['required', 'string', 'regex:/^\d+\|\d{2}:\d{2}(\|\d+)?$/'],
         ], ['slot.required' => 'Bitte eine Uhrzeit auswählen.']);
 
-        if (! $verwaltung && ! Buchung::offen($sprechtag)) {
-            return $this->zurueck($request, $eltern)->with('error', 'Die Termine sind noch nicht veröffentlicht.');
+        if (! $verwaltung && ! Buchung::offen($sprechtag, $eltern)) {
+            return $this->zurueck($request, $eltern)->with('error', 'Die Buchung ist für Sie noch nicht geöffnet.');
         }
 
-        [$tagId, $von] = explode('|', $daten['slot']);
-        $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, (int) $daten['plan_id'], (int) $daten['kind_id'], (int) $tagId, $von);
+        [$tagId, $von, $nurPlan] = explode('|', $daten['slot']) + [2 => null];
+        $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, (int) $daten['plan_id'], (int) $daten['kind_id'], (int) $tagId, $von, $nurPlan !== null ? (int) $nurPlan : null);
         abort_if($ergebnis === null, 404);
 
         return $this->zurueckManuell($request, $eltern, $sprechtag)->with($ergebnis[0] ? 'status' : 'error', $ergebnis[1]);
@@ -115,7 +116,7 @@ class ElternController
                     }
 
                     return (! $f[0] || $s['von'] >= $f[0]) && (! $f[1] || $s['bis'] <= $f[1]);
-                })->map(fn ($s) => array_intersect_key($s, array_flip(['tag_id', 'tag', 'von', 'bis'])))->values()->all();
+                })->map(fn ($s) => array_intersect_key($s, array_flip(['tag_id', 'tag', 'von', 'bis', 'plan', 'nur'])))->values()->all();
                 $wuensche[] = ['key' => $key, 'prio' => $prio, 'lehrer' => $l['plan']->user_id, 'slots' => $slots];
             }
         }
@@ -134,8 +135,8 @@ class ElternController
     public function vorschlagBuchen(Request $request, Sprechtag $sprechtag): RedirectResponse
     {
         $eltern = $this->eltern($request);
-        if (! Rechte::istVerwaltung($request->user()) && ! Buchung::offen($sprechtag)) {
-            return $this->zurueck($request, $eltern)->with('error', 'Die Termine sind noch nicht veröffentlicht.');
+        if (! Rechte::istVerwaltung($request->user()) && ! Buchung::offen($sprechtag, $eltern)) {
+            return $this->zurueck($request, $eltern)->with('error', 'Die Buchung ist für Sie noch nicht geöffnet.');
         }
 
         $vorschlag = session($this->vorschlagSchluessel($sprechtag, $eltern));
@@ -157,7 +158,7 @@ class ElternController
             if (Termin::where(['plan_id' => $planId, 'kind_user_id' => $kindId, 'tag_id' => (int) $p['slot']['tag_id'], 'von' => $p['slot']['von']])->exists()) {
                 continue;
             }
-            $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, $planId, $kindId, (int) $p['slot']['tag_id'], $p['slot']['von']);
+            $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, $planId, $kindId, (int) $p['slot']['tag_id'], $p['slot']['von'], $p['slot']['plan'] ?? null);
             if ($ergebnis && $ergebnis[0]) {
                 $gebucht++;
             } else {
@@ -175,51 +176,61 @@ class ElternController
 
     /**
      * Einen Termin buchen bzw. umbuchen – gemeinsame Regeln für den Knopf je
-     * Lehrer und für „Alle buchen". null = gehört nicht zu diesem Elternteil.
+     * Lehrer und für den Assistenten. Gebucht wird nur, was Buchung::angebot()
+     * dem Elternteil anbietet; bei einem gemeinsamen Gespräch der Klassenlehrer
+     * entsteht je Plan ein Termin mit derselben Gruppe. Ist dort keine
+     * gemeinsame Uhrzeit mehr frei, nennt $nurPlan den Klassenlehrer, bei dem
+     * allein gebucht wird. null = gehört nicht zu diesem Elternteil.
      *
      * @return array{0: bool, 1: string}|null
      */
-    private function einenBuchen(Request $request, User $eltern, Sprechtag $sprechtag, int $planId, int $kindId, int $tagId, string $von): ?array
+    private function einenBuchen(Request $request, User $eltern, Sprechtag $sprechtag, int $planId, int $kindId, int $tagId, string $von, ?int $nurPlan = null): ?array
     {
-        $kind = Buchung::kinder($eltern, $sprechtag)->first(fn ($z) => $z['kind']->id === $kindId);
-        $plan = Plan::with(['user.roles', 'tage.tag', 'termine'])
-            ->where('sprechtag_id', $sprechtag->id)->find($planId);
-        if ($kind === null || $plan === null || $plan->user === null || $plan->abgesagt()
-            || array_intersect($kind['klassen'], Plan::klassenVon($plan, $plan->user, $sprechtag)) === []) {
+        $eintrag = Buchung::angebot($eltern, $sprechtag)->first(fn ($z) => $z['kind']->id === $kindId)['lehrer']
+            ?->first(fn ($l) => $l['plan']->id === $planId);
+        if ($eintrag === null) {
             return null;
         }
 
-        $alt = $plan->termine->firstWhere('kind_user_id', $kind['kind']->id);
-        $andere = Buchung::familienTermine(Buchung::kinder($eltern, $sprechtag)->pluck('kind.id')->all(), $sprechtag)
-            ->reject(fn (Termin $t) => $alt && $t->id === $alt->id);
-        $slot = collect(Buchung::slots($plan, $andere))->first(fn ($s) => $s['tag_id'] === $tagId && $s['von'] === $von);
+        $alle = $eintrag['team'] ?? collect([$eintrag['plan']]);
+        $alt = Termin::whereIn('plan_id', $alle->pluck('id'))->where('kind_user_id', $kindId)->get();
+        $slot = collect($eintrag['slots'])->first(fn ($s) => $s['tag_id'] === $tagId && $s['von'] === $von && ($s['plan'] ?? null) === $nurPlan);
+        $allein = $slot !== null && isset($slot['plan']);
+        $plaene = $allein ? $alle->where('id', $slot['plan'])->values() : $alle;
+        $gleich = $alt->count() === $plaene->count() && $alt->every(fn (Termin $t) => (int) $t->tag_id === $tagId && $t->von === $von);
 
-        if ($slot === null || (! $slot['frei'] && ! ($alt && (int) $alt->tag_id === $tagId && $alt->von === $von))) {
+        if ($slot === null || (! $slot['frei'] && ! $gleich)) {
             return [false, 'Diese Uhrzeit ist nicht mehr frei oder überschneidet sich mit einem anderen Ihrer Termine.'];
         }
 
         try {
-            DB::transaction(function () use ($alt, $plan, $tagId, $slot, $kind, $eltern, $request) {
-                $alt?->delete();
-                Termin::create([
-                    'plan_id' => $plan->id,
-                    'tag_id' => $tagId,
-                    'von' => $slot['von'],
-                    'bis' => $slot['bis'],
-                    'kind_user_id' => $kind['kind']->id,
-                    'eltern_user_id' => $eltern->id,
-                    'gebucht_von' => $request->user()->id,
-                ]);
+            DB::transaction(function () use ($alt, $plaene, $tagId, $slot, $kindId, $eltern, $request, $allein) {
+                // Auch die Gruppen-Partner eines alten gemeinsamen Termins mitnehmen.
+                $alt->each(fn (Termin $t) => $t->absagenMitGruppe());
+                $gruppe = $plaene->count() > 1 ? (string) Str::uuid() : null;
+                foreach ($plaene as $plan) {
+                    Termin::create([
+                        'plan_id' => $plan->id,
+                        'tag_id' => $tagId,
+                        'von' => $slot['von'],
+                        'bis' => $slot['bis'],
+                        'kind_user_id' => $kindId,
+                        'eltern_user_id' => $eltern->id,
+                        'gebucht_von' => $request->user()->id,
+                        'gruppe' => $gruppe,
+                        'allein' => $allein,
+                    ]);
+                }
             });
         } catch (UniqueConstraintViolationException) {
             return [false, 'Diese Uhrzeit wurde gerade vergeben. Bitte eine andere wählen.'];
         }
 
         $this->audit('elternsprechtag.termin', $sprechtag, $eltern, [
-            'lehrer' => $plan->user_id, 'kind' => $kind['kind']->id, 'slot' => $tagId.'|'.$von, 'umgebucht' => $alt !== null,
+            'lehrer' => $plaene->pluck('user_id')->all(), 'kind' => $kindId, 'slot' => $tagId.'|'.$von, 'umgebucht' => $alt->isNotEmpty(), 'allein' => $allein,
         ]);
 
-        return [true, 'Termin bei '.$plan->user->name.' gebucht: '.$slot['tag'].', '.$slot['von'].' Uhr.'];
+        return [true, 'Termin bei '.($allein ? $slot['nur'] : $eintrag['namen']).' gebucht: '.$slot['tag'].', '.$slot['von'].' Uhr.'];
     }
 
     private function vorschlagSchluessel(Sprechtag $sprechtag, User $eltern): string
@@ -241,8 +252,9 @@ class ElternController
         }
 
         $text = $termin->beschriftung();
-        $termin->delete();
-        $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $termin->plan->user_id, 'kind' => $termin->kind_user_id]);
+        $lehrer = $termin->gruppeTermine()->pluck('plan.user_id')->all();
+        $termin->absagenMitGruppe();
+        $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $lehrer, 'kind' => $termin->kind_user_id]);
 
         return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', 'Termin abgesagt: '.$text.'.');
     }

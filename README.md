@@ -18,6 +18,16 @@ Modul für die modulare Intranet-Plattform (Waldorfschule).
   **„Teilnahme absagen"** (mit Grund für die Verwaltung): Plan verschwindet für die Eltern, alle
   gebuchten Termine werden mit Mail abgesagt; „Doch teilnehmen" macht es rückgängig.
 
+**Gemeinsame Gespräche:** Hat eine Klasse mehrere Klassenlehrer, führen sie die gewünschten
+Gespräche (Einstellung je Klasse: `wunsch` oder `alle`, Tabelle `elternsprechtag_klassenteams`)
+gemeinsam: Gesprächsdauer und Vorbereitung gelten für alle, Zeiten und Pausen bleiben eigen.
+Eltern buchen eine Karte, je Plan entsteht ein Termin mit derselben `gruppe`. Ist keine
+gemeinsame Uhrzeit mehr frei, wird bei einem allein gebucht (`allein`), beide sehen einen Hinweis.
+
+**Vorsprung:** Persönlich eingeladene Eltern bekommen die Info sofort und dürfen buchen, alle
+anderen nach `vorsprung_minuten` (Standard 60). Die zweite Welle verschickt der Scheduler-Task
+`elternsprechtag:info-nachsenden` (jede Minute).
+
 ## Datenquelle
 
 Klassen, Lehrer, Schüler und Eltern kommen aus den Rollen des Linear-Abgleichs

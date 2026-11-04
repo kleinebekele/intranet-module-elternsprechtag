@@ -9,7 +9,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
@@ -108,32 +107,26 @@ class SprechtagController
                 .$fehlend->map(fn (array $z) => Namen::anzeige($z['user']->name))->join(' · ').'.');
         }
 
-        $empfaenger = Klassen::eltern($sprechtag->klassenListe())
-            ->reject(fn (User $u) => $u->istGesperrt() || blank($u->email));
+        // Erneut senden: an alle sofort. Erstes Veröffentlichen: zuerst die persönlich
+        // eingeladenen Eltern, die übrigen nach dem Vorsprung (Command info-nachsenden).
+        $erneut = $sprechtag->info_versendet_am !== null;
+        $vorsprung = $erneut ? 0 : (int) $request->validate(['vorsprung_minuten' => ['nullable', 'integer', 'min:0', 'max:1440']])['vorsprung_minuten'];
+        $alleJetzt = $erneut || $vorsprung === 0;
 
-        $einladungen = InfoMail::einladungen($sprechtag);
+        [$gesendet, $fehler] = InfoMail::versenden($sprechtag, $mailer, $alleJetzt ? InfoMail::empfaenger($sprechtag) : InfoMail::eingeladene($sprechtag));
 
-        $gesendet = 0;
-        $fehler = 0;
-        foreach ($empfaenger as $u) {
-            [$html, $text] = InfoMail::werte($sprechtag, $u, $einladungen->get($u->id, []));
+        $sprechtag->update($erneut ? ['info_empfaenger' => $gesendet, 'info_rest_versendet_am' => $sprechtag->info_rest_versendet_am ?? now()] : [
+            'info_versendet_am' => now(),
+            'info_empfaenger' => $gesendet,
+            'vorsprung_minuten' => $vorsprung,
+            'info_rest_versendet_am' => $alleJetzt ? now() : null,
+        ]);
+        $this->audit('elternsprechtag.info', $sprechtag, ['empfaenger' => $gesendet, 'fehler' => $fehler, 'vorsprung' => $alleJetzt ? 0 : $vorsprung]);
 
-            try {
-                $mailer->senden(
-                    ElternsprechtagServiceProvider::VORLAGE_INFO, $u->email, $html, $text,
-                    quelle: 'Elternsprechtag-Info', referenz: 'elternsprechtag:'.$sprechtag->id.':'.$u->id, modul: 'Elternsprechtag',
-                );
-                $gesendet++;
-            } catch (\Throwable $e) {
-                $fehler++;
-                Log::warning('Elternsprechtag-Info nicht verschickt.', ['user' => $u->id, 'fehler' => $e->getMessage()]);
-            }
-        }
+        $rest = $alleJetzt ? 0 : InfoMail::uebrige($sprechtag)->count();
 
-        $sprechtag->update(['info_versendet_am' => now(), 'info_empfaenger' => $gesendet]);
-        $this->audit('elternsprechtag.info', $sprechtag, ['empfaenger' => $gesendet, 'fehler' => $fehler]);
-
-        return back()->with('status', "Termine veröffentlicht. Info an {$gesendet} Eltern in den Ausgangskorb gelegt."
+        return back()->with('status', ($erneut ? 'Info erneut' : 'Termine veröffentlicht. Info').' an '.$gesendet.($alleJetzt ? '' : ' persönlich eingeladene').' Eltern in den Ausgangskorb gelegt.'
+            .($rest > 0 ? ' Die übrigen '.$rest.' Eltern folgen um '.$sprechtag->restFaelligAm()->format('H:i').' Uhr.' : '')
             .($fehler > 0 ? " {$fehler} fehlgeschlagen (siehe Log)." : ''));
     }
 

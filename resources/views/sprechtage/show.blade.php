@@ -47,7 +47,7 @@
                 $pflichtFehlt = $sprechtag->info_versendet_am ? collect() : $lehrer->filter(fn ($z) => $z['pflichtFehlt']);
                 $ohnePlan = $lehrer->reject(fn ($z) => $plaene->has($z['user']->id))->count();
                 $nichtFreigegeben = $lehrer->filter(fn ($z) => $plaene->has($z['user']->id) && ! $z['angabe'])->count();
-                $frage = 'Mit der Veröffentlichung werden '.$eltern->count().' Eltern benachrichtigt. Danach können Lehrkräfte nichts mehr ändern.'
+                $frage = 'Mit der Veröffentlichung werden '.$eltern->count().' Eltern benachrichtigt – persönlich eingeladene sofort, alle anderen nach dem eingestellten Vorsprung. Danach können Lehrkräfte nichts mehr ändern.'
                     .($ohnePlan > 0 ? ' '.$ohnePlan.' '.($ohnePlan === 1 ? 'Kollege hat' : 'Kollegen haben').' noch keine Angabe gemacht und '.($ohnePlan === 1 ? 'kann sich' : 'können sich').' dann nicht mehr für diesen Elternsprechtag anmelden.' : '')
                     .($nichtFreigegeben > 0 ? ' '.$nichtFreigegeben.' '.($nichtFreigegeben === 1 ? 'Plan ist' : 'Pläne sind').' nicht freigegeben und '.($nichtFreigegeben === 1 ? 'wird' : 'werden').' so veröffentlicht, wie '.($nichtFreigegeben === 1 ? 'er gespeichert ist' : 'sie gespeichert sind').'.' : '');
             @endphp
@@ -62,10 +62,17 @@
             @endif
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 @darfRoute('module.elternsprechtag.sprechtage.info')
-                    <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
+                    <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}" class="flex flex-wrap items-center gap-3"
                           data-bestaetigen="{{ $sprechtag->info_versendet_am ? 'Die Info ging schon am '.$sprechtag->info_versendet_am->format('d.m.Y').' raus. Wirklich NOCHMAL an '.$eltern->count().' Eltern verschicken?' : $frage }}"
                           data-titel="Veröffentlichen" data-knopf="Veröffentlichen">
                         @csrf
+                        @unless ($sprechtag->info_versendet_am)
+                            <label class="flex items-center gap-2 text-sm text-gray-700" title="Persönlich eingeladene Eltern bekommen die Mail sofort und können so lange allein buchen; alle anderen danach.">
+                                Vorsprung für persönlich eingeladene Eltern
+                                <input type="number" name="vorsprung_minuten" min="0" max="1440" step="5" value="{{ old('vorsprung_minuten', $sprechtag->vorsprung_minuten ?? 60) }}"
+                                       class="w-20 rounded-lg border-gray-300 py-1 text-sm"> Min.
+                            </label>
+                        @endunless
                         <button type="submit" @disabled($eltern->isEmpty() || $sprechtag->tage->isEmpty() || $pflichtFehlt->isNotEmpty())
                                 class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
                             {{ $sprechtag->info_versendet_am ? 'Info erneut senden' : 'Veröffentlichen' }}
@@ -73,7 +80,11 @@
                     </form>
                 @enddarfRoute
                 @if ($sprechtag->info_versendet_am)
-                    <span class="text-sm text-green-700">✓ veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern</span>
+                    <span class="text-sm text-green-700">✓ veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern
+                        @if (! $sprechtag->info_rest_versendet_am)
+                            <span class="text-amber-700">· übrige Eltern folgen um {{ $sprechtag->restFaelligAm()->format('H:i') }} Uhr</span>
+                        @endif
+                    </span>
                 @endif
             </div>
             @if ($pflichtFehlt->isNotEmpty())

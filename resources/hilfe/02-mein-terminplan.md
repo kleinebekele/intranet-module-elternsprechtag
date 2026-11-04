@@ -37,6 +37,28 @@ Je Tag des Sprechtags:
 Rechts siehst du sofort, welche Termine sich daraus ergeben. Ein Gespräch, das in eine Pause
 ragen würde, rückt hinter die Pause; eines, das über das Ende hinausginge, entfällt.
 
+## Gemeinsame Gespräche mit der zweiten Klassenlehrkraft
+
+Hat deine Klasse zwei Klassenlehrkräfte, steht im linken Kasten **Gemeinsame Gespräche**. Dort
+legt ihr fest, welche Gespräche ihr zusammen führt:
+
+- **Nur Gespräche, die eine/r von uns wünscht** (Standard): Kinder, die eine von euch unter
+  „Mit diesen Eltern möchte ich unbedingt sprechen“ angehakt hat. Alle anderen Eltern buchen
+  euch einzeln.
+- **Alle Gespräche der Klasse.**
+
+Die Einstellung gilt für euch beide – wer zuletzt speichert, legt sie fest. **Gesprächsdauer und
+Vorbereitungszeit** sind für euch gleich und werden beim Speichern für beide übernommen. Beginn,
+Ende und Pausen trägt jede selbst ein. Gemeinsam buchbar sind die Uhrzeiten, die bei euch beiden
+genau gleich liegen; der Kasten zeigt, wie viele das sind.
+
+Die Eltern sehen euch als eine Karte und buchen einmal – der Termin steht dann in beiden Plänen,
+in der Liste mit „gemeinsam mit …“. Sagt eine von euch ab, fällt der Termin für beide weg.
+
+Ist keine gemeinsame Uhrzeit mehr frei, können die Eltern bei einer von euch allein buchen. Dann
+steht oben auf der Seite bei euch beiden ein gelber Hinweis, welches Gespräch nur bei wem
+stattfindet – auch in der PDF-Terminliste.
+
 ## Mit diesen Eltern möchte ich unbedingt sprechen
 
 Zum Aufklappen. Hak die Kinder an, mit deren Eltern du auf jeden Fall sprechen willst. Die Eltern

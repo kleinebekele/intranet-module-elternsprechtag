@@ -9,7 +9,7 @@
     $eingaben = $vorschlag['eingaben'] ?? [];
     $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->map(fn ($l) => [
         'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
-        'klassenlehrer' => $l['klassenlehrer'],
+        'klassenlehrer' => $l['klassenlehrer'], 'namen' => $l['namen'], 'team' => $l['team'],
     ]))->sortBy(fn ($p) => $p['klassenlehrer'] ? 0 : 1)->keyBy('key');
     $prioText = [1 => 'unbedingt', 2 => 'gern', 3 => 'wenn es passt'];
     $prioFarbe = [1 => 'bg-indigo-600 text-white', 2 => 'bg-indigo-100 text-indigo-800', 3 => 'bg-gray-100 text-gray-700'];
@@ -30,9 +30,9 @@
                 @foreach ($paare as $key => $p)
                     <div class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 {{ $p['termin'] ? 'border border-green-200 bg-green-50/60' : ($p['klassenlehrer'] ? 'border-2 border-indigo-400 bg-indigo-50/60' : 'border border-gray-200') }}">
                         <div class="min-w-0 text-sm">
-                            <div class="font-medium text-gray-800">{{ $nv($p['plan']->user->name) }}
+                            <div class="font-medium text-gray-800">{{ $p['namen'] }}
                                 @if ($p['klassenlehrer'])
-                                    <span class="ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">Klassenlehrkraft</span>
+                                    <span class="ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">{{ $p['team'] ? 'Klassenlehrkräfte gemeinsam' : 'Klassenlehrkraft' }}</span>
                                 @endif
                             </div>
                             <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
@@ -127,7 +127,10 @@
                                 @endif
                                 <span class="w-56 whitespace-nowrap font-medium tabular-nums text-gray-800">{{ $z['slot']['tag'] }} · {{ $z['slot']['von'] }}–{{ $z['slot']['bis'] }}</span>
                                 <span class="min-w-48 flex-1">
-                                    <span class="font-medium text-gray-800">{{ $p ? $nv($p['plan']->user->name) : '?' }}</span>
+                                    <span class="font-medium text-gray-800">{{ $p ? $p['namen'] : '?' }}</span>
+                                    @if (isset($z['slot']['nur']))
+                                        <span class="text-xs text-amber-800">(nur {{ $z['slot']['nur'] }})</span>
+                                    @endif
                                     <span class="text-gray-500">für {!! $p ? $kn($p['kind']) : '' !!}@if ($p && $p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif</span>
                                 </span>
                                 <span class="rounded-full px-2 py-0.5 text-xs {{ $prioFarbe[$z['prio']] }}">Prio {{ $z['prio'] }}</span>
@@ -142,7 +145,7 @@
                 @if ($vorschlag['offen'] !== [])
                     <div class="border-t border-amber-100 bg-amber-50 px-4 py-2 text-sm text-amber-900">
                         Nicht unterzubringen:
-                        {!! collect($vorschlag['offen'])->map(fn ($k) => $paare->has($k) ? e($nv($paare[$k]['plan']->user->name)).' (für '.$kn($paare[$k]['kind']).')' : null)->filter()->join(' · ') !!}
+                        {!! collect($vorschlag['offen'])->map(fn ($k) => $paare->has($k) ? e($paare[$k]['namen']).' (für '.$kn($paare[$k]['kind']).')' : null)->filter()->join(' · ') !!}
                         – dort sind im gewählten Zeitraum keine passenden Uhrzeiten frei.
                     </div>
                 @endif

@@ -25,7 +25,13 @@ auf dem Reiter **Manuelle Termine**:
 3. Der Termin erscheint grün hinterlegt als „Ihr Termin“.
 
 Steht bei einer Lehrkraft **„möchte Sie gern sprechen“**, wünscht sie sich ausdrücklich ein
-Gespräch mit Ihnen. Bitte buchen Sie dort möglichst einen Termin.
+Gespräch mit Ihnen. Bitte buchen Sie dort möglichst einen Termin. Persönlich eingeladene Eltern
+erhalten die E-Mail zuerst und können schon buchen, bevor die Buchung für alle öffnet.
+
+Hat die Klasse zwei Klassenlehrkräfte, sehen Sie sie oft als **eine Karte** („gemeinsames
+Gespräch“): Sie buchen einmal und sprechen mit beiden zugleich. Ist keine gemeinsame Uhrzeit mehr
+frei, bietet die Karte die freien Zeiten der einzelnen Lehrkräfte an – „(nur …)“ sagt, bei wem
+das Gespräch dann stattfindet.
 
 ## Termin-Assistent
 

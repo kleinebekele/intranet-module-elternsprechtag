@@ -21,6 +21,7 @@ class Sprechtag extends Model
             'klassen' => 'array',
             'lehrer_frist' => 'date',
             'info_versendet_am' => 'datetime',
+            'info_rest_versendet_am' => 'datetime',
         ];
     }
 
@@ -45,6 +46,18 @@ class Sprechtag extends Model
     public function veroeffentlicht(): bool
     {
         return $this->info_versendet_am !== null;
+    }
+
+    /** Ab wann die übrigen (nicht persönlich eingeladenen) Eltern Mail bekommen und buchen dürfen. */
+    public function restFaelligAm(): ?\Illuminate\Support\Carbon
+    {
+        return $this->info_versendet_am?->copy()->addMinutes((int) $this->vorsprung_minuten);
+    }
+
+    /** Vorsprung vorbei bzw. die übrigen Eltern sind schon informiert? */
+    public function fuerAlleOffen(): bool
+    {
+        return $this->info_rest_versendet_am !== null || ($this->restFaelligAm()?->isPast() ?? false);
     }
 
     public function fristVorbei(): bool

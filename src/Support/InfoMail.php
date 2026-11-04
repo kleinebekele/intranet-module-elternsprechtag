@@ -2,8 +2,11 @@
 
 namespace Intranet\Modules\Elternsprechtag\Support;
 
+use App\Mail\Vorlagen\VorlagenMailer;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Wunsch;
 
@@ -39,6 +42,62 @@ class InfoMail
         return collect($je)->map(fn (array $liste) => collect($liste)
             ->sortBy(fn ($z) => Namen::schluessel($z['kind']->name).' '.Namen::schluessel($z['lehrer']->name))
             ->values()->all());
+    }
+
+    /**
+     * Alle Eltern der Klassen, die eine Mail bekommen können (Adresse, nicht gesperrt).
+     *
+     * @return Collection<int, User>
+     */
+    public static function empfaenger(Sprechtag $sprechtag): Collection
+    {
+        return Klassen::eltern($sprechtag->klassenListe())
+            ->reject(fn (User $u) => $u->istGesperrt() || blank($u->email))
+            ->values();
+    }
+
+    /** Persönlich eingeladene Empfänger – sie bekommen die Info zuerst. */
+    public static function eingeladene(Sprechtag $sprechtag): Collection
+    {
+        $einladungen = self::einladungen($sprechtag);
+
+        return self::empfaenger($sprechtag)->filter(fn (User $u) => $einladungen->has($u->id))->values();
+    }
+
+    /** Alle übrigen Empfänger – sie bekommen die Info nach dem Vorsprung. */
+    public static function uebrige(Sprechtag $sprechtag): Collection
+    {
+        $einladungen = self::einladungen($sprechtag);
+
+        return self::empfaenger($sprechtag)->reject(fn (User $u) => $einladungen->has($u->id))->values();
+    }
+
+    /**
+     * Die Info an diese Eltern in den Ausgangskorb legen.
+     *
+     * @param  Collection<int, User>  $empfaenger
+     * @return array{0: int, 1: int}  gesendet, fehlgeschlagen
+     */
+    public static function versenden(Sprechtag $sprechtag, VorlagenMailer $mailer, Collection $empfaenger): array
+    {
+        $einladungen = self::einladungen($sprechtag);
+        $gesendet = $fehler = 0;
+
+        foreach ($empfaenger as $u) {
+            [$html, $text] = self::werte($sprechtag, $u, $einladungen->get($u->id, []));
+            try {
+                $mailer->senden(
+                    ElternsprechtagServiceProvider::VORLAGE_INFO, $u->email, $html, $text,
+                    quelle: 'Elternsprechtag-Info', referenz: 'elternsprechtag:'.$sprechtag->id.':'.$u->id, modul: 'Elternsprechtag',
+                );
+                $gesendet++;
+            } catch (\Throwable $e) {
+                $fehler++;
+                Log::warning('Elternsprechtag-Info nicht verschickt.', ['user' => $u->id, 'fehler' => $e->getMessage()]);
+            }
+        }
+
+        return [$gesendet, $fehler];
     }
 
     /**

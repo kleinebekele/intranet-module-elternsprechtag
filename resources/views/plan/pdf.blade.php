@@ -55,6 +55,8 @@
                             <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
                             <td>{{ $nv($z['termin']->kind?->name) }}
                                 @if (in_array($z['termin']->kind_user_id, $wuensche)) <span class="wunsch">(Wunsch)</span> @endif
+                                @if ($z['termin']->gruppe) <span class="wunsch">(gemeinsam mit {{ $partnerVon[$z['termin']->gruppe] ?? '' }})</span> @endif
+                                @if ($z['termin']->allein) <span class="wunsch">(nur hier – gemeinsam war nichts frei)</span> @endif
                             </td>
                             <td class="klasse">{{ $klasse($z['termin']->kind) }}</td>
                             <td>{{ $nv($z['termin']->eltern?->name) }}</td>
@@ -73,6 +75,18 @@
     @empty
         <p class="leer">Keine Tage eingetragen.</p>
     @endforelse
+
+    @if ($beiPartner->isNotEmpty())
+        <h2>Nur bei einer anderen Klassenlehrkraft gebucht</h2>
+        <table>
+            <thead><tr><th>Termin</th><th>Kind</th><th>Klasse</th><th>Bei</th></tr></thead>
+            <tbody>
+                @foreach ($beiPartner as $t)
+                    <tr><td class="zeit">{{ $t->tag?->beschriftung() }}, {{ $t->von }}</td><td>{{ $nv($t->kind?->name) }}</td><td class="klasse">{{ $klasse($t->kind) }}</td><td>{{ $nv($t->plan?->user?->name) }}</td></tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 
     @if ($offeneWuensche->isNotEmpty())
         <h2>Gesprächswünsche ohne Termin</h2>
