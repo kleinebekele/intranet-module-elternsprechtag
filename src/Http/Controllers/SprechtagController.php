@@ -87,6 +87,7 @@ class SprechtagController
             'plaene' => $plaene,
             'eltern' => Klassen::eltern($sprechtag->klassenListe()),
             'einladungen' => InfoMail::einladungen($sprechtag),
+            'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
         ]);
     }
 
@@ -107,27 +108,30 @@ class SprechtagController
                 .$fehlend->map(fn (array $z) => Namen::anzeige($z['user']->name))->join(' · ').'.');
         }
 
-        // Erneut senden: an alle sofort. Erstes Veröffentlichen: zuerst die persönlich
-        // eingeladenen Eltern, die übrigen nach dem Vorsprung (Command info-nachsenden).
-        $erneut = $sprechtag->info_versendet_am !== null;
-        $vorsprung = $erneut ? 0 : (int) ($request->validate(['vorsprung_minuten' => ['nullable', 'integer', 'min:0', 'max:1440']])['vorsprung_minuten'] ?? 60);
-        $alleJetzt = $erneut || $vorsprung === 0;
+        // Zwei Stufen: erst die Wunschgespräche (Mail nur an persönlich eingeladene
+        // Eltern, sie buchen nur dort), dann alle Gespräche (Mail an alle Eltern).
+        // Ohne Gesprächswünsche oder auf Wunsch geht beides auf einmal.
+        $stufe = $request->validate(['stufe' => ['nullable', 'in:wunsch,alle']])['stufe'] ?? 'alle';
+        $erneut = $sprechtag->fuerAlleOffen();
+        $wunschStufe = ! $sprechtag->veroeffentlicht() && $stufe === 'wunsch' && InfoMail::einladungen($sprechtag)->isNotEmpty();
+        $empfaenger = $wunschStufe ? InfoMail::eingeladene($sprechtag) : InfoMail::empfaenger($sprechtag);
 
-        [$gesendet, $fehler] = InfoMail::versenden($sprechtag, $mailer, $alleJetzt ? InfoMail::empfaenger($sprechtag) : InfoMail::eingeladene($sprechtag));
+        [$gesendet, $fehler] = InfoMail::versenden($sprechtag, $mailer, $empfaenger);
 
-        $sprechtag->update($erneut ? ['info_empfaenger' => $gesendet, 'info_rest_versendet_am' => $sprechtag->info_rest_versendet_am ?? now()] : [
-            'info_versendet_am' => now(),
+        $sprechtag->update([
+            'info_versendet_am' => $sprechtag->info_versendet_am ?? now(),
             'info_empfaenger' => $gesendet,
-            'vorsprung_minuten' => $vorsprung,
-            'info_rest_versendet_am' => $alleJetzt ? now() : null,
+            'info_rest_versendet_am' => $wunschStufe ? null : ($sprechtag->info_rest_versendet_am ?? now()),
         ]);
-        $this->audit('elternsprechtag.info', $sprechtag, ['empfaenger' => $gesendet, 'fehler' => $fehler, 'vorsprung' => $alleJetzt ? 0 : $vorsprung]);
+        $this->audit('elternsprechtag.info', $sprechtag, ['empfaenger' => $gesendet, 'fehler' => $fehler, 'stufe' => $wunschStufe ? 'wunsch' : ($erneut ? 'erneut' : 'alle')]);
 
-        $rest = $alleJetzt ? 0 : InfoMail::uebrige($sprechtag)->count();
+        $text = match (true) {
+            $wunschStufe => 'Wunschgespräche veröffentlicht. Info an '.$gesendet.' persönlich eingeladene Eltern in den Ausgangskorb gelegt – sie können jetzt nur diese Gespräche buchen.',
+            $erneut => 'Info erneut an '.$gesendet.' Eltern in den Ausgangskorb gelegt.',
+            default => 'Alle Gespräche veröffentlicht. Info an '.$gesendet.' Eltern in den Ausgangskorb gelegt.',
+        };
 
-        return back()->with('status', ($erneut ? 'Info erneut' : 'Termine veröffentlicht. Info').' an '.$gesendet.($alleJetzt ? '' : ' persönlich eingeladene').' Eltern in den Ausgangskorb gelegt.'
-            .($rest > 0 ? ' Die übrigen '.$rest.' Eltern folgen um '.$sprechtag->restFaelligAm()->format('H:i').' Uhr.' : '')
-            .($fehler > 0 ? " {$fehler} fehlgeschlagen (siehe Log)." : ''));
+        return back()->with('status', $text.($fehler > 0 ? " {$fehler} fehlgeschlagen (siehe Log)." : ''));
     }
 
     /** Vorschau der Info-Mail, wie sie ein bestimmtes Elternteil bekäme (JSON für die Übersicht). */

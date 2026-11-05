@@ -47,14 +47,20 @@
                 $pflichtFehlt = $sprechtag->info_versendet_am ? collect() : $lehrer->filter(fn ($z) => $z['pflichtFehlt']);
                 $ohnePlan = $lehrer->reject(fn ($z) => $plaene->has($z['user']->id))->count();
                 $nichtFreigegeben = $lehrer->filter(fn ($z) => $plaene->has($z['user']->id) && ! $z['angabe'])->count();
-                $frage = 'Mit der Veröffentlichung werden '.$eltern->count().' Eltern benachrichtigt – persönlich eingeladene sofort, alle anderen nach dem eingestellten Vorsprung. Danach können Lehrkräfte nichts mehr ändern.'
+                $mitAdresse = $eltern->reject(fn ($u) => $u->istGesperrt() || blank($u->email));
+                $eingeladen = $mitAdresse->filter(fn ($u) => $einladungen->has($u->id))->count();
+                $sperre = $eltern->isEmpty() || $sprechtag->tage->isEmpty() || $pflichtFehlt->isNotEmpty();
+                $folgen = ' Danach können Lehrkräfte ihre Pläne nicht mehr ändern.'
                     .($ohnePlan > 0 ? ' '.$ohnePlan.' '.($ohnePlan === 1 ? 'Kollege hat' : 'Kollegen haben').' noch keine Angabe gemacht und '.($ohnePlan === 1 ? 'kann sich' : 'können sich').' dann nicht mehr für diesen Elternsprechtag anmelden.' : '')
                     .($nichtFreigegeben > 0 ? ' '.$nichtFreigegeben.' '.($nichtFreigegeben === 1 ? 'Plan ist' : 'Pläne sind').' nicht freigegeben und '.($nichtFreigegeben === 1 ? 'wird' : 'werden').' so veröffentlicht, wie '.($nichtFreigegeben === 1 ? 'er gespeichert ist' : 'sie gespeichert sind').'.' : '');
+                $gebuchteWuensche = $wunschgespraeche->filter(fn ($w) => $w['termin'])->count();
+                $knopf = 'rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50';
             @endphp
             <p class="mt-1 text-sm text-gray-500">
-                Gibt die Termine aller Lehrer für die Eltern zur Buchung frei – danach können Lehrer ihre Pläne nicht mehr ändern.
-                Dazu geht eine Mail an alle Eltern der beteiligten Klassen ({{ $eltern->count() }} Personen,
-                {{ $eltern->reject(fn ($u) => $u->istGesperrt() || blank($u->email))->count() }} mit Adresse und nicht gesperrt).
+                Gibt die Termine der Lehrkräfte für die Eltern zur Buchung frei – danach können Lehrkräfte ihre Pläne nicht mehr ändern.
+                Das geht in zwei Stufen: <strong>1. Wunschgespräche</strong> – nur Eltern, die eine Lehrkraft unbedingt sprechen möchte, bekommen die Mail
+                und können nur diese Gespräche buchen. <strong>2. Alle Gespräche</strong> – die Mail geht an alle Eltern der beteiligten Klassen
+                ({{ $eltern->count() }} Personen, {{ $mitAdresse->count() }} mit Adresse und nicht gesperrt), alle Termine sind buchbar.
                 Den Wortlaut gibt es unter Verwaltung → Mailvorlagen („Elternsprechtag: Info an die Eltern"); der Hinweistext vom Sprechtag wird eingesetzt.
             </p>
             @if ($sprechtag->hinweis)
@@ -62,31 +68,109 @@
             @endif
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 @darfRoute('module.elternsprechtag.sprechtage.info')
-                    <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}" class="flex flex-wrap items-center gap-3"
-                          data-bestaetigen="{{ $sprechtag->info_versendet_am ? 'Die Info ging schon am '.$sprechtag->info_versendet_am->format('d.m.Y').' raus. Wirklich NOCHMAL an '.$eltern->count().' Eltern verschicken?' : $frage }}"
-                          data-titel="Veröffentlichen" data-knopf="Veröffentlichen">
-                        @csrf
-                        @unless ($sprechtag->info_versendet_am)
-                            <label class="flex items-center gap-2 text-sm text-gray-700" title="Persönlich eingeladene Eltern bekommen die Mail sofort und können so lange allein buchen; alle anderen danach.">
-                                Vorsprung für persönlich eingeladene Eltern
-                                <input type="number" name="vorsprung_minuten" min="0" max="1440" step="5" value="{{ old('vorsprung_minuten', $sprechtag->vorsprung_minuten ?? 60) }}"
-                                       class="w-20 rounded-lg border-gray-300 py-1 text-sm"> Min.
-                            </label>
-                        @endunless
-                        <button type="submit" @disabled($eltern->isEmpty() || $sprechtag->tage->isEmpty() || $pflichtFehlt->isNotEmpty())
-                                class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
-                            {{ $sprechtag->info_versendet_am ? 'Info erneut senden' : 'Veröffentlichen' }}
-                        </button>
-                    </form>
-                @enddarfRoute
-                @if ($sprechtag->info_versendet_am)
-                    <span class="text-sm text-green-700">✓ veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern
-                        @if (! $sprechtag->info_rest_versendet_am)
-                            <span class="text-amber-700">· übrige Eltern folgen um {{ $sprechtag->restFaelligAm()->format('H:i') }} Uhr</span>
+                    @if (! $sprechtag->veroeffentlicht())
+                        @if ($wunschgespraeche->isNotEmpty())
+                            <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
+                                  data-bestaetigen="{{ 'Die Wunschgespräche werden veröffentlicht: '.$eingeladen.' persönlich eingeladene Eltern bekommen die Mail und können nur diese Gespräche buchen. Alle anderen Eltern folgen, wenn du im zweiten Schritt alle Gespräche veröffentlichst.'.$folgen }}"
+                                  data-titel="1. Wunschgespräche veröffentlichen" data-knopf="Veröffentlichen">
+                                @csrf
+                                <input type="hidden" name="stufe" value="wunsch">
+                                <button type="submit" @disabled($sperre) class="{{ $knopf }} bg-indigo-600 text-white hover:bg-indigo-700">1. Wunschgespräche veröffentlichen</button>
+                            </form>
                         @endif
-                    </span>
+                        <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
+                              data-bestaetigen="{{ 'Alle Gespräche werden auf einmal veröffentlicht: '.$mitAdresse->count().' Eltern bekommen die Mail.'.($wunschgespraeche->isNotEmpty() ? ' Die persönlich eingeladenen Eltern haben dann keinen Vorsprung.' : '').$folgen }}"
+                              data-titel="Alle Gespräche veröffentlichen" data-knopf="Veröffentlichen">
+                            @csrf
+                            <input type="hidden" name="stufe" value="alle">
+                            <button type="submit" @disabled($sperre)
+                                    class="{{ $knopf }} {{ $wunschgespraeche->isNotEmpty() ? 'border border-gray-300 text-gray-700 hover:bg-gray-50' : 'bg-indigo-600 text-white hover:bg-indigo-700' }}">
+                                {{ $wunschgespraeche->isNotEmpty() ? 'Gleich alle Gespräche veröffentlichen' : 'Veröffentlichen' }}
+                            </button>
+                        </form>
+                    @elseif ($sprechtag->nurWunschgespraeche())
+                        <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
+                              data-bestaetigen="{{ 'Jetzt alle Gespräche veröffentlichen? '.$mitAdresse->count().' Eltern bekommen die Mail – auch die persönlich eingeladenen, damit sie wissen, dass jetzt alles buchbar ist. Bisher haben '.$gebuchteWuensche.' von '.$wunschgespraeche->count().' Wunschgesprächen einen Termin.' }}"
+                              data-titel="2. Alle Gespräche veröffentlichen" data-knopf="Veröffentlichen">
+                            @csrf
+                            <input type="hidden" name="stufe" value="alle">
+                            <button type="submit" class="{{ $knopf }} bg-indigo-600 text-white hover:bg-indigo-700">2. Alle Gespräche veröffentlichen</button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('module.elternsprechtag.sprechtage.info', $sprechtag) }}"
+                              data-bestaetigen="{{ 'Die Info ging schon am '.$sprechtag->info_rest_versendet_am->format('d.m.Y').' an alle raus. Wirklich NOCHMAL an '.$mitAdresse->count().' Eltern verschicken?' }}"
+                              data-titel="Info erneut senden" data-knopf="Senden">
+                            @csrf
+                            <input type="hidden" name="stufe" value="alle">
+                            <button type="submit" class="{{ $knopf }} border border-gray-300 text-gray-700 hover:bg-gray-50">Info erneut senden</button>
+                        </form>
+                    @endif
+                @enddarfRoute
+                @if ($sprechtag->nurWunschgespraeche())
+                    <span class="text-sm text-amber-700">✓ Wunschgespräche veröffentlicht am {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern · alle übrigen Gespräche sind noch nicht buchbar</span>
+                @elseif ($sprechtag->fuerAlleOffen())
+                    <span class="text-sm text-green-700">✓ alle Gespräche veröffentlicht am {{ $sprechtag->info_rest_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern
+                        @if ($sprechtag->info_rest_versendet_am->ne($sprechtag->info_versendet_am)) <span class="text-gray-500">(Wunschgespräche seit {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }})</span>@endif</span>
                 @endif
             </div>
+
+            {{-- Stand der Wunschgespräche: wer hat schon gebucht, wen muss man evtl. anrufen. --}}
+            @if ($wunschgespraeche->isNotEmpty())
+                @php $offeneWuensche = $wunschgespraeche->count() - $gebuchteWuensche; @endphp
+                <div class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: {{ $sprechtag->nurWunschgespraeche() ? 'true' : 'false' }} }">
+                    <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
+                        <div class="text-sm">
+                            @if ($sprechtag->veroeffentlicht())
+                                <span class="font-semibold text-gray-800">Wunschgespräche: {{ $gebuchteWuensche }} von {{ $wunschgespraeche->count() }} gebucht</span>
+                            @else
+                                <span class="font-semibold text-gray-800">{{ $wunschgespraeche->count() }} Wunschgespräche</span>
+                                <span class="text-gray-500">· nach dem Veröffentlichen siehst du hier, wer schon gebucht hat</span>
+                            @endif
+                            @if ($offeneWuensche > 0 && $sprechtag->veroeffentlicht())
+                                <span class="text-amber-800">· {{ $offeneWuensche }} noch ohne Termin</span>
+                            @endif
+                        </div>
+                        <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
+                    </div>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-indigo-100" @unless ($sprechtag->veroeffentlicht()) hidden @endunless>
+                        <div class="h-2 rounded-full bg-indigo-600" style="width: {{ round($gebuchteWuensche / $wunschgespraeche->count() * 100) }}%"></div>
+                    </div>
+                    <div x-show="offen" x-cloak class="mt-3 overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="text-left text-xs uppercase tracking-wide text-gray-500">
+                                <tr><th class="py-1 pr-3">Kind</th><th class="py-1 pr-3">Klasse</th><th class="py-1 pr-3">Gespräch mit</th><th class="py-1 pr-3">Eltern</th><th class="py-1">Termin</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-indigo-100">
+                                @foreach ($wunschgespraeche as $w)
+                                    <tr>
+                                        <td class="py-1 pr-3 text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($w['kind']->name) }}</td>
+                                        <td class="py-1 pr-3 text-gray-600">{{ $w['klasse'] }}</td>
+                                        <td class="py-1 pr-3 text-gray-600">{{ $w['lehrer'] }}</td>
+                                        <td class="py-1 pr-3 text-gray-600">
+                                            @forelse ($w['eltern'] as $e)
+                                                @darfRoute('module.elternsprechtag.eltern.index')
+                                                    <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>@if (! $loop->last), @endif
+                                                @else
+                                                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}@if (! $loop->last), @endif
+                                                @enddarfRoute
+                                            @empty
+                                                <span class="text-gray-400">keine hinterlegt</span>
+                                            @endforelse
+                                        </td>
+                                        <td class="py-1">
+                                            @if ($w['termin'])
+                                                <span class="text-green-700">✓ {{ $w['termin']->tag?->beschriftung() }}, {{ $w['termin']->von }} Uhr</span>
+                                            @else
+                                                <span class="text-amber-700">noch kein Termin</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
             @if ($pflichtFehlt->isNotEmpty())
                 <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                     Veröffentlichen geht erst, wenn alle Klassenlehrkräfte ihren Plan freigegeben oder ihre Teilnahme abgesagt haben. Es fehlen noch:

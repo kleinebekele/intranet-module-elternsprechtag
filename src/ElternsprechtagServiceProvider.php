@@ -39,14 +39,6 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 
         $this->vorlagenAnmelden();
 
-        if ($this->app->runningInConsole()) {
-            $this->commands([Console\InfoNachsenden::class]);
-            // Zweite Welle der Eltern-Info nach dem Vorsprung der eingeladenen Eltern.
-            $this->callAfterResolving(\Illuminate\Console\Scheduling\Schedule::class, function ($schedule): void {
-                $schedule->command('elternsprechtag:info-nachsenden')->everyMinute()->withoutOverlapping()->runInBackground();
-            });
-        }
-
         if (class_exists(\App\Support\Audit::class)) {
             \App\Support\Audit::benennen([
                 'elternsprechtag.angelegt' => 'Elternsprechtag: angelegt',
@@ -74,7 +66,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_INFO,
                 titel: 'Elternsprechtag: Info an die Eltern',
-                beschreibung: 'Geht über den Knopf „Veröffentlichen" an alle Eltern der beteiligten Klassen – an persönlich eingeladene sofort, an alle anderen nach dem eingestellten Vorsprung.',
+                beschreibung: 'Geht über den Knopf „Veröffentlichen" an alle Eltern der beteiligten Klassen – in zwei Stufen: zuerst an persönlich eingeladene Eltern (nur Wunschgespräche), danach an alle.',
                 platzhalter: [
                     'name' => 'Name des Elternteils',
                     'sprechtag' => 'Titel des Sprechtags',

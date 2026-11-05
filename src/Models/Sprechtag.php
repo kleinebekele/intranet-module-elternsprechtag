@@ -41,25 +41,28 @@ class Sprechtag extends Model
         return array_values($this->klassen ?? []);
     }
 
-    /** Frist abgelaufen? Der Fristtag selbst zählt noch mit. */
-    /** Veröffentlicht = Eltern informiert; ab dann ändern Lehrer nichts mehr. */
+    /** Veröffentlicht (mindestens die Wunschgespräche) – ab dann ändern Lehrer nichts mehr. */
     public function veroeffentlicht(): bool
     {
         return $this->info_versendet_am !== null;
     }
 
-    /** Ab wann die übrigen (nicht persönlich eingeladenen) Eltern Mail bekommen und buchen dürfen. */
-    public function restFaelligAm(): ?\Illuminate\Support\Carbon
-    {
-        return $this->info_versendet_am?->copy()->addMinutes((int) $this->vorsprung_minuten);
-    }
-
-    /** Vorsprung vorbei bzw. die übrigen Eltern sind schon informiert? */
+    /**
+     * Zweite Stufe veröffentlicht: alle Gespräche sind buchbar. Davor (erste Stufe)
+     * buchen nur persönlich eingeladene Eltern, und nur ihre Wunschgespräche.
+     */
     public function fuerAlleOffen(): bool
     {
-        return $this->info_rest_versendet_am !== null || ($this->restFaelligAm()?->isPast() ?? false);
+        return $this->info_rest_versendet_am !== null;
     }
 
+    /** Erste Stufe: nur die Wunschgespräche sind veröffentlicht. */
+    public function nurWunschgespraeche(): bool
+    {
+        return $this->veroeffentlicht() && ! $this->fuerAlleOffen();
+    }
+
+    /** Frist abgelaufen? Der Fristtag selbst zählt noch mit. */
     public function fristVorbei(): bool
     {
         return $this->lehrer_frist !== null && $this->lehrer_frist->endOfDay()->isPast();

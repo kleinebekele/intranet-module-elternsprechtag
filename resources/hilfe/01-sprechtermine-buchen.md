@@ -26,7 +26,8 @@ auf dem Reiter **Manuelle Termine**:
 
 Steht bei einer Lehrkraft **„möchte Sie gern sprechen“**, wünscht sie sich ausdrücklich ein
 Gespräch mit Ihnen. Bitte buchen Sie dort möglichst einen Termin. Persönlich eingeladene Eltern
-erhalten die E-Mail zuerst und können schon buchen, bevor die Buchung für alle öffnet.
+erhalten die E-Mail zuerst und können diese Gespräche buchen, bevor die Buchung für alle öffnet. Bei
+den übrigen Lehrkräften steht bis dahin „Buchbar, sobald alle Gespräche freigegeben sind“.
 
 Hat die Klasse zwei Klassenlehrkräfte, sehen Sie sie oft als **eine Karte** („gemeinsames
 Gespräch“): Sie buchen einmal und sprechen mit beiden zugleich. Ist keine gemeinsame Uhrzeit mehr

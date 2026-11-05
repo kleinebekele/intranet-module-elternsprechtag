@@ -20,8 +20,9 @@ class Buchung
 {
     /**
      * Eltern buchen selbst, sobald der Sprechtag veröffentlicht ist und bis er
-     * vorbei ist. Persönlich eingeladene Eltern sofort, alle anderen erst nach
-     * dem Vorsprung (Sprechtag::fuerAlleOffen()).
+     * vorbei ist. In der ersten Stufe nur persönlich eingeladene Eltern (und dort
+     * nur die Wunschgespräche, siehe `gesperrt` im Angebot), alle anderen erst ab
+     * der zweiten Stufe (Sprechtag::fuerAlleOffen()).
      */
     public static function offen(Sprechtag $sprechtag, ?User $eltern = null): bool
     {
@@ -43,7 +44,8 @@ class Buchung
     }
 
     /**
-     * Je Kind die Lehrer mit Termin, Gesprächswunsch und Slots – alle Pläne des
+     * Je Kind die Lehrer mit Termin, Gesprächswunsch, Slots und `gesperrt`
+     * (erste Stufe und kein Wunschgespräch) – alle Pläne des
      * Sprechtags außer denen, deren Lehrer abgesagt hat. Wann Eltern das sehen,
      * regelt offen() (Veröffentlichung des Sprechtags).
      *
@@ -63,8 +65,10 @@ class Buchung
 
         $familie = self::familienTermine($kinder->pluck('kind.id')->all(), $sprechtag);
         $teams = Team::alle($sprechtag, $plaene);
+        // Erste Stufe: buchbar sind nur Gespräche, die die Lehrkraft gewünscht hat.
+        $nurWunsch = $sprechtag->nurWunschgespraeche();
 
-        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie, $teams) {
+        return $kinder->map(function (array $z) use ($plaene, $sprechtag, $familie, $teams, $nurWunsch) {
             $kid = $z['kind']->id;
             $team = self::team($z, $teams);
 
@@ -72,9 +76,10 @@ class Buchung
                 ->filter(fn (Plan $p) => array_intersect($z['klassen'], Plan::klassenVon($p, $p->user, $sprechtag)) !== [])
                 ->reject(fn (Plan $p) => $team && $team->contains('id', $p->id))
                 ->sortBy(fn (Plan $p) => (Klassen::istKlassenlehrer($p->user, $z['klassen']) ? '0' : '1').Namen::schluessel($p->user->name))
-                ->map(function (Plan $p) use ($kid, $familie, $z) {
+                ->map(function (Plan $p) use ($kid, $familie, $z, $nurWunsch) {
                     $termin = $p->termine->firstWhere('kind_user_id', $kid);
                     $andere = $familie->reject(fn (Termin $t) => $termin && $t->id === $termin->id);
+                    $wunsch = $p->wuensche->firstWhere('kind_user_id', $kid);
 
                     return [
                         'plan' => $p,
@@ -82,9 +87,10 @@ class Buchung
                         'namen' => Namen::anzeige($p->user->name),
                         'termin' => $termin,
                         'klassenlehrer' => Klassen::istKlassenlehrer($p->user, $z['klassen']),
-                        'wunsch' => $p->wuensche->firstWhere('kind_user_id', $kid),
+                        'wunsch' => $wunsch,
                         'slots' => self::slots($p, $andere),
                         'ausweichen' => false,
+                        'gesperrt' => $nurWunsch && ! $wunsch,
                     ];
                 })
                 ->values();
@@ -99,15 +105,17 @@ class Buchung
                 if ($ausweichen) {
                     $slots = Team::einzelSlots($team, $andere);
                 }
+                $wunsch = $team->map(fn (Plan $p) => $p->wuensche->firstWhere('kind_user_id', $kid))->filter()->first();
                 $lehrer->prepend([
                     'plan' => $team->first(),
                     'team' => $team,
                     'namen' => Team::namen($team),
                     'termin' => $termine->first(),
                     'klassenlehrer' => true,
-                    'wunsch' => $team->map(fn (Plan $p) => $p->wuensche->firstWhere('kind_user_id', $kid))->filter()->first(),
+                    'wunsch' => $wunsch,
                     'slots' => $slots,
                     'ausweichen' => $ausweichen,
+                    'gesperrt' => $nurWunsch && ! $wunsch,
                 ]);
             }
 

@@ -101,12 +101,13 @@ class ElternController
         $fenster = fn (int $tagId) => $gewaehlteTage->isEmpty() ? [null, null]
             : ($gewaehlteTage->has($tagId) ? [$gewaehlteTage[$tagId]['von'] ?? null, $gewaehlteTage[$tagId]['bis'] ?? null] : false);
 
+        $verwaltung = Rechte::istVerwaltung($request->user());
         $wuensche = [];
         foreach (Buchung::angebot($eltern, $sprechtag) as $z) {
             foreach ($z['lehrer'] as $l) {
                 $key = $l['plan']->id.'-'.$z['kind']->id;
                 $prio = (int) ($daten['prio'][$key] ?? 0);
-                if ($prio < 1 || $l['termin']) {
+                if ($prio < 1 || $l['termin'] || ($l['gesperrt'] && ! $verwaltung)) {
                     continue;
                 }
                 $slots = collect($l['slots'])->where('frei', true)->filter(function ($s) use ($fenster) {
@@ -190,6 +191,9 @@ class ElternController
             ?->first(fn ($l) => $l['plan']->id === $planId);
         if ($eintrag === null) {
             return null;
+        }
+        if ($eintrag['gesperrt'] && ! Rechte::istVerwaltung($request->user())) {
+            return [false, 'Bei '.$eintrag['namen'].' können Sie erst buchen, wenn alle Gespräche freigegeben sind.'];
         }
 
         $alle = $eintrag['team'] ?? collect([$eintrag['plan']]);

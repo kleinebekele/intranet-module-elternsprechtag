@@ -35,8 +35,8 @@
             @endif
             @unless ($offen)
                 <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                    @if ($s->veroeffentlicht() && $s->restFaelligAm())
-                        Die Buchung öffnet für Sie am {{ $s->restFaelligAm()->format('d.m.Y') }} um {{ $s->restFaelligAm()->format('H:i') }} Uhr.
+                    @if ($s->veroeffentlicht())
+                        Zurzeit buchen nur Eltern, die eine Lehrkraft persönlich eingeladen hat. Sie erhalten eine Nachricht, sobald die Buchung für alle öffnet.
                     @else
                         Die Termine sind noch nicht veröffentlicht. Sie erhalten eine Nachricht, sobald es losgeht.
                     @endif
@@ -45,6 +45,12 @@
                     @endif
                 </div>
             @endunless
+            @if ($offen && $s->nurWunschgespraeche())
+                <div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
+                    Sie sind persönlich eingeladen: Zurzeit können Sie nur die Gespräche buchen, bei denen „möchte Sie gern sprechen“ steht.
+                    Alle übrigen Lehrkräfte folgen später – Sie bekommen dann noch eine E-Mail.
+                </div>
+            @endif
 
             <div x-data="{ reiter: @js($start) }">
             @if ($mitReitern)
@@ -75,7 +81,7 @@
                                 $plan = $l['plan'];
                                 $termin = $l['termin'];
                                 $freie = collect($l['slots'])->where('frei', true);
-                                $darfBuchen = $offen || $verwaltung;
+                                $darfBuchen = ($offen && ! $l['gesperrt']) || $verwaltung;
                             @endphp
                             {{-- Klassenlehrer stehen vorn und sind kräftiger gerahmt – sie sind der erste Ansprechpartner. --}}
                             <div class="rounded-lg px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : ($l['klassenlehrer'] ? 'bg-indigo-50/60' : '') }} {{ $l['klassenlehrer'] ? 'border-2 border-indigo-400 shadow-sm' : 'border '.($termin ? '' : 'border-gray-200') }}">
@@ -137,6 +143,8 @@
                                             </button>
                                         </form>
                                     @endif
+                                @elseif ($offen && $l['gesperrt'])
+                                    <p class="mt-2 text-sm text-gray-500">Buchbar, sobald alle Gespräche freigegeben sind.</p>
                                 @endif
                             </div>
                         @endforeach

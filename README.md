@@ -24,9 +24,10 @@ gemeinsam: Gesprächsdauer und Vorbereitung gelten für alle, Zeiten und Pausen 
 Eltern buchen eine Karte, je Plan entsteht ein Termin mit derselben `gruppe`. Ist keine
 gemeinsame Uhrzeit mehr frei, wird bei einem allein gebucht (`allein`), beide sehen einen Hinweis.
 
-**Vorsprung:** Persönlich eingeladene Eltern bekommen die Info sofort und dürfen buchen, alle
-anderen nach `vorsprung_minuten` (Standard 60). Die zweite Welle verschickt der Scheduler-Task
-`elternsprechtag:info-nachsenden` (jede Minute).
+**Zwei Stufen:** Erst werden die Wunschgespräche veröffentlicht (`info_versendet_am`): Mail nur an
+persönlich eingeladene Eltern, buchbar sind nur ihre Wunschgespräche (`gesperrt` im Angebot). Die
+Verwaltung sieht, wie viele davon gebucht sind, und veröffentlicht von Hand alle Gespräche
+(`info_rest_versendet_am`, Mail an alle Eltern). `vorsprung_minuten` ist seit v1.19 ungenutzt.
 
 ## Datenquelle
 

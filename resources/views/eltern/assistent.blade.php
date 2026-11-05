@@ -7,7 +7,8 @@
         ? '<span class="text-gray-800 underline">'.e(\Intranet\Modules\Elternsprechtag\Support\Namen::vorname($kind->name)).'</span>'
         : e(\Intranet\Modules\Elternsprechtag\Support\Namen::vorname($kind->name));
     $eingaben = $vorschlag['eingaben'] ?? [];
-    $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->map(fn ($l) => [
+    // Erste Stufe: Eltern sehen im Assistenten nur ihre Wunschgespräche, die Verwaltung alles.
+    $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->reject(fn ($l) => $l['gesperrt'] && ! $verwaltung)->map(fn ($l) => [
         'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
         'klassenlehrer' => $l['klassenlehrer'], 'namen' => $l['namen'], 'team' => $l['team'],
     ]))->sortBy(fn ($p) => $p['klassenlehrer'] ? 0 : 1)->keyBy('key');

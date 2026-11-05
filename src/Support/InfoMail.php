@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
+use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Wunsch;
 
@@ -45,6 +46,47 @@ class InfoMail
     }
 
     /**
+     * Die Wunschgespräche des Sprechtags mit Stand der Buchung – je Kind und
+     * Gespräch einmal. Wünschen beide Klassenlehrer eines gemeinsamen Gesprächs
+     * dasselbe Kind, ist das ein Gespräch; gebucht zählt auch der Ausweichtermin
+     * bei nur einem von ihnen.
+     *
+     * @return Collection<int, array{kind: User, klasse: string, lehrer: string, eltern: Collection<int, User>, termin: ?\Intranet\Modules\Elternsprechtag\Models\Termin}>
+     */
+    public static function wunschgespraeche(Sprechtag $sprechtag): Collection
+    {
+        $plaene = Plan::with(['user.roles', 'tage', 'wuensche.kind.parents', 'wuensche.kind.roles', 'termine.tag'])
+            ->where('sprechtag_id', $sprechtag->id)
+            ->get()
+            ->filter(fn (Plan $p) => $p->user !== null && ! $p->abgesagt());
+        $teams = Team::alle($sprechtag, $plaene);
+
+        $je = [];
+        foreach ($plaene as $plan) {
+            foreach ($plan->wuensche as $w) {
+                if (! $w->kind) {
+                    continue;
+                }
+                $klassen = array_values(array_intersect(Klassen::vonKind($w->kind), $sprechtag->klassenListe()));
+                $team = collect($teams)->first(fn ($t, $k) => in_array((string) $k, $klassen, true) && $t['plaene']->contains('id', $plan->id));
+                $mit = $team ? $team['plaene'] : collect([$plan]);
+                $schluessel = $w->kind_user_id.'-'.$mit->pluck('id')->sort()->join('.');
+                $je[$schluessel] ??= [
+                    'kind' => $w->kind,
+                    'klasse' => implode(', ', $klassen),
+                    'lehrer' => $team ? Team::namen($mit) : Namen::anzeige($plan->user->name),
+                    'eltern' => $w->kind->parents,
+                    'termin' => $mit->flatMap(fn (Plan $p) => $p->termine)->firstWhere('kind_user_id', $w->kind_user_id),
+                ];
+            }
+        }
+
+        return collect($je)
+            ->sortBy(fn ($z) => [$z['termin'] ? 1 : 0, Namen::schluessel($z['kind']->name)])
+            ->values();
+    }
+
+    /**
      * Alle Eltern der Klassen, die eine Mail bekommen können (Adresse, nicht gesperrt).
      *
      * @return Collection<int, User>
@@ -64,7 +106,7 @@ class InfoMail
         return self::empfaenger($sprechtag)->filter(fn (User $u) => $einladungen->has($u->id))->values();
     }
 
-    /** Alle übrigen Empfänger – sie bekommen die Info nach dem Vorsprung. */
+    /** Alle übrigen Empfänger – sie bekommen die Info erst mit der zweiten Stufe. */
     public static function uebrige(Sprechtag $sprechtag): Collection
     {
         $einladungen = self::einladungen($sprechtag);

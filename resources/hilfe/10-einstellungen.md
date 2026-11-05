@@ -47,8 +47,21 @@ Plan angelegt haben:
 
 ## Veröffentlichen
 
-Der Knopf **Veröffentlichen** gibt die Termine aller Lehrkräfte für die Eltern frei und legt die
-Info-Mail für alle Eltern der Klassen in den Ausgangskorb.
+Veröffentlicht wird in **zwei Stufen**:
+
+1. **Wunschgespräche veröffentlichen** – nur Eltern, mit denen eine Lehrkraft unbedingt sprechen
+   möchte, bekommen die Info-Mail. Sie können nur diese Gespräche buchen; die übrigen Lehrkräfte
+   sehen sie, aber ohne Buchungsmöglichkeit. Alle anderen Eltern sehen noch nichts Buchbares.
+2. **Alle Gespräche veröffentlichen** – jetzt geht die Mail an alle Eltern der Klassen (auch an die
+   eingeladenen, damit sie wissen, dass jetzt alles buchbar ist), und alle Termine sind offen.
+
+Zwischen den beiden Stufen zeigt der Kasten **Wunschgespräche: x von y gebucht**, welche Eltern
+schon einen Termin haben. Aufgeklappt steht je Gespräch Kind, Klasse, Lehrkraft(en), Eltern und
+Termin. Ein Klick auf den Namen eines Elternteils öffnet seine Buchungsseite – etwa um nach einem
+Anruf den Termin für es einzutragen. Wann Stufe 2 kommt, entscheiden Sie selbst.
+
+Gibt es keine Gesprächswünsche, heißt der Knopf einfach **Veröffentlichen**. Mit **Gleich alle
+Gespräche veröffentlichen** lassen sich beide Stufen auch auf einmal erledigen.
 
 **Pflicht für Klassenlehrkräfte:** Wer Klassenlehrkraft einer beteiligten Klasse ist, muss vorher
 seinen Plan freigeben oder seine Teilnahme absagen. Solange das fehlt, ist der Knopf gesperrt;
@@ -57,16 +70,12 @@ Klassenlehrkraft“. Hat eine Klasse mehrere Klassenlehrkräfte, genügt es, wen
 Plan freigegeben hat – die anderen halten das Veröffentlichen dann nicht mehr auf. Alle anderen
 Lehrkräfte dürfen fehlen.
 
-**Vorsprung für persönlich eingeladene Eltern** (Standard 60 Minuten): Eltern, mit denen eine
-Lehrkraft unbedingt sprechen möchte, bekommen die Mail sofort und können so lange allein buchen.
-Alle anderen Eltern bekommen die Mail danach automatisch, und erst dann öffnet die Buchung für
-sie. 0 = alle sofort. Neben „veröffentlicht“ steht, wann die übrigen Eltern folgen.
-
 Die Rückfrage nennt, wer noch keine Angabe gemacht hat – diese Kollegen können sich nach dem
 Veröffentlichen nicht mehr anmelden. Gespeicherte, aber nicht freigegebene Pläne werden so
 veröffentlicht, wie sie sind. Wer abgesagt hat, erscheint bei den Eltern nicht.
 
-Danach heißt der Knopf **Info erneut senden** und verschickt die Mail sofort noch einmal an alle.
+Lehrkräfte können ihre Pläne schon ab Stufe 1 nicht mehr ändern. Nach Stufe 2 heißt der Knopf
+**Info erneut senden** und verschickt die Mail sofort noch einmal an alle.
 
 ## Gemeinsame Gespräche der Klassenlehrkräfte
 
