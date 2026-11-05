@@ -39,7 +39,7 @@ Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Daf
 **Termin-Assistent** da:
 
 1. **Mit wem?** Geben Sie je Lehrkraft eine Priorität: 1 = unbedingt, 2 = gern, 3 = wenn es
-   passt. Anfangs steht überall „–“ (kein Gespräch) – wählen Sie selbst, mit wem Sie sprechen möchten.
+   passt. Lehrkräfte, die Sie gern sprechen möchten, stehen schon auf 1, alle anderen auf „–“ (kein Gespräch).
 2. **Wann?** Freiwillig. Ohne Angabe entscheidet der Assistent frei. Mit einem Haken begrenzen
    Sie ihn auf diesen Tag, mit Uhrzeiten auf Ihr Zeitfenster.
 3. Auf Wunsch etwas **Zeit für den Raumwechsel** zwischen zwei Gesprächen einplanen.

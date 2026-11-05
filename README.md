@@ -35,7 +35,7 @@ Klassen, Lehrer, Schüler und Eltern kommen aus den Rollen des Linear-Abgleichs
 Lehrer ist, wer irgendeine Linear-Lehrerrolle hat. Für welche Klassen eines Sprechtags er da ist,
 wählt er im Terminplan selbst; seine Linear-Klassen sind nur die Vorauswahl.
 Klassenlehrer (`linear-klasse-<klasse>-klassenlehrer`, aus `WD_Lehrer.Funktion`) stehen bei den
-Eltern vorn und sind hervorgehoben. Im Assistenten ist nichts vorbelegt.
+Eltern vorn und sind hervorgehoben. Im Assistenten steht nur auf Prio 1, wer einen Gesprächswunsch hat.
 
 ## Rechte
 

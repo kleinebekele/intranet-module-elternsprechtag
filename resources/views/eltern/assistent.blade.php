@@ -42,7 +42,7 @@
                             <span class="whitespace-nowrap text-xs font-medium text-green-800">gebucht {{ $p['termin']->von }} Uhr</span>
                         @else
                             {{-- Vorbelegt mit 1: Gesprächswunsch der Lehrkraft und Klassenlehrkraft. --}}
-                            @php $wert = (int) ($eingaben['prio'][$key] ?? 0); @endphp
+                            @php $wert = (int) ($eingaben['prio'][$key] ?? ($p['wunsch'] ? 1 : 0)); @endphp
                             <select name="prio[{{ $key }}]" class="rounded-lg border-gray-300 py-1 text-sm">
                                 <option value="0" @selected($wert === 0)>–</option>
                                 @foreach ($prioText as $n => $t)
