@@ -22,11 +22,15 @@
                 'pausen' => $pt?->pausenListe() ?? [],
             ]];
         }),
-        // Gebuchte Slots je Tag: von → „Kind (Eltern)" fürs Einfärben.
+        // Gebuchte Slots je Tag: von → wer gebucht hat (Tooltip) und ob es Wunsch-Eltern sind (Farbe).
         'gebucht' => $plan->termine->groupBy('tag_id')->map(fn ($ts) => $ts->mapWithKeys(fn ($t) => [
-            $t->von => trim($nv($t->kind?->name).' ('.($t->eltern ? $nv($t->eltern->name) : 'Eltern').')')
-                .($t->gruppe ? ' · gemeinsam mit '.($team['partnerVon'][$t->gruppe] ?? '') : '')
-                .($t->allein ? ' · nur bei '.($fremd ? $nv($lehrer->name) : 'dir') : ''),
+            $t->von => [
+                'kind' => $nv($t->kind?->name),
+                'eltern' => $t->eltern ? $nv($t->eltern->name) : 'Eltern',
+                'zusatz' => trim(($t->gruppe ? 'gemeinsam mit '.($team['partnerVon'][$t->gruppe] ?? '') : '')
+                    .($t->allein ? 'nur bei '.($fremd ? $nv($lehrer->name) : 'dir') : '')),
+                'wunsch' => $wuensche->has($t->kind_user_id),
+            ],
         ])),
     ];
     $gewaehlt = array_map('intval', old('wuensche', $wuensche->keys()->all()));
@@ -101,6 +105,24 @@
                         <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}"
                            class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Terminliste als PDF</a>
                     </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Terminliste ansehen (Auge): derselbe Inhalt wie das PDF, erst beim Öffnen geladen. --}}
+    @if ($plan->exists)
+        <div x-data="{ offen: false, src: '' }" @liste-ansehen.window="offen = true; src = @js(route('module.elternsprechtag.plan.ansicht', $ziel))" @keydown.escape.window="offen = false">
+            <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="offen = false">
+                <div class="flex h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-xl">
+                    <div class="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3">
+                        <h2 class="text-base font-semibold text-gray-800">Terminliste</h2>
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" class="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf text-xl"></i> PDF</a>
+                            <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
+                        </div>
+                    </div>
+                    <iframe :src="src" class="w-full flex-1 rounded-b-xl bg-white" title="Terminliste"></iframe>
                 </div>
             </div>
         </div>
@@ -223,21 +245,32 @@
                        class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
             <label class="mt-3 block text-sm"><span class="text-gray-600">Bemerkung (für die Verwaltung)</span>
                 <textarea name="bemerkung" rows="3" maxlength="2000" class="mt-1 w-full rounded-lg border-gray-300 text-sm">{{ old('bemerkung', $plan->bemerkung) }}</textarea></label>
-            <div class="mt-4 rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900">
-                Insgesamt <strong x-text="gesamt()"></strong> Termine
-                @if ($plan->termine->isNotEmpty())
-                    {{-- Link statt Button: ein deaktiviertes fieldset sperrt sonst auch das Öffnen. --}}
-                    <a href="#" @click.prevent="$dispatch('termine-zeigen')" class="font-medium text-green-700 underline hover:text-green-800">({{ $plan->termine->count() }} gebucht)</a>
-                @endif
-                @if ($plan->exists)
-                    <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" title="Terminliste als PDF herunterladen"
-                       class="ml-1 inline-flex items-center align-middle text-xl leading-none text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf"></i></a>
-                @endif
-            </div>
         </div>
 
         {{-- Zeiten je Tag --}}
         <div class="space-y-4 xl:col-span-2">
+            {{-- Legende und Gesamtzahl. Links statt Buttons: ein deaktiviertes fieldset sperrt sonst auch das Öffnen. --}}
+            <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
+                    <span class="flex items-center gap-1.5"><span class="inline-block h-3 w-6 rounded bg-gray-100 ring-1 ring-gray-200"></span> frei</span>
+                    <span class="flex items-center gap-1.5"><span class="inline-block h-3 w-6 rounded bg-green-100 ring-1 ring-green-300"></span> gebucht</span>
+                    <span class="flex items-center gap-1.5"><span class="inline-block h-3 w-6 rounded bg-violet-200 ring-1 ring-violet-400"></span> gebucht von Wunsch-Eltern ★</span>
+                    <span class="text-gray-400">Maus auf einen Termin: wer gebucht hat</span>
+                </div>
+                <div class="ml-auto flex items-center gap-2 text-gray-800">
+                    <span>Insgesamt <strong x-text="gesamt()"></strong> Termine</span>
+                    @if ($plan->termine->isNotEmpty())
+                        <a href="#" @click.prevent="$dispatch('termine-zeigen')" class="font-medium text-green-700 underline hover:text-green-800">({{ $plan->termine->count() }} gebucht)</a>
+                    @endif
+                    @if ($plan->exists)
+                        <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" title="Terminliste als PDF herunterladen"
+                           class="inline-flex items-center text-2xl leading-none text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf"></i></a>
+                        <a href="#" @click.prevent="$dispatch('liste-ansehen')" title="Terminliste ansehen (wie im PDF)"
+                           class="inline-flex items-center text-2xl leading-none text-gray-500 hover:text-indigo-700"><i class="bx bx-show"></i></a>
+                    @endif
+                </div>
+            </div>
+
             @foreach ($sprechtag->tage as $t)
                 <div class="rounded-xl border border-gray-200 bg-white p-5" x-data="{ id: {{ $t->id }} }">
                     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -278,9 +311,19 @@
                             <div class="text-sm text-gray-600">Ergibt diese Termine</div>
                             <div class="mt-1 flex flex-wrap gap-1">
                                 <template x-for="s in slots(id)" :key="s.von">
-                                    <span class="rounded px-2 py-0.5 text-xs tabular-nums" x-text="`${s.von}–${s.bis}`"
-                                          :class="gebucht(id, s.von) ? 'bg-green-100 font-medium text-green-800 ring-1 ring-green-300' : 'bg-gray-100 text-gray-700'"
-                                          :title="gebucht(id, s.von) || 'frei'"></span>
+                                    <span class="group relative rounded px-2 py-0.5 text-xs tabular-nums" tabindex="0"
+                                          :class="farbe(gebucht(id, s.von))">
+                                        <span x-text="`${s.von}–${s.bis}`"></span><span x-show="gebucht(id, s.von)?.wunsch"> ★</span>
+                                        {{-- Wer gebucht hat: sofort beim Überfahren (bzw. Antippen), nicht erst nach der Verzögerung von title. --}}
+                                        <template x-if="gebucht(id, s.von)">
+                                            <span class="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-64 -translate-x-1/2 rounded-lg bg-gray-900 px-2.5 py-1.5 text-left text-xs font-normal text-white shadow-lg group-hover:block group-focus:block">
+                                                <span class="block font-semibold" x-text="gebucht(id, s.von).kind"></span>
+                                                <span class="block" x-text="'Eltern: ' + gebucht(id, s.von).eltern"></span>
+                                                <span class="block text-violet-200" x-show="gebucht(id, s.von).wunsch">★ Wunschgespräch</span>
+                                                <span class="block text-gray-300" x-show="gebucht(id, s.von).zusatz" x-text="gebucht(id, s.von).zusatz"></span>
+                                            </span>
+                                        </template>
+                                    </span>
                                 </template>
                                 <span x-show="slots(id).length === 0" class="text-xs text-amber-700">Keine Termine – Zeiten prüfen.</span>
                             </div>
@@ -427,7 +470,13 @@
                     return liste;
                 },
                 gebucht(id, von) {
-                    return (start.gebucht[id] || {})[von] || '';
+                    return (start.gebucht[id] || {})[von] || null;
+                },
+                farbe(g) {
+                    if (! g) return 'bg-gray-100 text-gray-700';
+                    return g.wunsch
+                        ? 'cursor-default bg-violet-200 font-semibold text-violet-900 ring-1 ring-violet-400'
+                        : 'cursor-default bg-green-100 font-medium text-green-800 ring-1 ring-green-300';
                 },
                 gesamt() {
                     return Object.keys(this.tage).reduce((n, id) => n + this.slots(id).length, 0);

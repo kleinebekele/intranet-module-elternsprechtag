@@ -28,6 +28,10 @@
         .wunsch { color: #4338ca; font-size: 9px; }
         .seite { page-break-inside: avoid; }
         .leer { color: #6b7280; font-style: italic; }
+        @if (! empty($vorschau))
+            {{-- Vorschau im Terminplan (iframe): kein Seitenrand wie im PDF, also selbst etwas Luft. --}}
+            body { margin: 20px; font-size: 13px; background: #fff; }
+        @endif
     </style>
 </head>
 <body>

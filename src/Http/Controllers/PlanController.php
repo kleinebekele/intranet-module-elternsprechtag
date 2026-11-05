@@ -148,6 +148,22 @@ class PlanController
     /** Terminliste zum Ausdrucken: je Tag alle Slots mit Kind und Eltern, dazu offene Gesprächswünsche. */
     public function pdf(Request $request, Sprechtag $sprechtag)
     {
+        $daten = $this->listenDaten($request, $sprechtag);
+
+        return \Barryvdh\DomPDF\Facade\Pdf::setOption('isFontSubsettingEnabled', true)
+            ->loadView('elternsprechtag::plan.pdf', $daten)
+            ->download('elternsprechtag-'.str($daten['lehrer']->name)->slug().'.pdf');
+    }
+
+    /** Dieselbe Terminliste als Seite – für die Vorschau (Auge) im Terminplan. */
+    public function ansicht(Request $request, Sprechtag $sprechtag)
+    {
+        return response()->view('elternsprechtag::plan.pdf', $this->listenDaten($request, $sprechtag) + ['vorschau' => true]);
+    }
+
+    /** Inhalt der Terminliste (PDF und Vorschau). */
+    private function listenDaten(Request $request, Sprechtag $sprechtag): array
+    {
         $lehrer = $this->lehrer($request, $sprechtag);
         $plan = Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
             ->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
@@ -168,10 +184,9 @@ class PlanController
         $offeneWuensche = $plan->wuensche->filter(fn ($w) => $w->kind && ! in_array($w->kind_user_id, $gebucht))
             ->sortBy(fn ($w) => Namen::schluessel($w->kind->name))->values();
 
-        $datei = 'elternsprechtag-'.str($lehrer->name)->slug().'.pdf';
         $team = $this->teamDaten($plan, $lehrer, $sprechtag);
 
-        return \Barryvdh\DomPDF\Facade\Pdf::setOption('isFontSubsettingEnabled', true)->loadView('elternsprechtag::plan.pdf', [
+        return [
             'sprechtag' => $sprechtag,
             'lehrer' => $lehrer,
             'plan' => $plan,
@@ -180,7 +195,7 @@ class PlanController
             'offeneWuensche' => $offeneWuensche,
             'partnerVon' => $team['partnerVon'],
             'beiPartner' => $team['beiPartner'],
-        ])->download($datei);
+        ];
     }
 
     public function speichern(Request $request, Sprechtag $sprechtag): RedirectResponse
