@@ -58,61 +58,11 @@
 
     @include('elternsprechtag::partials.meldung')
 
-    {{-- Gebuchte Termine: öffnet sich über „(N gebucht)" bei „Insgesamt … Termine". Außerhalb des Formulars, weil es eigene Absage-Formulare enthält. --}}
-    @if ($plan->termine->isNotEmpty())
-        @php
-            $gueltig = [];
-            foreach ($plan->tage as $pt) {
-                foreach (\Intranet\Modules\Elternsprechtag\Support\Slots::fuer($plan, $pt) as $sl) {
-                    $gueltig[] = $pt->tag_id.'|'.$sl['von'];
-                }
-            }
-        @endphp
-        <div x-data="{ offen: false }" @termine-zeigen.window="offen = true" @keydown.escape.window="offen = false">
-            <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
-                 @click.self="offen = false">
-                <div class="w-full max-w-2xl rounded-xl bg-white p-5 shadow-xl">
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-base font-semibold text-gray-800">Gebuchte Termine ({{ $plan->termine->count() }})</h2>
-                        <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
-                    </div>
-                    <div class="mt-3 divide-y divide-gray-100 text-sm">
-                        @foreach ($plan->termine->sortBy(fn ($t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von) as $t)
-                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                                <span class="font-medium tabular-nums text-gray-800">{{ $t->tag?->beschriftung() }} · {{ $t->von }}–{{ $t->bis }}</span>
-                                <span>{{ $nv($t->kind?->name) }}</span>
-                                <span class="text-gray-500">({{ $t->eltern ? $nv($t->eltern->name) : 'Eltern' }})</span>
-                                @if ($t->gruppe)
-                                    <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">gemeinsam mit {{ $team['partnerVon'][$t->gruppe] ?? '' }}</span>
-                                @elseif ($t->allein)
-                                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">nur hier – gemeinsam war nichts mehr frei</span>
-                                @endif
-                                @unless (in_array($t->tag_id.'|'.$t->von, $gueltig, true))
-                                    <span class="text-amber-700">passt nicht mehr zu den Zeiten</span>
-                                @endunless
-                                @if ($verwaltung || $t->beginn()->isFuture())
-                                    <form method="POST" action="{{ route('module.elternsprechtag.plan.absagen', $fremd ? [$t, 'lehrer' => $lehrer->id] : [$t]) }}" class="ml-auto"
-                                          data-bestaetigen="Termin {{ $t->tag?->beschriftung() }}, {{ $t->von }} Uhr mit den Eltern von {{ $t->kind?->name }} absagen? Die Eltern bekommen eine Mail."
-                                          data-titel="Termin absagen" data-knopf="Absagen">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
-                                    </form>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="mt-4 flex justify-end">
-                        <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}"
-                           class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">Terminliste als PDF</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
 
-    {{-- Terminliste ansehen (Auge): derselbe Inhalt wie das PDF, erst beim Öffnen geladen. --}}
+    {{-- Terminliste ansehen (Auge): derselbe Inhalt wie das PDF, dazu je Termin Notiz und Absagen.
+         Bei jedem Öffnen frisch geladen. --}}
     @if ($plan->exists)
-        <div x-data="{ offen: false, src: '' }" @liste-ansehen.window="offen = true; src = @js(route('module.elternsprechtag.plan.ansicht', $ziel))" @keydown.escape.window="offen = false">
+        <div x-data="{ offen: false, src: '' }" @liste-ansehen.window="offen = true; src = @js(route('module.elternsprechtag.plan.ansicht', $ziel)) + (@js(route('module.elternsprechtag.plan.ansicht', $ziel)).includes('?') ? '&' : '?') + 't=' + Date.now()" @keydown.escape.window="offen = false">
             <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="offen = false">
                 <div class="flex h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-xl">
                     <div class="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3">
@@ -260,7 +210,7 @@
                 <div class="ml-auto flex items-center gap-2 text-gray-800">
                     <span>Insgesamt <strong x-text="gesamt()"></strong> Termine</span>
                     @if ($plan->termine->isNotEmpty())
-                        <a href="#" @click.prevent="$dispatch('termine-zeigen')" class="font-medium text-green-700 underline hover:text-green-800">({{ $plan->termine->count() }} gebucht)</a>
+                        <span class="font-medium text-green-700">({{ $plan->termine->count() }} gebucht)</span>
                     @endif
                     @if ($plan->exists)
                         <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" title="Terminliste als PDF herunterladen"

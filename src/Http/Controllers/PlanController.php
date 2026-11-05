@@ -158,7 +158,27 @@ class PlanController
     /** Dieselbe Terminliste als Seite – für die Vorschau (Auge) im Terminplan. */
     public function ansicht(Request $request, Sprechtag $sprechtag)
     {
-        return response()->view('elternsprechtag::plan.pdf', $this->listenDaten($request, $sprechtag) + ['vorschau' => true]);
+        $daten = $this->listenDaten($request, $sprechtag);
+
+        return response()->view('elternsprechtag::plan.pdf', $daten + [
+            'vorschau' => true,
+            // Für Notiz und Absagen aus der Vorschau: ggf. ?lehrer= mitgeben.
+            'param' => $daten['lehrer']->is($request->user()) ? [] : ['lehrer' => $daten['lehrer']->id],
+            'verwaltung' => Rechte::istVerwaltung($request->user()),
+        ]);
+    }
+
+    /** Notiz der Lehrkraft zu einem gebuchten Termin (aus der Vorschau, speichert beim Tippen). */
+    public function notiz(Request $request, Termin $termin)
+    {
+        $termin->load('plan.sprechtag');
+        $lehrer = $this->lehrer($request, $termin->plan->sprechtag);
+        abort_unless((int) $termin->plan->user_id === $lehrer->id, 404);
+
+        $daten = $request->validate(['notiz' => ['nullable', 'string', 'max:2000']]);
+        $termin->update(['notiz' => trim((string) ($daten['notiz'] ?? '')) ?: null]);
+
+        return response()->json(['ok' => true]);
     }
 
     /** Inhalt der Terminliste (PDF und Vorschau). */

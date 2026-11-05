@@ -31,6 +31,14 @@
         @if (! empty($vorschau))
             {{-- Vorschau im Terminplan (iframe): kein Seitenrand wie im PDF, also selbst etwas Luft. --}}
             body { margin: 20px; font-size: 13px; background: #fff; }
+            td.notiz { width: 260px; }
+            .notizfeld { width: 100%; box-sizing: border-box; font-size: 12px; padding: 4px 6px; border: 1px solid #d1d5db;
+                         border-radius: 6px; resize: vertical; min-height: 30px; }
+            .notizfeld:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
+            .gespeichert { font-size: 10px; color: #15803d; }
+            .absage { margin-top: 2px; font-size: 11px; color: #6b7280; }
+            .link { background: none; border: 0; padding: 0; cursor: pointer; font-size: 11px; color: #b91c1c; text-decoration: underline; }
+            .rot { font-weight: bold; }
         @endif
     </style>
 </head>
@@ -64,7 +72,24 @@
                             </td>
                             <td class="klasse">{{ $klasse($z['termin']->kind) }}</td>
                             <td>{{ $nv($z['termin']->eltern?->name) }}</td>
-                            <td class="notiz"></td>
+                            @if (! empty($vorschau))
+                                <td class="notiz">
+                                    <textarea class="notizfeld" rows="1" maxlength="2000" placeholder="Notiz …"
+                                              data-url="{{ route('module.elternsprechtag.plan.notiz', [$z['termin'], ...$param]) }}">{{ $z['termin']->notiz }}</textarea>
+                                    <span class="gespeichert" hidden>gespeichert</span>
+                                    @if ($verwaltung || $z['termin']->beginn()->isFuture())
+                                        {{-- Zweistufig statt confirm(): erst „absagen", dann „Ja, absagen". Nach dem Absenden lädt der ganze Terminplan neu. --}}
+                                        <form method="POST" target="_top" class="absage"
+                                              action="{{ route('module.elternsprechtag.plan.absagen', [$z['termin'], ...$param]) }}">
+                                            @csrf @method('DELETE')
+                                            <button type="button" class="link" onclick="this.hidden = true; this.nextElementSibling.hidden = false">absagen</button>
+                                            <span hidden>Eltern bekommen eine Mail. <button type="submit" class="link rot">Ja, absagen</button></span>
+                                        </form>
+                                    @endif
+                                </td>
+                            @else
+                                <td class="notiz">{{ $z['termin']->notiz }}</td>
+                            @endif
                         </tr>
                     @else
                         <tr>
@@ -102,6 +127,38 @@
                 @endforeach
             </tbody>
         </table>
+    @endif
+
+    @if (! empty($vorschau))
+        <script>
+            // Notizen speichern sich beim Tippen (kurz nach der letzten Taste) und beim Verlassen des Felds.
+            document.querySelectorAll('.notizfeld').forEach((feld) => {
+                const hinweis = feld.nextElementSibling;
+                let warte = null, zuletzt = feld.value;
+                const speichern = async () => {
+                    clearTimeout(warte);
+                    if (feld.value === zuletzt) return;
+                    const wert = feld.value;
+                    const antwort = await fetch(feld.dataset.url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': @json(csrf_token()) },
+                        body: JSON.stringify({ notiz: wert }),
+                    });
+                    if (antwort.ok) {
+                        zuletzt = wert;
+                        hinweis.textContent = 'gespeichert';
+                        hinweis.style.color = '#15803d';
+                    } else {
+                        hinweis.textContent = 'nicht gespeichert – bitte erneut versuchen';
+                        hinweis.style.color = '#b91c1c';
+                    }
+                    hinweis.hidden = false;
+                    setTimeout(() => { hinweis.hidden = true; }, 2500);
+                };
+                feld.addEventListener('input', () => { clearTimeout(warte); warte = setTimeout(speichern, 800); });
+                feld.addEventListener('blur', speichern);
+            });
+        </script>
     @endif
 </body>
 </html>
