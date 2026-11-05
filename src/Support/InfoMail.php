@@ -117,10 +117,12 @@ class InfoMail
     /**
      * Die Info an diese Eltern in den Ausgangskorb legen.
      *
+     * Vorlage: VORLAGE_WUNSCH (erste Stufe) oder VORLAGE_INFO (an alle).
+     *
      * @param  Collection<int, User>  $empfaenger
      * @return array{0: int, 1: int}  gesendet, fehlgeschlagen
      */
-    public static function versenden(Sprechtag $sprechtag, VorlagenMailer $mailer, Collection $empfaenger): array
+    public static function versenden(Sprechtag $sprechtag, VorlagenMailer $mailer, Collection $empfaenger, string $vorlage = ElternsprechtagServiceProvider::VORLAGE_INFO): array
     {
         $einladungen = self::einladungen($sprechtag);
         $gesendet = $fehler = 0;
@@ -129,8 +131,8 @@ class InfoMail
             [$html, $text] = self::werte($sprechtag, $u, $einladungen->get($u->id, []));
             try {
                 $mailer->senden(
-                    ElternsprechtagServiceProvider::VORLAGE_INFO, $u->email, $html, $text,
-                    quelle: 'Elternsprechtag-Info', referenz: 'elternsprechtag:'.$sprechtag->id.':'.$u->id, modul: 'Elternsprechtag',
+                    $vorlage, $u->email, $html, $text,
+                    quelle: $vorlage === ElternsprechtagServiceProvider::VORLAGE_WUNSCH ? 'Elternsprechtag-Einladung' : 'Elternsprechtag-Info', referenz: 'elternsprechtag:'.$sprechtag->id.':'.$u->id, modul: 'Elternsprechtag',
                 );
                 $gesendet++;
             } catch (\Throwable $e) {
@@ -185,11 +187,13 @@ Klassen: {$klassenText}" : '',
             'link' => route('module.elternsprechtag.eltern.index'),
             'hinweis' => (string) $sprechtag->hinweis,
             'einladung' => '',
+            'gespraeche' => '',
         ];
         $html = array_map('e', $text);
         $html['hinweis'] = nl2br(e((string) $sprechtag->hinweis));
         $html['klassen_zeile'] = count($klassen) > 1 ? '<br><strong>Klassen:</strong> '.e($klassenText) : '';
         $html['einladung'] = '';
+        $html['gespraeche'] = '';
 
         if ($einladung !== []) {
             $zeilen = array_map(fn ($z) => $z['lehrer']->name.' – für '.$z['kind']->name, $einladung);
@@ -198,6 +202,9 @@ Klassen: {$klassenText}" : '',
                 .'<p style="margin:0 0 8px;"><strong>Persönliche Einladung:</strong> Folgende Lehrkräfte möchten Sie gern sprechen:</p>'
                 .'<ul style="margin:0 0 8px;padding-left:20px;">'.implode('', array_map(fn ($z) => '<li>'.e($z).'</li>', $zeilen)).'</ul>'
                 .'<p style="margin:0;">Bitte buchen Sie dort möglichst einen Termin.</p></div>';
+
+            $html['gespraeche'] = '<ul style="margin:0 0 16px;padding-left:20px;">'.implode('', array_map(fn ($z) => '<li>'.e($z).'</li>', $zeilen)).'</ul>';
+            $text['gespraeche'] = implode("\n", array_map(fn ($z) => '- '.$z, $zeilen));
 
             $text['einladung'] = "Persönliche Einladung – folgende Lehrkräfte möchten Sie gern sprechen:\n"
                 .implode("\n", array_map(fn ($z) => '- '.$z, $zeilen))

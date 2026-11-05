@@ -18,7 +18,11 @@ use Intranet\Modules\Elternsprechtag\Support\Rechte;
  */
 class ElternsprechtagServiceProvider extends ModuleServiceProvider
 {
+    /** Allgemeine Info an alle Eltern (zweite Stufe bzw. alles auf einmal). */
     public const VORLAGE_INFO = 'elternsprechtag_info';
+
+    /** Einladung zu den Wunschgesprächen (erste Stufe, nur persönlich eingeladene Eltern). */
+    public const VORLAGE_WUNSCH = 'elternsprechtag_wunsch';
 
     public const VORLAGE_ABSAGE = 'elternsprechtag_absage';
 
@@ -65,8 +69,8 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             $register = $this->app->make(\App\Mail\Vorlagen\VorlagenRegister::class);
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_INFO,
-                titel: 'Elternsprechtag: Info an die Eltern',
-                beschreibung: 'Geht über den Knopf „Veröffentlichen" an alle Eltern der beteiligten Klassen – in zwei Stufen: zuerst an persönlich eingeladene Eltern (nur Wunschgespräche), danach an alle.',
+                titel: 'Elternsprechtag: Info an alle Eltern',
+                beschreibung: 'Geht an alle Eltern der beteiligten Klassen, sobald alle Gespräche veröffentlicht werden (zweite Stufe oder „Gleich alle Gespräche veröffentlichen"). Persönlich eingeladene Eltern bekommen sie auch – mit dem Abschnitt {{ einladung }}.',
                 platzhalter: [
                     'name' => 'Name des Elternteils',
                     'sprechtag' => 'Titel des Sprechtags',
@@ -90,6 +94,34 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 ],
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Info',
+            ));
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                schluessel: self::VORLAGE_WUNSCH,
+                titel: 'Elternsprechtag: Einladung zu Wunschgesprächen',
+                beschreibung: 'Erste Stufe: geht über „1. Wunschgespräche veröffentlichen" nur an Eltern, mit denen eine Lehrkraft unbedingt sprechen möchte. Sie können vorerst nur diese Gespräche buchen; die allgemeine Info folgt mit der zweiten Stufe.',
+                platzhalter: [
+                    'name' => 'Name des Elternteils',
+                    'sprechtag' => 'Titel des Sprechtags',
+                    'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
+                    'klassen' => 'Klassen der Kinder dieses Elternteils',
+                    'klassen_zeile' => 'Zeile „Klassen: …" unter den Terminen; entfällt, wenn es nur eine Klasse ist',
+                    'hinweis' => 'Hinweistext, der beim Sprechtag eingetragen ist',
+                    'gespraeche' => 'Liste der Lehrkräfte, die diese Eltern sprechen möchten, je mit Kind',
+                    'link' => 'Link zur Terminbuchung im Intranet',
+                ],
+                betreff: 'Elternsprechtag: {{ sprechtag }} – persönliche Einladung',
+                html: self::WUNSCH_HTML,
+                text: self::WUNSCH_TEXT,
+                beispiele: [
+                    'sprechtag' => 'Elternsprechtag Herbst',
+                    'tage' => 'Do 12.11.2026, Fr 13.11.2026',
+                    'klassen' => '5a, 7a',
+                    'klassen_zeile' => '<br><strong>Klassen:</strong> 5a, 7a',
+                    'hinweis' => 'Die Gespräche finden in den Klassenräumen statt.',
+                    'gespraeche' => '<ul style="margin:0 0 16px;padding-left:20px;"><li>Frau Muster – für Max Muster</li></ul>',
+                ],
+                modul: 'Elternsprechtag',
+                ausloeser: 'Elternsprechtag-Einladung',
             ));
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_ABSAGE,
@@ -129,6 +161,37 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 </p>
 <p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
 HTML;
+
+    private const WUNSCH_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;">Liebe Eltern, hallo {{ name }}!</p>
+<p style="margin:0 0 16px;">Zum <strong>{{ sprechtag }}</strong> möchten folgende Lehrkräfte gern mit Ihnen sprechen:</p>
+{{ gespraeche }}
+<p style="margin:0 0 16px;">Damit diese Gespräche sicher einen Platz bekommen, können Sie sie schon jetzt – vor allen anderen Eltern – buchen. Bitte buchen Sie dort möglichst bald einen Termin. Die übrigen Lehrkräfte sind etwas später buchbar; dazu erhalten Sie noch eine E-Mail.</p>
+<p style="margin:0 0 16px;"><strong>Termine:</strong> {{ tage }}{{ klassen_zeile }}</p>
+<p style="margin:0 0 16px;">{{ hinweis }}</p>
+<p style="margin:0 0 24px;">
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Termin buchen</a>
+</p>
+<p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
+HTML;
+
+    private const WUNSCH_TEXT = <<<'TEXT'
+Liebe Eltern, hallo {{ name }}!
+
+Zum {{ sprechtag }} möchten folgende Lehrkräfte gern mit Ihnen sprechen:
+{{ gespraeche }}
+
+Damit diese Gespräche sicher einen Platz bekommen, können Sie sie schon jetzt – vor allen anderen Eltern – buchen. Bitte buchen Sie dort möglichst bald einen Termin. Die übrigen Lehrkräfte sind etwas später buchbar; dazu erhalten Sie noch eine E-Mail.
+
+Termine: {{ tage }}{{ klassen_zeile }}
+
+{{ hinweis }}
+
+Termin buchen: {{ link }}
+
+Mit freundlichen Grüßen
+Ihr Kollegium
+TEXT;
 
     private const ABSAGE_HTML = <<<'HTML'
 <p style="margin:0 0 16px;font-size:16px;">Liebe Eltern, hallo {{ name }}!</p>

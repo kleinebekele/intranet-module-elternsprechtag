@@ -116,7 +116,8 @@ class SprechtagController
         $wunschStufe = ! $sprechtag->veroeffentlicht() && $stufe === 'wunsch' && InfoMail::einladungen($sprechtag)->isNotEmpty();
         $empfaenger = $wunschStufe ? InfoMail::eingeladene($sprechtag) : InfoMail::empfaenger($sprechtag);
 
-        [$gesendet, $fehler] = InfoMail::versenden($sprechtag, $mailer, $empfaenger);
+        [$gesendet, $fehler] = InfoMail::versenden($sprechtag, $mailer, $empfaenger,
+            $wunschStufe ? ElternsprechtagServiceProvider::VORLAGE_WUNSCH : ElternsprechtagServiceProvider::VORLAGE_INFO);
 
         $sprechtag->update([
             'info_versendet_am' => $sprechtag->info_versendet_am ?? now(),
@@ -134,15 +135,25 @@ class SprechtagController
         return back()->with('status', $text.($fehler > 0 ? " {$fehler} fehlgeschlagen (siehe Log)." : ''));
     }
 
-    /** Vorschau der Info-Mail, wie sie ein bestimmtes Elternteil bekäme (JSON für die Übersicht). */
+    /**
+     * Vorschau einer Mail, wie sie ein bestimmtes Elternteil bekäme (JSON für die
+     * Übersicht). `art=wunsch` = Einladung der ersten Stufe, sonst die Info an alle.
+     */
     public function vorschau(Request $request, Sprechtag $sprechtag, VorlagenMailer $mailer): JsonResponse
     {
         $sprechtag->load('tage');
         $eltern = User::findOrFail((int) $request->query('eltern'));
         abort_unless(Klassen::eltern($sprechtag->klassenListe())->contains('id', $eltern->id), 404);
 
-        [$html, $text] = InfoMail::werte($sprechtag, $eltern, InfoMail::einladungen($sprechtag)->get($eltern->id, []));
-        $mail = $mailer->rendern(ElternsprechtagServiceProvider::VORLAGE_INFO, $html, $text);
+        $einladung = InfoMail::einladungen($sprechtag)->get($eltern->id, []);
+        $wunsch = $request->query('art') === 'wunsch';
+        if ($wunsch && $einladung === []) {
+            return response()->json(['an' => $eltern->email ?: '(keine Mailadresse)', 'betreff' => '–', 'gesperrt' => $eltern->istGesperrt(),
+                'html' => '<p style="font-family:sans-serif;color:#6b7280;padding:16px;">Dieses Elternteil ist nicht persönlich eingeladen und bekommt in der ersten Stufe keine Mail.</p>']);
+        }
+
+        [$html, $text] = InfoMail::werte($sprechtag, $eltern, $einladung);
+        $mail = $mailer->rendern($wunsch ? ElternsprechtagServiceProvider::VORLAGE_WUNSCH : ElternsprechtagServiceProvider::VORLAGE_INFO, $html, $text);
 
         return response()->json([
             'an' => $eltern->email ?: '(keine Mailadresse)',

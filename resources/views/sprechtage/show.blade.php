@@ -61,7 +61,7 @@
                 Das geht in zwei Stufen: <strong>1. Wunschgespräche</strong> – nur Eltern, die eine Lehrkraft unbedingt sprechen möchte, bekommen die Mail
                 und können nur diese Gespräche buchen. <strong>2. Alle Gespräche</strong> – die Mail geht an alle Eltern der beteiligten Klassen
                 ({{ $eltern->count() }} Personen, {{ $mitAdresse->count() }} mit Adresse und nicht gesperrt), alle Termine sind buchbar.
-                Den Wortlaut gibt es unter Verwaltung → Mailvorlagen („Elternsprechtag: Info an die Eltern"); der Hinweistext vom Sprechtag wird eingesetzt.
+                Den Wortlaut beider Mails gibt es unter Verwaltung → Mailvorlagen („Elternsprechtag: Einladung zu Wunschgesprächen" und „Elternsprechtag: Info an alle Eltern"); der Hinweistext vom Sprechtag wird eingesetzt.
             </p>
             @if ($sprechtag->hinweis)
                 <div class="mt-3 whitespace-pre-line rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{{ $sprechtag->hinweis }}</div>
@@ -191,11 +191,11 @@
                     $erste = $optionen->first()['wert'];
                 @endphp
                 <div class="mt-5 border-t border-gray-100 pt-4"
-                     x-data="mailVorschau(@js(route('module.elternsprechtag.sprechtage.vorschau', $sprechtag)), @js($erste))"
+                     x-data="mailVorschau(@js(route('module.elternsprechtag.sprechtage.vorschau', $sprechtag)), @js($erste), @js($einladungen->isNotEmpty() && ! $sprechtag->fuerAlleOffen() ? 'wunsch' : 'alle'))"
                      @suchauswahl-gewaehlt="laden($event.detail.wert)">
                     <div role="button" tabindex="0" :aria-expanded="offen" @click="umschalten()" @keydown.enter.prevent="umschalten()" @keydown.space.prevent="umschalten()"
                          class="flex cursor-pointer items-center justify-between gap-2">
-                        <h3 class="text-sm font-semibold text-gray-800">Vorschau der Mail an die Eltern
+                        <h3 class="text-sm font-semibold text-gray-800">Vorschau der Mails an die Eltern
                             <span class="font-normal text-gray-500">· {{ $einladungen->count() }} Eltern persönlich eingeladen</span></h3>
                         <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
                     </div>
@@ -209,6 +209,14 @@
                             'leer' => 'Elternteil suchen …',
                             'breite' => 'w-80',
                         ])
+                        @if ($einladungen->isNotEmpty())
+                            <div class="flex rounded-lg border border-gray-300 text-sm" role="group">
+                                <button type="button" @click="art = 'wunsch'; laden(aktuell)" class="rounded-l-lg px-3 py-1.5"
+                                        :class="art === 'wunsch' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'">1. Einladung Wunschgespräche</button>
+                                <button type="button" @click="art = 'alle'; laden(aktuell)" class="rounded-r-lg border-l border-gray-300 px-3 py-1.5"
+                                        :class="art === 'alle' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-50'">2. Info an alle</button>
+                            </div>
+                        @endif
                     </div>
                     <div class="mt-3 rounded-lg border border-gray-200">
                         <div class="space-y-0.5 border-b border-gray-200 bg-gray-50 px-3 py-2 text-sm">
@@ -221,9 +229,9 @@
                     </div>
                 </div>
                 <script>
-                    function mailVorschau(url, erste) {
+                    function mailVorschau(url, erste, art) {
                         return {
-                            an: '', betreff: '', gesperrt: false, offen: false, geladen: false,
+                            an: '', betreff: '', gesperrt: false, offen: false, geladen: false, art: art, aktuell: erste,
                             // Erst beim ersten Aufklappen laden.
                             umschalten() {
                                 this.offen = ! this.offen;
@@ -231,7 +239,8 @@
                             },
                             async laden(id) {
                                 if (! id) return;
-                                const antwort = await fetch(url + '?eltern=' + encodeURIComponent(id), { headers: { Accept: 'application/json' } });
+                                this.aktuell = id;
+                                const antwort = await fetch(url + '?eltern=' + encodeURIComponent(id) + '&art=' + this.art, { headers: { Accept: 'application/json' } });
                                 if (! antwort.ok) return;
                                 const d = await antwort.json();
                                 this.an = d.an; this.betreff = d.betreff; this.gesperrt = d.gesperrt;

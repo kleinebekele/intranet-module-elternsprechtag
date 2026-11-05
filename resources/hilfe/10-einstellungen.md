@@ -96,9 +96,13 @@ der Mail. Wer seine Teilnahme abgesagt hat, zählt nicht.
 
 Die Mail nennt nur die Klassen der eigenen Kinder. Bei nur einer Klasse entfällt die Zeile.
 
+Mit den Knöpfen neben dem Suchfeld wechseln Sie zwischen den beiden Mails: **1. Einladung
+Wunschgespräche** (nur für persönlich eingeladene Eltern) und **2. Info an alle**.
+
 Den Wortlaut der Mails ändern Sie unter Verwaltung → Mailvorlagen:
 
-- „Elternsprechtag: Info an die Eltern“
+- „Elternsprechtag: Einladung zu Wunschgesprächen“ – erste Stufe
+- „Elternsprechtag: Info an alle Eltern“ – zweite Stufe bzw. alles auf einmal
 - „Elternsprechtag: Absage durch die Lehrkraft“
 
 ## Telefonische Anmeldungen
