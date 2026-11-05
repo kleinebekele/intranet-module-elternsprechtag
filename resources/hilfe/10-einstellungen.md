@@ -53,7 +53,9 @@ Info-Mail für alle Eltern der Klassen in den Ausgangskorb.
 **Pflicht für Klassenlehrkräfte:** Wer Klassenlehrkraft einer beteiligten Klasse ist, muss vorher
 seinen Plan freigeben oder seine Teilnahme absagen. Solange das fehlt, ist der Knopf gesperrt;
 darunter steht, wer noch fehlt, und in der Übersicht steht bei ihnen „Pflicht als
-Klassenlehrkraft“. Alle anderen Lehrkräfte dürfen fehlen.
+Klassenlehrkraft“. Hat eine Klasse mehrere Klassenlehrkräfte, genügt es, wenn eine davon ihren
+Plan freigegeben hat – die anderen halten das Veröffentlichen dann nicht mehr auf. Alle anderen
+Lehrkräfte dürfen fehlen.
 
 **Vorsprung für persönlich eingeladene Eltern** (Standard 60 Minuten): Eltern, mit denen eine
 Lehrkraft unbedingt sprechen möchte, bekommen die Mail sofort und können so lange allein buchen.

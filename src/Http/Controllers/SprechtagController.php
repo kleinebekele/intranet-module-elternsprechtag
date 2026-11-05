@@ -110,7 +110,7 @@ class SprechtagController
         // Erneut senden: an alle sofort. Erstes Veröffentlichen: zuerst die persönlich
         // eingeladenen Eltern, die übrigen nach dem Vorsprung (Command info-nachsenden).
         $erneut = $sprechtag->info_versendet_am !== null;
-        $vorsprung = $erneut ? 0 : (int) $request->validate(['vorsprung_minuten' => ['nullable', 'integer', 'min:0', 'max:1440']])['vorsprung_minuten'];
+        $vorsprung = $erneut ? 0 : (int) ($request->validate(['vorsprung_minuten' => ['nullable', 'integer', 'min:0', 'max:1440']])['vorsprung_minuten'] ?? 60);
         $alleJetzt = $erneut || $vorsprung === 0;
 
         [$gesendet, $fehler] = InfoMail::versenden($sprechtag, $mailer, $alleJetzt ? InfoMail::empfaenger($sprechtag) : InfoMail::eingeladene($sprechtag));
@@ -171,7 +171,7 @@ class SprechtagController
     {
         $klassen = $sprechtag->klassenListe();
 
-        return Klassen::lehrer($klassen)->pluck('user')
+        $liste = Klassen::lehrer($klassen)->pluck('user')
             ->concat(Klassen::klassenlehrer($klassen))
             ->concat($plaene->pluck('user')->filter())
             ->unique('id')
@@ -179,17 +179,24 @@ class SprechtagController
             ->map(function (User $u) use ($plaene, $sprechtag, $klassen) {
                 $plan = $plaene->get($u->id);
                 $klassenlehrer = Klassen::alsKlassenlehrer($u, $klassen);
-                $angabe = $plan !== null && ($plan->freigegeben() || $plan->abgesagt());
 
                 return [
                     'user' => $u,
                     'klassen' => array_values(array_diff(Plan::klassenVon($plan, $u, $sprechtag), $klassenlehrer)),
                     'klassenlehrer' => $klassenlehrer,
-                    'angabe' => $angabe,
-                    'pflichtFehlt' => $klassenlehrer !== [] && ! $angabe,
+                    'angabe' => $plan !== null && ($plan->freigegeben() || $plan->abgesagt()),
+                    'freigegeben' => $plan !== null && $plan->freigegeben(),
                 ];
             })
             ->values();
+
+        // Eine Klasse ist versorgt, sobald eine ihrer Klassenlehrkräfte den Plan freigegeben hat –
+        // die übrigen Klassenlehrkräfte dieser Klasse halten das Veröffentlichen dann nicht mehr auf.
+        $versorgt = $liste->where('freigegeben', true)->flatMap(fn (array $z) => $z['klassenlehrer'])->unique()->all();
+
+        return $liste->map(fn (array $z) => $z + [
+            'pflichtFehlt' => ! $z['angabe'] && array_diff($z['klassenlehrer'], $versorgt) !== [],
+        ]);
     }
 
     private function formular(Sprechtag $sprechtag): View
