@@ -223,6 +223,13 @@
                             <div><span class="text-gray-500">An:</span> <span x-text="an"></span>
                                 <span x-show="gesperrt" class="text-red-700">(gesperrt – bekommt keine Mail)</span></div>
                             <div><span class="text-gray-500">Betreff:</span> <span class="font-medium" x-text="betreff"></span></div>
+                            <template x-if="anhaenge.length">
+                                <div><span class="text-gray-500">Anhang:</span>
+                                    <template x-for="a in anhaenge" :key="a.name">
+                                        <a :href="a.url" target="_blank" class="mr-2 inline-flex items-center gap-1 text-indigo-700 hover:underline">📎 <span x-text="a.name"></span> <span class="text-gray-500" x-text="'(' + a.groesse + ')'"></span></a>
+                                    </template>
+                                </div>
+                            </template>
                         </div>
                         <iframe x-ref="rahmen" class="h-[32rem] w-full rounded-b-lg" title="Vorschau der Mail"></iframe>
                     </div>
@@ -231,7 +238,7 @@
                 <script>
                     function mailVorschau(url, erste, art) {
                         return {
-                            an: '', betreff: '', gesperrt: false, offen: false, geladen: false, art: art, aktuell: erste,
+                            an: '', betreff: '', gesperrt: false, anhaenge: [], offen: false, geladen: false, art: art, aktuell: erste,
                             // Erst beim ersten Aufklappen laden.
                             umschalten() {
                                 this.offen = ! this.offen;
@@ -243,7 +250,7 @@
                                 const antwort = await fetch(url + '?eltern=' + encodeURIComponent(id) + '&art=' + this.art, { headers: { Accept: 'application/json' } });
                                 if (! antwort.ok) return;
                                 const d = await antwort.json();
-                                this.an = d.an; this.betreff = d.betreff; this.gesperrt = d.gesperrt;
+                                this.an = d.an; this.betreff = d.betreff; this.gesperrt = d.gesperrt; this.anhaenge = d.anhaenge || [];
                                 this.$refs.rahmen.srcdoc = d.html;
                             },
                         };

@@ -155,12 +155,27 @@ class SprechtagController
         [$html, $text] = InfoMail::werte($sprechtag, $eltern, $einladung);
         $mail = $mailer->rendern($wunsch ? ElternsprechtagServiceProvider::VORLAGE_WUNSCH : ElternsprechtagServiceProvider::VORLAGE_INFO, $html, $text);
 
+        $anhaenge = $wunsch ? array_map(fn ($a) => [
+            'name' => $a['name'],
+            'groesse' => number_format(filesize($a['pfad']) / 1024, 0, ',', '.').' KB',
+            'url' => route('module.elternsprechtag.sprechtage.elterninfo'),
+        ], InfoMail::elternPdf()) : [];
+
         return response()->json([
             'an' => $eltern->email ?: '(keine Mailadresse)',
             'betreff' => $mail['betreff'],
             'html' => $mail['html'],
             'gesperrt' => $eltern->istGesperrt(),
+            'anhaenge' => $anhaenge,
         ]);
+    }
+
+    /** Die Elternanleitung, die an der Einladungsmail hängt – zum Ansehen aus der Vorschau. */
+    public function elternPdf(): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $anhang = InfoMail::elternPdf()[0] ?? abort(404);
+
+        return response()->file($anhang['pfad'], ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="'.$anhang['name'].'"']);
     }
 
     /** @return Collection<int, Plan>  Schlüssel = Lehrer-ID */
