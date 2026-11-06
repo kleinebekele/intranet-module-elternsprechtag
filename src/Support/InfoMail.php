@@ -126,6 +126,7 @@ class InfoMail
     {
         $einladungen = self::einladungen($sprechtag);
         $gesendet = $fehler = 0;
+        $anhaenge = $vorlage === ElternsprechtagServiceProvider::VORLAGE_WUNSCH ? self::elternPdf() : [];
 
         foreach ($empfaenger as $u) {
             [$html, $text] = self::werte($sprechtag, $u, $einladungen->get($u->id, []));
@@ -133,6 +134,7 @@ class InfoMail
                 $mailer->senden(
                     $vorlage, $u->email, $html, $text,
                     quelle: $vorlage === ElternsprechtagServiceProvider::VORLAGE_WUNSCH ? 'Elternsprechtag-Einladung' : 'Elternsprechtag-Info', referenz: 'elternsprechtag:'.$sprechtag->id.':'.$u->id, modul: 'Elternsprechtag',
+                    anhaenge: $anhaenge,
                 );
                 $gesendet++;
             } catch (\Throwable $e) {
@@ -142,6 +144,19 @@ class InfoMail
         }
 
         return [$gesendet, $fehler];
+    }
+
+    /**
+     * Die Elternanleitung als Anhang. Quelle: waldorfschule/docs/elternsprechtag/eltern.html,
+     * nach jeder Änderung neu drucken und hierher kopieren.
+     *
+     * @return list<array{pfad: string, name: string}>
+     */
+    public static function elternPdf(): array
+    {
+        $pfad = dirname(__DIR__, 2).'/resources/pdf/Elternsprechtag-Elterninfo.pdf';
+
+        return is_file($pfad) ? [['pfad' => $pfad, 'name' => 'Elternsprechtag-Elterninfo.pdf']] : [];
     }
 
     /**
