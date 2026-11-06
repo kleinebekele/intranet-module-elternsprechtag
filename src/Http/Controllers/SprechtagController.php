@@ -88,6 +88,9 @@ class SprechtagController
             'eltern' => Klassen::eltern($sprechtag->klassenListe()),
             'einladungen' => InfoMail::einladungen($sprechtag),
             'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
+            'zustellung' => $sprechtag->veroeffentlicht()
+                ? InfoMail::zustellung($sprechtag, $sprechtag->fuerAlleOffen() ? 'Elternsprechtag-Info' : 'Elternsprechtag-Einladung')
+                : null,
         ]);
     }
 

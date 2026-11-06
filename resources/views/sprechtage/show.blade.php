@@ -112,6 +112,28 @@
                     <span class="text-sm text-green-700">✓ alle Gespräche veröffentlicht am {{ $sprechtag->info_rest_versendet_am->format('d.m.Y H:i') }}, Info an {{ $sprechtag->info_empfaenger }} Eltern
                         @if ($sprechtag->info_rest_versendet_am->ne($sprechtag->info_versendet_am)) <span class="text-gray-500">(Wunschgespräche seit {{ $sprechtag->info_versendet_am->format('d.m.Y H:i') }})</span>@endif</span>
                 @endif
+                @if ($zustellung && $zustellung['wartend'] > 0)
+                    <span class="text-sm text-gray-500">· {{ $zustellung['wartend'] }} noch im Ausgangskorb</span>
+                @endif
+                @if ($zustellung && $zustellung['fehlgeschlagen']->isNotEmpty())
+                    <details class="w-full text-sm">
+                        <summary class="cursor-pointer font-medium text-red-700">⚠ {{ $zustellung['fehlgeschlagen']->count() }} {{ $zustellung['fehlgeschlagen']->count() === 1 ? 'Mail wurde' : 'Mails wurden' }} nicht zugestellt – bitte diese Eltern anders erreichen</summary>
+                        <ul class="mt-1 space-y-0.5 pl-5 text-gray-700">
+                            @foreach ($zustellung['fehlgeschlagen'] as $f)
+                                <li>
+                                    @if ($f['eltern'])
+                                        <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $f['eltern']->id]) }}" class="text-indigo-700 hover:underline">{{ $f['eltern']->name }}</a>
+                                    @endif
+                                    <span class="text-gray-500">{{ $f['an'] }}</span>
+                                    @if ($f['grund'] !== '') <span class="text-xs text-gray-400">· {{ \Illuminate\Support\Str::limit($f['grund'], 120) }}</span>@endif
+                                </li>
+                            @endforeach
+                        </ul>
+                        @if (auth()->user()?->is_admin && \Illuminate\Support\Facades\Route::has('admin.mail.index'))
+                            <a href="{{ route('admin.mail.index', ['status' => 'fehlgeschlagen']) }}" class="mt-1 inline-block pl-5 text-xs text-indigo-700 hover:underline">im Ausgangskorb ansehen</a>
+                        @endif
+                    </details>
+                @endif
             </div>
 
             {{-- Stand der Wunschgespräche: wer hat schon gebucht, wen muss man evtl. anrufen. --}}

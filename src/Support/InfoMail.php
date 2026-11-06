@@ -19,6 +19,41 @@ use Intranet\Modules\Elternsprechtag\Models\Wunsch;
 class InfoMail
 {
     /**
+     * Zustellstand der Info-Mails dieses Sprechtags laut Ausgangskorb, je Mail-Art
+     * (`Elternsprechtag-Einladung` bzw. `Elternsprechtag-Info`). Je Elternteil zählt
+     * nur die jüngste Mail dieser Art – ein erneutes Senden ersetzt den alten Fehlschlag.
+     *
+     * @return array{wartend: int, fehlgeschlagen: Collection<int, array{eltern: ?User, an: string, grund: string}>}
+     */
+    public static function zustellung(Sprechtag $sprechtag, string $quelle): array
+    {
+        $leer = ['wartend' => 0, 'fehlgeschlagen' => collect()];
+        if (! class_exists(\App\Models\MailOutbox::class)) {
+            return $leer;
+        }
+
+        $praefix = 'elternsprechtag:'.$sprechtag->id.':';
+        $mails = \App\Models\MailOutbox::query()
+            ->where('quelle', $quelle)
+            ->where('referenz', 'like', $praefix.'%')
+            ->orderBy('id')
+            ->get(['id', 'referenz', 'an', 'status', 'zustellung', 'fehler', 'zustellung_grund'])
+            ->keyBy('referenz');
+
+        $fehl = $mails->filter(fn ($m) => $m->stand() === \App\Models\MailOutbox::FEHLGESCHLAGEN);
+        $eltern = User::whereIn('id', $fehl->map(fn ($m) => (int) substr($m->referenz, strlen($praefix)))->values())->get()->keyBy('id');
+
+        return [
+            'wartend' => $mails->filter(fn ($m) => $m->stand() === \App\Models\MailOutbox::WARTEND)->count(),
+            'fehlgeschlagen' => $fehl->map(fn ($m) => [
+                'eltern' => $eltern->get((int) substr($m->referenz, strlen($praefix))),
+                'an' => implode(', ', (array) $m->an),
+                'grund' => (string) ($m->zustellung_grund ?: $m->fehler),
+            ])->values(),
+        ];
+    }
+
+    /**
      * Gesprächswünsche des Sprechtags je Elternteil. Pläne mit abgesagter
      * Teilnahme zählen nicht; die Notiz des Lehrers bleibt intern.
      *
