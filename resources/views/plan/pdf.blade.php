@@ -2,6 +2,24 @@
     use Intranet\Modules\Elternsprechtag\Support\Klassen;
     $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
     $klasse = fn ($kind) => $kind ? implode(', ', Klassen::vonKind($kind)) : '';
+    $vorschau = ! empty($vorschau);
+    // Im PDF aufeinanderfolgende freie Zeiten zu einer Zeile zusammenfassen – sonst wird
+    // die Liste schnell länger als eine Seite. Die Vorschau zeigt jede Zeit einzeln.
+    $zusammenfassen = function ($zeilen) {
+        $aus = [];
+        foreach ($zeilen as $z) {
+            $frei = ! $z['pause'] && ! $z['termin'];
+            $letzte = end($aus);
+            if ($frei && $letzte && ($letzte['frei'] ?? false)) {
+                $aus[array_key_last($aus)]['bis'] = $z['bis'];
+                $aus[array_key_last($aus)]['anzahl']++;
+            } else {
+                $aus[] = $z + ['frei' => $frei, 'anzahl' => 1];
+            }
+        }
+
+        return $aus;
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="de">
@@ -28,15 +46,17 @@
         .wunsch { color: #4338ca; font-size: 9px; }
         .seite { page-break-inside: avoid; }
         .leer { color: #6b7280; font-style: italic; }
-        @if (! empty($vorschau))
+        @if ($vorschau)
             {{-- Vorschau im Terminplan (iframe): kein Seitenrand wie im PDF, also selbst etwas Luft. --}}
             body { margin: 20px; font-size: 13px; background: #fff; }
-            td.notiz { width: 260px; }
+            td.notiz { width: 320px; }
+            td.aktion { width: 1%; white-space: nowrap; padding-right: 10px; }
             .notizfeld { width: 100%; box-sizing: border-box; font-size: 12px; padding: 4px 6px; border: 1px solid #d1d5db;
                          border-radius: 6px; resize: vertical; min-height: 30px; }
             .notizfeld:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
             .gespeichert { font-size: 10px; color: #15803d; }
-            .absage { margin-top: 2px; font-size: 11px; color: #6b7280; }
+            .absage { margin: 0; font-size: 11px; color: #6b7280; }
+            .absage span:not([hidden]) { display: block; white-space: normal; width: 9rem; }
             .link { background: none; border: 0; padding: 0; cursor: pointer; font-size: 11px; color: #b91c1c; text-decoration: underline; }
             .rot { font-weight: bold; }
         @endif
@@ -56,27 +76,16 @@
         <h2>{{ $t['tag']->beschriftung() }} <span class="zeit">{{ $t['von'] }}–{{ $t['bis'] }} Uhr</span></h2>
         <table>
             <thead>
-                <tr><th>Uhrzeit</th><th>Kind</th><th>Klasse</th><th>Eltern</th><th>Notiz</th></tr>
+                <tr>@if ($vorschau)<th></th>@endif<th>Uhrzeit</th><th>Kind</th><th>Klasse</th><th>Eltern</th><th>Notiz</th></tr>
             </thead>
             <tbody>
-                @foreach ($t['zeilen'] as $z)
+                @foreach ($vorschau ? $t['zeilen'] : $zusammenfassen($t['zeilen']) as $z)
                     @if ($z['pause'])
-                        <tr class="pause"><td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td><td colspan="4">Pause</td></tr>
+                        <tr class="pause">@if ($vorschau)<td></td>@endif<td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td><td colspan="4">Pause</td></tr>
                     @elseif ($z['termin'])
                         <tr>
-                            <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
-                            <td>{{ $nv($z['termin']->kind?->name) }}
-                                @if (in_array($z['termin']->kind_user_id, $wuensche)) <span class="wunsch">(Wunsch)</span> @endif
-                                @if ($z['termin']->gruppe) <span class="wunsch">(gemeinsam mit {{ $partnerVon[$z['termin']->gruppe] ?? '' }})</span> @endif
-                                @if ($z['termin']->allein) <span class="wunsch">(nur hier – gemeinsam war nichts frei)</span> @endif
-                            </td>
-                            <td class="klasse">{{ $klasse($z['termin']->kind) }}</td>
-                            <td>{{ $nv($z['termin']->eltern?->name) }}</td>
-                            @if (! empty($vorschau))
-                                <td class="notiz">
-                                    <textarea class="notizfeld" rows="1" maxlength="2000" placeholder="Notiz …"
-                                              data-url="{{ route('module.elternsprechtag.plan.notiz', [$z['termin'], ...$param]) }}">{{ $z['termin']->notiz }}</textarea>
-                                    <span class="gespeichert" hidden>gespeichert</span>
+                            @if ($vorschau)
+                                <td class="aktion">
                                     @if ($verwaltung || $z['termin']->beginn()->isFuture())
                                         {{-- Zweistufig statt confirm(): erst „absagen", dann „Ja, absagen". Nach dem Absenden lädt der ganze Terminplan neu. --}}
                                         <form method="POST" target="_top" class="absage"
@@ -87,14 +96,30 @@
                                         </form>
                                     @endif
                                 </td>
+                            @endif
+                            <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
+                            <td>{{ $nv($z['termin']->kind?->name) }}
+                                @if (in_array($z['termin']->kind_user_id, $wuensche)) <span class="wunsch">(Wunsch)</span> @endif
+                                @if ($z['termin']->gruppe) <span class="wunsch">(gemeinsam mit {{ $partnerVon[$z['termin']->gruppe] ?? '' }})</span> @endif
+                                @if ($z['termin']->allein) <span class="wunsch">(nur hier – gemeinsam war nichts frei)</span> @endif
+                            </td>
+                            <td class="klasse">{{ $klasse($z['termin']->kind) }}</td>
+                            <td>{{ $nv($z['termin']->eltern?->name) }}</td>
+                            @if ($vorschau)
+                                <td class="notiz">
+                                    <textarea class="notizfeld" rows="1" maxlength="2000" placeholder="Notiz … (wird automatisch gespeichert)"
+                                              data-url="{{ route('module.elternsprechtag.plan.notiz', [$z['termin'], ...$param]) }}">{{ $z['termin']->notiz }}</textarea>
+                                    <span class="gespeichert" hidden>gespeichert</span>
+                                </td>
                             @else
                                 <td class="notiz">{{ $z['termin']->notiz }}</td>
                             @endif
                         </tr>
                     @else
                         <tr>
+                            @if ($vorschau)<td></td>@endif
                             <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
-                            <td class="frei" colspan="3">frei</td>
+                            <td class="frei" colspan="3">frei @if (($z['anzahl'] ?? 1) > 1)({{ $z['anzahl'] }} Termine)@endif</td>
                             <td class="notiz"></td>
                         </tr>
                     @endif
@@ -129,7 +154,7 @@
         </table>
     @endif
 
-    @if (! empty($vorschau))
+    @if ($vorschau)
         <script>
             // Notizen speichern sich beim Tippen (kurz nach der letzten Taste) und beim Verlassen des Felds.
             document.querySelectorAll('.notizfeld').forEach((feld) => {

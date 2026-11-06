@@ -64,7 +64,7 @@
     @if ($plan->exists)
         <div x-data="{ offen: false, src: '' }" @liste-ansehen.window="offen = true; src = @js(route('module.elternsprechtag.plan.ansicht', $ziel)) + (@js(route('module.elternsprechtag.plan.ansicht', $ziel)).includes('?') ? '&' : '?') + 't=' + Date.now()" @keydown.escape.window="offen = false">
             <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="offen = false">
-                <div class="flex h-[90vh] w-full max-w-4xl flex-col rounded-xl bg-white shadow-xl">
+                <div class="flex h-[90vh] w-full max-w-7xl flex-col rounded-xl bg-white shadow-xl">
                     <div class="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3">
                         <h2 class="text-base font-semibold text-gray-800">Terminliste</h2>
                         <div class="flex items-center gap-3">
