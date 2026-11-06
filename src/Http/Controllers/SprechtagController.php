@@ -155,11 +155,11 @@ class SprechtagController
         [$html, $text] = InfoMail::werte($sprechtag, $eltern, $einladung);
         $mail = $mailer->rendern($wunsch ? ElternsprechtagServiceProvider::VORLAGE_WUNSCH : ElternsprechtagServiceProvider::VORLAGE_INFO, $html, $text);
 
-        $anhaenge = $wunsch ? array_map(fn ($a) => [
+        $anhaenge = array_map(fn ($a) => [
             'name' => $a['name'],
             'groesse' => number_format(filesize($a['pfad']) / 1024, 0, ',', '.').' KB',
             'url' => route('module.elternsprechtag.sprechtage.elterninfo'),
-        ], InfoMail::elternPdf()) : [];
+        ], InfoMail::elternPdf());
 
         return response()->json([
             'an' => $eltern->email ?: '(keine Mailadresse)',
@@ -170,7 +170,7 @@ class SprechtagController
         ]);
     }
 
-    /** Die Elternanleitung, die an der Einladungsmail hängt – zum Ansehen aus der Vorschau. */
+    /** Die Elternanleitung, die an beiden Info-Mails hängt – zum Ansehen aus der Vorschau. */
     public function elternPdf(): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         $anhang = InfoMail::elternPdf()[0] ?? abort(404);

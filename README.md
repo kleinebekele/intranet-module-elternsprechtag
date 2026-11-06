@@ -29,8 +29,8 @@ persönlich eingeladene Eltern, buchbar sind nur ihre Wunschgespräche (`gesperr
 Verwaltung sieht, wie viele davon gebucht sind, und veröffentlicht von Hand alle Gespräche
 (`info_rest_versendet_am`, Mail an alle Eltern). `vorsprung_minuten` ist seit v1.19 ungenutzt.
 
-**Elternanleitung:** Die Einladungsmail der ersten Stufe hängt `resources/pdf/Elternsprechtag-Elterninfo.pdf`
-an. Nach jeder Änderung an der Anleitung die PDF dort ersetzen.
+**Elternanleitung:** Beide Info-Mails (Einladung und Info an alle) hängen `resources/pdf/Elternsprechtag-Elterninfo.pdf`
+an. Die Anleitung erklärt deshalb keine Stufen. Nach jeder Änderung an der Anleitung die PDF dort ersetzen.
 
 ## Datenquelle
 

@@ -126,7 +126,7 @@ class InfoMail
     {
         $einladungen = self::einladungen($sprechtag);
         $gesendet = $fehler = 0;
-        $anhaenge = $vorlage === ElternsprechtagServiceProvider::VORLAGE_WUNSCH ? self::elternPdf() : [];
+        $anhaenge = self::elternPdf();
 
         foreach ($empfaenger as $u) {
             [$html, $text] = self::werte($sprechtag, $u, $einladungen->get($u->id, []));
