@@ -203,7 +203,8 @@ Klassen: {$klassenText}" : '',
                 .'<ul style="margin:0 0 8px;padding-left:20px;">'.implode('', array_map(fn ($z) => '<li>'.e($z).'</li>', $zeilen)).'</ul>'
                 .'<p style="margin:0;">Bitte buchen Sie dort möglichst einen Termin.</p></div>';
 
-            $html['gespraeche'] = '<ul style="margin:0 0 16px;padding-left:20px;">'.implode('', array_map(fn ($z) => '<li>'.e($z).'</li>', $zeilen)).'</ul>';
+            $html['gespraeche'] = '<div style="margin:0 0 16px;padding:12px 16px;background:#eef2ff;border-left:4px solid #4f46e5;border-radius:4px;">'
+                .'<ul style="margin:0;padding-left:20px;">'.implode('', array_map(fn ($z) => '<li>'.e($z).'</li>', $zeilen)).'</ul></div>';
             $text['gespraeche'] = implode("\n", array_map(fn ($z) => '- '.$z, $zeilen));
 
             $text['einladung'] = "Persönliche Einladung – folgende Lehrkräfte möchten Sie gern sprechen:\n"

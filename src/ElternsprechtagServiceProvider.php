@@ -118,7 +118,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'klassen' => '5a, 7a',
                     'klassen_zeile' => '<br><strong>Klassen:</strong> 5a, 7a',
                     'hinweis' => 'Die Gespräche finden in den Klassenräumen statt.',
-                    'gespraeche' => '<ul style="margin:0 0 16px;padding-left:20px;"><li>Frau Muster – für Max Muster</li></ul>',
+                    'gespraeche' => '<div style="margin:0 0 16px;padding:12px 16px;background:#eef2ff;border-left:4px solid #4f46e5;border-radius:4px;"><ul style="margin:0;padding-left:20px;"><li>Frau Muster – für Max Muster</li></ul></div>',
                 ],
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Einladung',
