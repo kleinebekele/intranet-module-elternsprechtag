@@ -101,13 +101,12 @@ class ElternController
         $fenster = fn (int $tagId) => $gewaehlteTage->isEmpty() ? [null, null]
             : ($gewaehlteTage->has($tagId) ? [$gewaehlteTage[$tagId]['von'] ?? null, $gewaehlteTage[$tagId]['bis'] ?? null] : false);
 
-        $verwaltung = Rechte::istVerwaltung($request->user());
         $wuensche = [];
         foreach (Buchung::angebot($eltern, $sprechtag) as $z) {
             foreach ($z['lehrer'] as $l) {
                 $key = $l['plan']->id.'-'.$z['kind']->id;
                 $prio = (int) ($daten['prio'][$key] ?? 0);
-                if ($prio < 1 || $l['termin'] || ($l['gesperrt'] && ! $verwaltung)) {
+                if ($prio < 1 || $l['termin'] || $l['gesperrt']) {
                     continue;
                 }
                 $slots = collect($l['slots'])->where('frei', true)->filter(function ($s) use ($fenster) {

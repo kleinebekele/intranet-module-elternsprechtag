@@ -7,8 +7,9 @@
         ? '<span class="text-gray-800 underline">'.e(\Intranet\Modules\Elternsprechtag\Support\Namen::vorname($kind->name)).'</span>'
         : e(\Intranet\Modules\Elternsprechtag\Support\Namen::vorname($kind->name));
     $eingaben = $vorschlag['eingaben'] ?? [];
-    // Erste Stufe: Eltern sehen im Assistenten nur ihre Wunschgespräche, die Verwaltung alles.
-    $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->reject(fn ($l) => $l['gesperrt'] && ! $verwaltung)->map(fn ($l) => [
+    // Erste Stufe: Der Assistent zeigt nur die Wunschgespräche – auch der Verwaltung, sonst
+    // widerspräche er dem Hinweis oben. Andere Lehrkräfte bucht die Verwaltung unter „Manuelle Termine".
+    $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->reject(fn ($l) => $l['gesperrt'])->map(fn ($l) => [
         'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
         'klassenlehrer' => $l['klassenlehrer'], 'namen' => $l['namen'], 'team' => $l['team'],
     ]))->sortBy(fn ($p) => $p['klassenlehrer'] ? 0 : 1)->keyBy('key');
@@ -29,7 +30,7 @@
             <p class="mt-1 text-xs text-gray-500">1 = unbedingt · 2 = gern · 3 = wenn es passt. Wichtigere Gespräche haben Vorrang, wenn nicht alle unterzubringen sind.</p>
             <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
                 @foreach ($paare as $key => $p)
-                    <div class="flex items-center justify-between gap-3 rounded-lg px-3 py-2 {{ $p['termin'] ? 'border border-green-200 bg-green-50/60' : ($p['klassenlehrer'] ? 'border-2 border-indigo-400 bg-indigo-50/60' : 'border border-gray-200') }}">
+                    <div class="flex flex-col gap-2 rounded-lg px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $p['termin'] ? 'border border-green-200 bg-green-50/60' : ($p['klassenlehrer'] ? 'border-2 border-indigo-400 bg-indigo-50/60' : 'border border-gray-200') }}">
                         <div class="min-w-0 text-sm">
                             <div class="font-medium text-gray-800">{{ $p['namen'] }}
                                 @if ($p['klassenlehrer'])
@@ -44,7 +45,7 @@
                         @else
                             {{-- Vorbelegt mit 1: Gesprächswunsch der Lehrkraft und Klassenlehrkraft. --}}
                             @php $wert = (int) ($eingaben['prio'][$key] ?? ($p['wunsch'] ? 1 : 0)); @endphp
-                            <select name="prio[{{ $key }}]" class="rounded-lg border-gray-300 py-1 text-sm">
+                            <select name="prio[{{ $key }}]" class="w-full rounded-lg border-gray-300 py-1 text-sm sm:w-auto">
                                 <option value="0" @selected($wert === 0)>–</option>
                                 @foreach ($prioText as $n => $t)
                                     <option value="{{ $n }}" @selected($wert === $n)>{{ $n }} · {{ $t }}</option>
