@@ -16,7 +16,8 @@ Route::middleware(['web', 'auth'])
 
         // Verwaltung: Sprechtage anlegen, Eltern informieren, Stand der Lehrer.
         Route::get('sprechtage', [SprechtagController::class, 'index'])->name('sprechtage.index');
-        Route::get('sprechtage/elterninfo.pdf', [SprechtagController::class, 'elternPdf'])->name('sprechtage.elterninfo');
+        // Ohne .pdf-Endung: der Webserver liefert *.pdf sonst als statische Datei (404).
+        Route::get('sprechtage/elterninfo', [SprechtagController::class, 'elternPdf'])->name('sprechtage.elterninfo');
         Route::get('sprechtage/anlegen', [SprechtagController::class, 'create'])->name('sprechtage.create');
         Route::post('sprechtage', [SprechtagController::class, 'store'])->name('sprechtage.store');
         Route::get('sprechtage/{sprechtag}', [SprechtagController::class, 'show'])->name('sprechtage.show');
@@ -26,7 +27,7 @@ Route::middleware(['web', 'auth'])
         Route::get('sprechtage/{sprechtag}/vorschau', [SprechtagController::class, 'vorschau'])->name('sprechtage.vorschau');
         Route::post('sprechtage/{sprechtag}/info', [SprechtagController::class, 'info'])->name('sprechtage.info');
 
-        // Lehrer: eigener Terminplan je Sprechtag (Verwaltung auch fÃ¼r andere Ã¼ber ?lehrer=).
+        // Lehrer: eigener Terminplan je Sprechtag (Verwaltung auch für andere über ?lehrer=).
         Route::get('plan', [PlanController::class, 'index'])->name('plan.index');
         Route::get('plan/{sprechtag}', [PlanController::class, 'zeigen'])->name('plan.zeigen');
         Route::post('plan/{sprechtag}', [PlanController::class, 'speichern'])->name('plan.speichern');
@@ -37,7 +38,7 @@ Route::middleware(['web', 'auth'])
         Route::delete('plan/termin/{termin}', [PlanController::class, 'absagen'])->name('plan.absagen');
         Route::post('plan/termin/{termin}/notiz', [PlanController::class, 'notiz'])->name('plan.notiz');
 
-        // Eltern: Termine buchen (Verwaltung auch fÃ¼r andere Ã¼ber ?eltern=).
+        // Eltern: Termine buchen (Verwaltung auch für andere über ?eltern=).
         Route::get('termine', [ElternController::class, 'index'])->name('eltern.index');
         Route::post('termine/{sprechtag}', [ElternController::class, 'buchen'])->name('eltern.buchen');
         Route::post('termine/{sprechtag}/assistent', [ElternController::class, 'assistent'])->name('eltern.assistent');
