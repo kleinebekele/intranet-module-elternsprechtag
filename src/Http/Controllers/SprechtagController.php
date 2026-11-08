@@ -194,6 +194,14 @@ class SprechtagController
         }
 
         [$html, $text] = InfoMail::werte($sprechtag, $eltern, $einladung);
+        // {{ konto_einrichten }} wie beim echten Versand für genau dieses Elternteil (ab Core v1.0.3).
+        $konto = null;
+        if (class_exists(\App\Mail\Vorlagen\KontoEinrichten::class)) {
+            $k = \App\Mail\Vorlagen\KontoEinrichten::fuer($eltern->email);
+            $html[\App\Mail\Vorlagen\KontoEinrichten::PLATZHALTER] = $k['html'];
+            $text[\App\Mail\Vorlagen\KontoEinrichten::PLATZHALTER] = $k['text'];
+            $konto = $k['html'] !== '';
+        }
         $mail = $mailer->rendern($wunsch ? ElternsprechtagServiceProvider::VORLAGE_WUNSCH : ElternsprechtagServiceProvider::VORLAGE_INFO, $html, $text);
 
         $anhaenge = array_map(fn ($a) => [
@@ -208,6 +216,7 @@ class SprechtagController
             'html' => $mail['html'],
             'gesperrt' => $eltern->istGesperrt(),
             'anhaenge' => $anhaenge,
+            'konto' => $konto,
         ]);
     }
 
