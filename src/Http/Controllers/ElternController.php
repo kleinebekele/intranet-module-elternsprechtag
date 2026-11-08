@@ -15,6 +15,7 @@ use Intranet\Modules\Elternsprechtag\Models\Termin;
 use Intranet\Modules\Elternsprechtag\Support\Assistent;
 use Intranet\Modules\Elternsprechtag\Support\Buchung;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
+use Intranet\Modules\Elternsprechtag\Support\Lehrerinfo;
 use Intranet\Modules\Elternsprechtag\Support\Namen;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
 
@@ -55,7 +56,30 @@ class ElternController
             'sprechtage' => $sprechtage,
             'vorschlaege' => $sprechtage->mapWithKeys(fn ($z) => [$z['sprechtag']->id => session($this->vorschlagSchluessel($z['sprechtag'], $eltern))]),
             'personen' => $verwaltung ? $this->alleEltern() : collect(),
+            'keineZeit' => DB::table('elternsprechtag_besuche')->where('user_id', $eltern->id)->whereNotNull('keine_zeit_am')->get()->keyBy('sprechtag_id'),
         ]);
+    }
+
+    /**
+     * „Ich kann diesmal keinen Termin wahrnehmen" melden bzw. zurücknehmen –
+     * die Eltern selbst oder die Verwaltung nach einem Anruf.
+     */
+    public function keineZeit(Request $request, Sprechtag $sprechtag): RedirectResponse
+    {
+        $eltern = $this->eltern($request);
+        abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
+        $daten = $request->validate(['melden' => ['required', 'boolean'], 'bemerkung' => ['nullable', 'string', 'max:1000']]);
+
+        $melden = (bool) $daten['melden'];
+        $werte = $melden
+            ? ['keine_zeit_am' => now(), 'keine_zeit_bemerkung' => trim((string) ($daten['bemerkung'] ?? '')) ?: null]
+            : ['keine_zeit_am' => null, 'keine_zeit_bemerkung' => null];
+        DB::table('elternsprechtag_besuche')->updateOrInsert(['sprechtag_id' => $sprechtag->id, 'user_id' => $eltern->id], $werte);
+        $this->audit('elternsprechtag.keine_zeit', $sprechtag, $eltern, ['gemeldet' => $melden]);
+
+        return $this->zurueck($request, $eltern, '#keine-zeit-'.$sprechtag->id)->with('status', $melden
+            ? 'Danke für Ihre Rückmeldung – wir wissen jetzt, dass Sie diesmal keinen Termin wahrnehmen können.'
+            : 'Ihre Meldung „keine Zeit" ist zurückgenommen.');
     }
 
     public function buchen(Request $request, Sprechtag $sprechtag): RedirectResponse
@@ -242,6 +266,8 @@ class ElternController
             return [false, 'Diese Uhrzeit wurde gerade vergeben. Bitte eine andere wählen.'];
         }
 
+        Lehrerinfo::pruefen($plaene->pluck('id')->merge($alt->pluck('plan_id')));
+
         $this->audit('elternsprechtag.termin', $sprechtag, $eltern, [
             'lehrer' => $plaene->pluck('user_id')->all(), 'kind' => $kindId, 'slot' => $tagId.'|'.$von, 'umgebucht' => $alt->isNotEmpty(), 'allein' => $allein,
         ]);
@@ -266,10 +292,15 @@ class ElternController
         if (! Rechte::istVerwaltung($request->user()) && $termin->beginn()->isPast()) {
             return $this->zurueckManuell($request, $eltern, $sprechtag)->with('error', 'Der Termin hat schon begonnen.');
         }
+        if (! Rechte::istVerwaltung($request->user()) && $sprechtag->buchungGeschlossen()) {
+            return $this->zurueckManuell($request, $eltern, $sprechtag)->with('error', 'Die Terminbuchung ist geschlossen. Bitte sagen Sie direkt bei der Lehrkraft ab.');
+        }
 
         $text = $termin->beschriftung();
-        $lehrer = $termin->gruppeTermine()->pluck('plan.user_id')->all();
+        $gruppe = $termin->gruppeTermine();
+        $lehrer = $gruppe->pluck('plan.user_id')->all();
         $termin->absagenMitGruppe();
+        Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
         $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $lehrer, 'kind' => $termin->kind_user_id]);
 
         return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', 'Termin abgesagt: '.$text.'.');

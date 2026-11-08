@@ -26,6 +26,9 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 
     public const VORLAGE_ABSAGE = 'elternsprechtag_absage';
 
+    /** Terminliste als PDF an die Lehrkraft (Plan voll, Buchungsschluss, spätere Änderung). */
+    public const VORLAGE_TERMINLISTE = 'elternsprechtag_terminliste';
+
     public function manifest(): ModuleManifest
     {
         return ModuleManifest::make('elternsprechtag', 'Elternsprechtag', icon: 'calendar')
@@ -33,8 +36,24 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen')
+            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.keinezeit')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
+    }
+
+    public function register(): void
+    {
+        parent::register();
+
+        // Task Elternsprechtag/Buchungsschluss (Vorabend 18 Uhr) – nur, wenn Ekkon im Core steckt.
+        if (class_exists(\App\Ekkon\Support\TaskRegistry::class)) {
+            $this->app->singletonIf(\App\Ekkon\Support\TaskRegistry::class);
+            $this->app->make(\App\Ekkon\Support\TaskRegistry::class)->addSource(
+                $this->moduleBasePath().'/src/Tasks',
+                __NAMESPACE__.'\Tasks',
+                'do1emu/module-elternsprechtag',
+                'elternsprechtag',
+            );
+        }
     }
 
     public function boot(): void
@@ -52,6 +71,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.plan' => 'Elternsprechtag: Terminplan gespeichert',
                 'elternsprechtag.termin' => 'Elternsprechtag: Termin gebucht',
                 'elternsprechtag.absage' => 'Elternsprechtag: Termin abgesagt',
+                'elternsprechtag.keine_zeit' => 'Elternsprechtag: Eltern melden „keine Zeit" bzw. nehmen es zurück',
                 'elternsprechtag.absage_lehrer' => 'Elternsprechtag: Termin von der Lehrkraft abgesagt',
                 'elternsprechtag.freigabe' => 'Elternsprechtag: Terminplan freigegeben bzw. Freigabe zurückgenommen',
                 'elternsprechtag.teilnahme' => 'Elternsprechtag: Teilnahme abgesagt bzw. wieder zugesagt',
@@ -147,6 +167,30 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Absage',
             ));
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                schluessel: self::VORLAGE_TERMINLISTE,
+                titel: 'Elternsprechtag: Terminliste an die Lehrkraft',
+                beschreibung: 'Geht mit der Terminliste als PDF an die Lehrkraft, sobald ihr Plan voll ist (nach einer Absage beim nächsten Vollwerden erneut), am Vorabend um 18 Uhr beim Buchungsschluss an alle übrigen teilnehmenden Lehrkräfte und danach bei jeder Änderung durch die Verwaltung.',
+                platzhalter: [
+                    'name' => 'Name der Lehrkraft',
+                    'sprechtag' => 'Titel des Sprechtags',
+                    'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
+                    'anlass' => 'Warum die Mail kommt (Plan voll / Buchungsschluss / Änderung)',
+                    'stand' => 'z. B. „12 von 14 Terminen gebucht"',
+                    'link' => 'Link zu „Mein Terminplan"',
+                ],
+                betreff: 'Elternsprechtag: {{ sprechtag }} – deine Terminliste',
+                html: self::TERMINLISTE_HTML,
+                text: self::TERMINLISTE_TEXT,
+                beispiele: [
+                    'sprechtag' => 'Elternsprechtag Herbst',
+                    'tage' => 'Do 12.11.2026, Fr 13.11.2026',
+                    'anlass' => 'die Terminbuchung ist geschlossen; Eltern können jetzt nichts mehr buchen oder absagen.',
+                    'stand' => '12 von 14 Terminen gebucht',
+                ],
+                modul: 'Elternsprechtag',
+                ausloeser: Support\Lehrerinfo::QUELLE,
+            ));
         });
     }
 
@@ -191,6 +235,29 @@ Termin buchen: {{ link }}
 
 Mit freundlichen Grüßen
 Ihr Kollegium
+TEXT;
+
+    private const TERMINLISTE_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;">Hallo {{ name }},</p>
+<p style="margin:0 0 16px;">zum <strong>{{ sprechtag }}</strong> ({{ tage }}): {{ anlass }}</p>
+<p style="margin:0 0 16px;"><strong>Stand:</strong> {{ stand }}. Deine Terminliste hängt als PDF an.</p>
+<p style="margin:0 0 24px;">
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Mein Terminplan</a>
+</p>
+<p style="margin:0;color:#6b7280;font-size:14px;">Viele Grüße<br>Deine Verwaltung</p>
+HTML;
+
+    private const TERMINLISTE_TEXT = <<<'TEXT'
+Hallo {{ name }},
+
+zum {{ sprechtag }} ({{ tage }}): {{ anlass }}
+
+Stand: {{ stand }}. Deine Terminliste hängt als PDF an.
+
+Mein Terminplan: {{ link }}
+
+Viele Grüße
+Deine Verwaltung
 TEXT;
 
     private const ABSAGE_HTML = <<<'HTML'

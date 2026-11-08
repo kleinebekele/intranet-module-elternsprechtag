@@ -43,5 +43,6 @@ Route::middleware(['web', 'auth'])
         Route::post('termine/{sprechtag}', [ElternController::class, 'buchen'])->name('eltern.buchen');
         Route::post('termine/{sprechtag}/assistent', [ElternController::class, 'assistent'])->name('eltern.assistent');
         Route::post('termine/{sprechtag}/assistent/buchen', [ElternController::class, 'vorschlagBuchen'])->name('eltern.vorschlag');
+        Route::post('termine/{sprechtag}/keine-zeit', [ElternController::class, 'keineZeit'])->name('eltern.keinezeit');
         Route::delete('termine/termin/{termin}', [ElternController::class, 'absagen'])->name('eltern.absagen');
     });

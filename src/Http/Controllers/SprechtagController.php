@@ -80,19 +80,56 @@ class SprechtagController
     {
         $sprechtag->load('tage');
         $plaene = $this->plaene($sprechtag);
+        $eltern = Klassen::eltern($sprechtag->klassenListe());
 
         return view('elternsprechtag::sprechtage.show', [
             'sprechtag' => $sprechtag,
             'lehrer' => $this->lehrer($sprechtag, $plaene),
             'plaene' => $plaene,
-            'eltern' => Klassen::eltern($sprechtag->klassenListe()),
+            'eltern' => $eltern,
+            'elternStand' => $sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null,
             'einladungen' => InfoMail::einladungen($sprechtag),
             'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
-            'besuche' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->pluck('letzter_besuch_am', 'user_id'),
+            'besuche' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('letzter_besuch_am')->pluck('letzter_besuch_am', 'user_id'),
+            'keineZeit' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('keine_zeit_am')->get()->keyBy('user_id'),
+            // Wer selbst gebucht hat, war auf der Seite – auch vor der Besuchszählung.
+            'selbstGebucht' => DB::table('elternsprechtag_termine')
+                ->join('elternsprechtag_plaene', 'elternsprechtag_plaene.id', '=', 'elternsprechtag_termine.plan_id')
+                ->where('elternsprechtag_plaene.sprechtag_id', $sprechtag->id)
+                ->whereColumn('elternsprechtag_termine.gebucht_von', 'elternsprechtag_termine.eltern_user_id')
+                ->distinct()->pluck('elternsprechtag_termine.gebucht_von')->flip(),
             'zustellung' => $sprechtag->veroeffentlicht()
                 ? InfoMail::zustellung($sprechtag, $sprechtag->fuerAlleOffen() ? 'Elternsprechtag-Info' : 'Elternsprechtag-Einladung')
                 : null,
         ]);
+    }
+
+    /**
+     * Stand der normalen Einladung: je Elternteil (nicht gesperrt) die Kinder
+     * mit Klasse und die Zahl gebuchter Gespräche – ohne Termin zuerst.
+     */
+    private function elternStand(Sprechtag $sprechtag, Collection $eltern): Collection
+    {
+        $termine = \Intranet\Modules\Elternsprechtag\Models\Termin::whereHas('plan', fn ($q) => $q->where('sprechtag_id', $sprechtag->id))
+            ->get(['id', 'kind_user_id', 'plan_id', 'gruppe']);
+        // Ein gemeinsames Gespräch mehrerer Klassenlehrer zählt einmal.
+        $jeKind = $termine->groupBy('kind_user_id')->map(fn ($ts) => $ts->unique(fn ($t) => $t->gruppe ?: 'p'.$t->plan_id)->count());
+        $klassen = $sprechtag->klassenListe();
+
+        return User::with('children.roles')->whereIn('id', $eltern->pluck('id'))->whereNull('gesperrt_am')->get()
+            ->map(function (User $e) use ($jeKind, $klassen) {
+                $kinder = $e->children
+                    ->map(fn (User $k) => ['kind' => $k, 'klassen' => array_values(array_intersect(Klassen::vonKind($k), $klassen))])
+                    ->filter(fn ($z) => $z['klassen'] !== []);
+
+                return [
+                    'eltern' => $e,
+                    'kinder' => $kinder->map(fn ($z) => Namen::anzeige($z['kind']->name).' ('.implode(', ', $z['klassen']).')')->join(', '),
+                    'termine' => $kinder->sum(fn ($z) => $jeKind[$z['kind']->id] ?? 0),
+                ];
+            })
+            ->sortBy(fn ($z) => [$z['termine'] > 0 ? 1 : 0, Namen::schluessel($z['eltern']->name)])
+            ->values();
     }
 
     /** Info an alle Eltern der beteiligten Klassen – über den Ausgangskorb. */
@@ -256,6 +293,7 @@ class SprechtagController
             'klassen' => ['array'],
             'klassen.*' => ['string', 'max:100'],
             'lehrer_frist' => ['nullable', 'date'],
+            'eltern_frist' => ['nullable', 'date'],
             'hinweis' => ['nullable', 'string', 'max:5000'],
             'tage' => ['required', 'array', 'min:1'],
             'tage.*.id' => ['nullable', 'integer'],
@@ -272,6 +310,7 @@ class SprechtagController
             'titel' => $daten['titel'],
             'klassen' => array_values(array_unique($daten['klassen'] ?? [])),
             'lehrer_frist' => $daten['lehrer_frist'] ?? null,
+            'eltern_frist' => $daten['eltern_frist'] ?? null,
             'hinweis' => $daten['hinweis'] ?? null,
         ])->save();
 
@@ -285,6 +324,13 @@ class SprechtagController
             $behalten[] = $tag->id;
         }
         $sprechtag->tage()->whereNotIn('id', $behalten)->delete();
+
+        // Frist der Eltern nach hinten verschoben? Dann ist die Buchung wieder offen
+        // und die Terminlisten gehen beim neuen Schluss erneut raus.
+        $sprechtag->load('tage');
+        if ($sprechtag->schluss_gemeldet_am !== null && ! $sprechtag->buchungGeschlossen()) {
+            $sprechtag->forceFill(['schluss_gemeldet_am' => null])->save();
+        }
 
         return $sprechtag;
     }

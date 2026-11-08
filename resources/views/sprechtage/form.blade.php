@@ -21,6 +21,10 @@
                 <label class="block text-sm"><span class="text-gray-600">Lehrer tragen ihren Terminplan ein bis (einschließlich)</span>
                     <input type="date" name="lehrer_frist" value="{{ old('lehrer_frist', $sprechtag->lehrer_frist?->toDateString()) }}"
                            class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
+                <label class="block text-sm"><span class="text-gray-600">Eltern buchen bis (Datum und Uhrzeit)</span>
+                    <input type="datetime-local" name="eltern_frist" value="{{ old('eltern_frist', $sprechtag->eltern_frist?->format('Y-m-d\TH:i')) }}"
+                           class="mt-1 w-full rounded-lg border-gray-300 text-sm">
+                    <span class="mt-1 block text-xs text-gray-500">Leer = Vorabend des ersten Tages, 18 Uhr. Danach können Eltern nichts mehr buchen oder absagen, und alle Lehrkräfte bekommen ihre Terminliste per Mail.</span></label>
                 <label class="block text-sm"><span class="text-gray-600">Hinweis für die Eltern (steht in der Info-Mail)</span>
                     <textarea name="hinweis" rows="4" maxlength="5000" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
                               placeholder="z. B. Die Terminbuchung öffnet am … im Intranet.">{{ old('hinweis', $sprechtag->hinweis) }}</textarea></label>

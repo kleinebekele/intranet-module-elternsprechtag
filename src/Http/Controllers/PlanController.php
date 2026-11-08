@@ -184,8 +184,13 @@ class PlanController
     /** Inhalt der Terminliste (PDF und Vorschau). */
     private function listenDaten(Request $request, Sprechtag $sprechtag): array
     {
-        $lehrer = $this->lehrer($request, $sprechtag);
-        $plan = Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
+        return $this->terminliste($this->lehrer($request, $sprechtag), $sprechtag);
+    }
+
+    /** Inhalt der Terminliste eines Lehrers – auch für die Mail mit PDF (Support\Lehrerinfo). */
+    public function terminliste(User $lehrer, Sprechtag $sprechtag): array
+    {
+        $plan =Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
             ->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
 
         $tage = $plan->tage->filter(fn ($pt) => $pt->tag !== null)->sortBy(fn ($pt) => $pt->tag->datum)->map(function ($pt) use ($plan) {
@@ -417,8 +422,10 @@ class PlanController
     private function terminAbsagen(Termin $termin, Sprechtag $sprechtag, User $lehrer, VorlagenMailer $mailer): bool
     {
         $text = $termin->beschriftung();
-        $namen = $termin->gruppeTermine()->map(fn (Termin $t) => $t->plan?->user?->name)->filter()->join(' und ') ?: $lehrer->name;
+        $gruppe = $termin->gruppeTermine();
+        $namen = $gruppe->map(fn (Termin $t) => $t->plan?->user?->name)->filter()->join(' und ') ?: $lehrer->name;
         $termin->absagenMitGruppe();
+        \Intranet\Modules\Elternsprechtag\Support\Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
 
         $eltern = $termin->eltern;
         $benachrichtigt = false;

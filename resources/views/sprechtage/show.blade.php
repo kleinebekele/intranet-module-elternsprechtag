@@ -37,6 +37,13 @@
                 <div><dt class="text-gray-500">Frist für die Lehrer</dt>
                     <dd>{{ $sprechtag->lehrer_frist?->format('d.m.Y') ?? 'keine' }}
                         @if ($sprechtag->fristVorbei()) <span class="text-xs text-gray-500">(abgelaufen – Lehrer können nichts mehr ändern)</span> @endif</dd></div>
+                @if ($sprechtag->buchungsschluss())
+                    <div><dt class="text-gray-500">Frist für die Eltern</dt>
+                        <dd>{{ $sprechtag->buchungsschluss()->format('d.m.Y, H:i') }} Uhr
+                            @if (! $sprechtag->eltern_frist) <span class="text-xs text-gray-500">(Standard: Vorabend 18 Uhr)</span>@endif
+                            @if ($sprechtag->schluss_gemeldet_am) <span class="text-xs text-gray-500">(abgelaufen – Terminlisten an die Lehrkräfte verschickt)</span>
+                            @else <span class="text-xs text-gray-500">(danach buchen nur noch Verwaltung; alle Lehrkräfte bekommen ihre Terminliste per Mail, volle Pläne schon vorher)</span>@endif</dd></div>
+                @endif
             </dl>
         </div>
 
@@ -170,31 +177,13 @@
                                         <td class="py-1 pr-3 text-gray-600">{{ $w['lehrer'] }}</td>
                                         <td class="py-1 pr-3 text-gray-600">
                                             @forelse ($w['eltern'] as $e)
-                                                @php
-                                                    $konto = $e->password !== null || $e->microsoft_angemeldet_am !== null;
-                                                    $besuch = $besuche[$e->id] ?? null;
-                                                @endphp
                                                 <span class="whitespace-nowrap">
                                                 @darfRoute('module.elternsprechtag.eltern.index')
                                                     <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>
                                                 @else
                                                     {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}
                                                 @enddarfRoute
-                                                <span class="ml-0.5 inline-flex gap-0.5 align-middle text-base leading-none">
-                                                    @if ($konto)
-                                                        <i class="bx bx-user-check text-green-600" title="Konto eingerichtet (Passwort gesetzt)"></i>
-                                                    @else
-                                                        <i class="bx bx-user-x text-gray-400" title="Konto noch nicht eingerichtet (kein Passwort gesetzt)"></i>
-                                                    @endif
-                                                    @if ($besuch)
-                                                        <i class="bx bx-show text-green-600" title="Terminseite besucht, zuletzt {{ \Illuminate\Support\Carbon::parse($besuch)->format('d.m.Y H:i') }}"></i>
-                                                    @else
-                                                        <i class="bx bx-hide text-gray-400" title="Terminseite noch nicht besucht"></i>
-                                                    @endif
-                                                    @if (blank($e->email))
-                                                        <i class="bx bx-envelope text-red-600" title="Keine Mailadresse hinterlegt – bekommt keine Einladung"></i>
-                                                    @endif
-                                                </span>@if (! $loop->last),@endif
+                                                @include('elternsprechtag::partials.eltern-status')@if (! $loop->last),@endif
                                                 </span>
                                             @empty
                                                 <span class="text-gray-400">keine hinterlegt</span>
@@ -203,8 +192,74 @@
                                         <td class="py-1">
                                             @if ($w['termin'])
                                                 <span class="text-green-700">✓ {{ $w['termin']->tag?->beschriftung() }}, {{ $w['termin']->von }} Uhr</span>
+                                            @elseif ($kz = $w['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first())
+                                                <span class="text-gray-500">keine Zeit gemeldet{{ $kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '' }}</span>
                                             @else
                                                 <span class="text-amber-700">noch kein Termin</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        <p class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                            <span><i class="bx bx-user-check align-middle text-green-600"></i>/<i class="bx bx-user-x align-middle text-gray-400"></i> Konto eingerichtet / noch nicht</span>
+                            <span><i class="bx bx-show align-middle text-green-600"></i>/<i class="bx bx-hide align-middle text-gray-400"></i> Terminseite besucht / noch nicht</span>
+                            <span><i class="bx bx-envelope align-middle text-red-600"></i> keine Mailadresse</span>
+                        </p>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Stand der normalen Einladung: alle Eltern, wer hat schon gebucht. --}}
+            @if ($elternStand)
+                @php $mitTermin = $elternStand->filter(fn ($z) => $z['termine'] > 0)->count(); @endphp
+                <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2" x-data="{ offen: false }">
+                    <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
+                        <div class="text-sm">
+                            <span class="font-semibold text-gray-800">Alle Eltern: {{ $mitTermin }} von {{ $elternStand->count() }} haben gebucht</span>
+                            @php $ohneZeit = $elternStand->filter(fn ($z) => $z['termine'] === 0 && isset($keineZeit[$z['eltern']->id]))->count(); @endphp
+                            @if ($elternStand->count() - $mitTermin - $ohneZeit > 0)
+                                <span class="text-amber-800">· {{ $elternStand->count() - $mitTermin - $ohneZeit }} noch ohne Termin</span>
+                            @endif
+                            @if ($ohneZeit > 0)
+                                <span class="text-gray-500">· {{ $ohneZeit }} haben „keine Zeit“ gemeldet</span>
+                            @endif
+                        </div>
+                        <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
+                    </div>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+                        <div class="h-2 rounded-full bg-indigo-600" style="width: {{ $elternStand->isEmpty() ? 0 : round($mitTermin / $elternStand->count() * 100) }}%"></div>
+                    </div>
+                    <div x-show="offen" x-cloak class="mt-3 overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="text-left text-xs uppercase tracking-wide text-gray-500">
+                                <tr><th class="py-1 pr-3">Eltern</th><th class="py-1 pr-3">Kinder</th><th class="py-1">Gespräche</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach ($elternStand as $z)
+                                    @php $e = $z['eltern']; @endphp
+                                    <tr>
+                                        <td class="py-1 pr-3 text-gray-600">
+                                            <span class="whitespace-nowrap">
+                                            @darfRoute('module.elternsprechtag.eltern.index')
+                                                <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>
+                                            @else
+                                                {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}
+                                            @enddarfRoute
+                                            @include('elternsprechtag::partials.eltern-status')
+                                            </span>
+                                        </td>
+                                        <td class="py-1 pr-3 text-gray-600">{{ $z['kinder'] ?: '–' }}</td>
+                                        <td class="py-1">
+                                            @if ($z['termine'] > 0)
+                                                <span class="text-green-700">✓ {{ $z['termine'] }} gebucht</span>
+                                            @else
+                                                @if ($kz = $keineZeit[$e->id] ?? null)
+                                                    <span class="text-gray-500">keine Zeit gemeldet{{ $kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '' }}</span>
+                                                @else
+                                                    <span class="text-amber-700">noch keins</span>
+                                                @endif
                                             @endif
                                         </td>
                                     </tr>

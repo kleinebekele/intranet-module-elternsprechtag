@@ -29,6 +29,20 @@ persönlich eingeladene Eltern, buchbar sind nur ihre Wunschgespräche (`gesperr
 Verwaltung sieht, wie viele davon gebucht sind, und veröffentlicht von Hand alle Gespräche
 (`info_rest_versendet_am`, Mail an alle Eltern). `vorsprung_minuten` ist seit v1.19 ungenutzt.
 
+**Frist für die Eltern und Terminliste an die Lehrkräfte:** `eltern_frist` (Datum + Uhrzeit, leer =
+Vorabend des ersten Tages, 18 Uhr). Danach buchen und sagen Eltern nichts mehr ab, nur noch Verwaltung
+und Lehrkraft. Ist ein Plan voll, bekommt die Lehrkraft sofort die Mailvorlage `elternsprechtag_terminliste`
+mit ihrer Terminliste als PDF (`voll_gemeldet_am`); wird ein Termin frei, fällt die Marke weg und die
+Liste kommt beim nächsten Vollwerden erneut. Zur Frist schickt der Ekkon-Task
+`Elternsprechtag/Buchungsschluss` (alle 5 Minuten, holt nach) die Liste an alle übrigen teilnehmenden
+Lehrkräfte (`schluss_gemeldet_am`); danach geht bei jeder Änderung durch andere (Verwaltung) eine neue
+Liste raus. Wird die Frist nach hinten verschoben, öffnet die Buchung wieder.
+
+**Rückmeldungen der Eltern:** In der Übersicht stehen hinter jedem Elternteil Icons für Konto
+eingerichtet, Terminseite besucht (`elternsprechtag_besuche`, nur eigener Aufruf; wer selbst gebucht
+hat, zählt auch) und fehlende Mailadresse. Eltern können „Ich kann diesmal keinen Termin wahrnehmen"
+melden (`keine_zeit_am`, optional mit Nachricht); das steht in der Terminspalte beider Übersichten.
+
 **Elternanleitung:** Beide Info-Mails (Einladung und Info an alle) hängen `resources/pdf/Elternsprechtag-Elterninfo.pdf`
 an. Die Anleitung erklärt deshalb keine Stufen. Nach jeder Änderung an der Anleitung die PDF dort ersetzen.
 

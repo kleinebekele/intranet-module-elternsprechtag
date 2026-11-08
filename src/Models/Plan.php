@@ -18,7 +18,7 @@ class Plan extends Model
 
     protected function casts(): array
     {
-        return ['abgeschlossen_am' => 'datetime', 'abgesagt_am' => 'datetime', 'klassen' => 'array'];
+        return ['abgeschlossen_am' => 'datetime', 'abgesagt_am' => 'datetime', 'voll_gemeldet_am' => 'datetime', 'klassen' => 'array'];
     }
 
     /** Der Lehrer nimmt an diesem Sprechtag nicht teil. */

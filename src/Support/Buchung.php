@@ -26,7 +26,7 @@ class Buchung
      */
     public static function offen(Sprechtag $sprechtag, ?User $eltern = null): bool
     {
-        if (! $sprechtag->veroeffentlicht() || $sprechtag->vorbei()) {
+        if (! $sprechtag->veroeffentlicht() || $sprechtag->vorbei() || $sprechtag->buchungGeschlossen()) {
             return false;
         }
 

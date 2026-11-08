@@ -35,7 +35,9 @@
             @endif
             @unless ($offen)
                 <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                    @if ($s->veroeffentlicht())
+                    @if ($s->veroeffentlicht() && $s->buchungGeschlossen())
+                        Die Terminbuchung ist seit {{ $s->buchungsschluss()->format('d.m.Y, H:i') }} Uhr geschlossen. Ihre gebuchten Termine stehen unten. Wenn Sie einen Termin nicht wahrnehmen können, geben Sie bitte der Lehrkraft direkt Bescheid.
+                    @elseif ($s->veroeffentlicht())
                         Zurzeit buchen nur Eltern, die eine Lehrkraft persönlich eingeladen hat. Sie erhalten eine Nachricht, sobald die Buchung für alle öffnet.
                     @else
                         Die Termine sind noch nicht veröffentlicht. Sie erhalten eine Nachricht, sobald es losgeht.
@@ -153,6 +155,31 @@
             @endforeach
             </div>
             </div>
+
+            {{-- Rückmeldung „keine Zeit": dann muss niemand hinterhertelefonieren. --}}
+            @if ($s->veroeffentlicht() && ($offen || $verwaltung))
+                @php $kz = $keineZeit[$s->id] ?? null; @endphp
+                <div id="keine-zeit-{{ $s->id }}" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700" x-data="{ auf: false }">
+                    @if ($kz)
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span>Sie haben am {{ \Illuminate\Support\Carbon::parse($kz->keine_zeit_am)->format('d.m.Y') }} gemeldet, dass Sie diesmal keinen Termin wahrnehmen können.
+                                @if ($kz->keine_zeit_bemerkung) <span class="text-gray-500">„{{ $kz->keine_zeit_bemerkung }}“</span>@endif</span>
+                            <form method="POST" action="{{ route('module.elternsprechtag.eltern.keinezeit', [$s] + $als) }}">
+                                @csrf <input type="hidden" name="melden" value="0">
+                                <button type="submit" class="text-xs text-indigo-700 hover:underline">Meldung zurücknehmen</button>
+                            </form>
+                        </div>
+                    @else
+                        <button type="button" @click="auf = ! auf" class="text-indigo-700 hover:underline">Sie können diesmal keinen Termin wahrnehmen? Geben Sie uns kurz Bescheid.</button>
+                        <form x-show="auf" x-cloak method="POST" action="{{ route('module.elternsprechtag.eltern.keinezeit', [$s] + $als) }}" class="mt-2 space-y-2">
+                            @csrf <input type="hidden" name="melden" value="1">
+                            <textarea name="bemerkung" rows="2" maxlength="1000" class="w-full rounded-lg border-gray-300 text-sm"
+                                      placeholder="Optional: Nachricht an die Schule, z. B. „Wir melden uns für einen eigenen Termin.“"></textarea>
+                            <button type="submit" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Ich kann diesmal keinen Termin wahrnehmen</button>
+                        </form>
+                    @endif
+                </div>
+            @endif
         </section>
     @empty
         <p class="text-sm text-gray-400">

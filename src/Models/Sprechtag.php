@@ -22,7 +22,21 @@ class Sprechtag extends Model
             'lehrer_frist' => 'date',
             'info_versendet_am' => 'datetime',
             'info_rest_versendet_am' => 'datetime',
+            'schluss_gemeldet_am' => 'datetime',
+            'eltern_frist' => 'datetime',
         ];
+    }
+
+    /** Frist für die Eltern (Buchungsschluss): eingetragen, sonst Vorabend des ersten Tages, 18 Uhr. */
+    public function buchungsschluss(): ?\Illuminate\Support\Carbon
+    {
+        return $this->eltern_frist?->copy() ?? $this->tage->first()?->datum?->copy()->subDay()->setTime(18, 0);
+    }
+
+    /** Ab dem Buchungsschluss buchen und sagen nur noch Verwaltung bzw. Lehrkraft ab. */
+    public function buchungGeschlossen(): bool
+    {
+        return $this->buchungsschluss()?->isPast() ?? false;
     }
 
     public function tage(): HasMany
