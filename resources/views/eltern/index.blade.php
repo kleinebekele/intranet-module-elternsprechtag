@@ -179,23 +179,23 @@
             {{-- Wer schon gebucht hat, hat die möglichen Termine gebucht – dann keine Frage nach „keine Zeit". --}}
             @if ($s->veroeffentlicht() && ($offen || $verwaltung) && ! $hatTermine)
                 @php $kz = $keineZeit[$s->id] ?? null; @endphp
-                <div id="keine-zeit-{{ $s->id }}" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700" x-data="{ auf: false }">
+                <div id="keine-zeit-{{ $s->id }}" class="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" x-data="{ auf: false }">
                     @if ($kz)
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <span>Sie haben am {{ \Illuminate\Support\Carbon::parse($kz->keine_zeit_am)->format('d.m.Y') }} gemeldet, dass Sie diesmal keinen Termin wahrnehmen können.
-                                @if ($kz->keine_zeit_bemerkung) <span class="text-gray-500">„{{ $kz->keine_zeit_bemerkung }}“</span>@endif</span>
+                                @if ($kz->keine_zeit_bemerkung) <span class="text-amber-800">„{{ $kz->keine_zeit_bemerkung }}“</span>@endif</span>
                             <form method="POST" action="{{ route('module.elternsprechtag.eltern.keinezeit', [$s] + $als) }}">
                                 @csrf <input type="hidden" name="melden" value="0">
-                                <button type="submit" class="text-xs text-indigo-700 hover:underline">Meldung zurücknehmen</button>
+                                <button type="submit" class="text-xs font-medium text-amber-800 underline">Meldung zurücknehmen</button>
                             </form>
                         </div>
                     @else
-                        <button type="button" @click="auf = ! auf" class="text-indigo-700 hover:underline">Sie können diesmal keinen Termin wahrnehmen? Geben Sie uns kurz Bescheid.</button>
+                        <button type="button" @click="auf = ! auf" class="font-medium text-amber-800 underline">Sie können diesmal keinen Termin wahrnehmen? Geben Sie uns kurz Bescheid.</button>
                         <form x-show="auf" x-cloak method="POST" action="{{ route('module.elternsprechtag.eltern.keinezeit', [$s] + $als) }}" class="mt-2 space-y-2">
                             @csrf <input type="hidden" name="melden" value="1">
-                            <textarea name="bemerkung" rows="2" maxlength="1000" class="w-full rounded-lg border-gray-300 text-sm"
+                            <textarea name="bemerkung" rows="2" maxlength="1000" class="w-full rounded-lg border-amber-300 text-sm"
                                       placeholder="Optional: Nachricht an die Schule, z. B. „Wir melden uns für einen eigenen Termin.“"></textarea>
-                            <button type="submit" class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Ich kann diesmal keinen Termin wahrnehmen</button>
+                            <button type="submit" class="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700">Ich kann diesmal keinen Termin wahrnehmen</button>
                         </form>
                     @endif
                 </div>
