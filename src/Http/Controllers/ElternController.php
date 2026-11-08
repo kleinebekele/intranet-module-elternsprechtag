@@ -36,6 +36,18 @@ class ElternController
             ->filter(fn (array $z) => $z['kinder']->isNotEmpty())
             ->values();
 
+        // Eigenen Aufruf merken (Übersicht „Wunschgespräche" zeigt, wer schon da war).
+        if ($eltern->is($request->user())) {
+            foreach ($sprechtage as $z) {
+                $jetzt = now();
+                DB::table('elternsprechtag_besuche')->upsert(
+                    [['sprechtag_id' => $z['sprechtag']->id, 'user_id' => $eltern->id, 'erster_besuch_am' => $jetzt, 'letzter_besuch_am' => $jetzt]],
+                    ['sprechtag_id', 'user_id'],
+                    ['letzter_besuch_am'],
+                );
+            }
+        }
+
         return view('elternsprechtag::eltern.index', [
             'eltern' => $eltern,
             'fremd' => ! $eltern->is($request->user()),

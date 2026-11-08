@@ -88,6 +88,7 @@ class SprechtagController
             'eltern' => Klassen::eltern($sprechtag->klassenListe()),
             'einladungen' => InfoMail::einladungen($sprechtag),
             'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
+            'besuche' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->pluck('letzter_besuch_am', 'user_id'),
             'zustellung' => $sprechtag->veroeffentlicht()
                 ? InfoMail::zustellung($sprechtag, $sprechtag->fuerAlleOffen() ? 'Elternsprechtag-Info' : 'Elternsprechtag-Einladung')
                 : null,

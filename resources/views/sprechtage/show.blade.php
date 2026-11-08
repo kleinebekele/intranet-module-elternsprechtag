@@ -139,7 +139,7 @@
             {{-- Stand der Wunschgespräche: wer hat schon gebucht, wen muss man evtl. anrufen. --}}
             @if ($wunschgespraeche->isNotEmpty())
                 @php $offeneWuensche = $wunschgespraeche->count() - $gebuchteWuensche; @endphp
-                <div class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: {{ $sprechtag->nurWunschgespraeche() ? 'true' : 'false' }} }">
+                <div class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: false }">
                     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
                         <div class="text-sm">
                             @if ($sprechtag->veroeffentlicht())
@@ -170,11 +170,32 @@
                                         <td class="py-1 pr-3 text-gray-600">{{ $w['lehrer'] }}</td>
                                         <td class="py-1 pr-3 text-gray-600">
                                             @forelse ($w['eltern'] as $e)
+                                                @php
+                                                    $konto = $e->password !== null || $e->microsoft_angemeldet_am !== null;
+                                                    $besuch = $besuche[$e->id] ?? null;
+                                                @endphp
+                                                <span class="whitespace-nowrap">
                                                 @darfRoute('module.elternsprechtag.eltern.index')
-                                                    <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>@if (! $loop->last), @endif
+                                                    <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>
                                                 @else
-                                                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}@if (! $loop->last), @endif
+                                                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}
                                                 @enddarfRoute
+                                                <span class="ml-0.5 inline-flex gap-0.5 align-middle text-base leading-none">
+                                                    @if ($konto)
+                                                        <i class="bx bx-user-check text-green-600" title="Konto eingerichtet (Passwort gesetzt)"></i>
+                                                    @else
+                                                        <i class="bx bx-user-x text-gray-400" title="Konto noch nicht eingerichtet (kein Passwort gesetzt)"></i>
+                                                    @endif
+                                                    @if ($besuch)
+                                                        <i class="bx bx-show text-green-600" title="Terminseite besucht, zuletzt {{ \Illuminate\Support\Carbon::parse($besuch)->format('d.m.Y H:i') }}"></i>
+                                                    @else
+                                                        <i class="bx bx-hide text-gray-400" title="Terminseite noch nicht besucht"></i>
+                                                    @endif
+                                                    @if (blank($e->email))
+                                                        <i class="bx bx-envelope text-red-600" title="Keine Mailadresse hinterlegt – bekommt keine Einladung"></i>
+                                                    @endif
+                                                </span>@if (! $loop->last),@endif
+                                                </span>
                                             @empty
                                                 <span class="text-gray-400">keine hinterlegt</span>
                                             @endforelse
@@ -190,6 +211,11 @@
                                 @endforeach
                             </tbody>
                         </table>
+                        <p class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                            <span><i class="bx bx-user-check align-middle text-green-600"></i>/<i class="bx bx-user-x align-middle text-gray-400"></i> Konto eingerichtet / noch nicht</span>
+                            <span><i class="bx bx-show align-middle text-green-600"></i>/<i class="bx bx-hide align-middle text-gray-400"></i> Terminseite besucht / noch nicht</span>
+                            <span><i class="bx bx-envelope align-middle text-red-600"></i> keine Mailadresse</span>
+                        </p>
                     </div>
                 </div>
             @endif
