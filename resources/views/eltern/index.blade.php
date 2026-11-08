@@ -20,6 +20,7 @@
         @php
             $s = $eintrag['sprechtag'];
             $offen = \Intranet\Modules\Elternsprechtag\Support\Buchung::offen($s, $eltern);
+            $hatTermine = collect($eintrag['kinder'])->contains(fn ($z) => $z['lehrer']->contains(fn ($l) => $l['termin']));
             $mitReitern = $offen || $verwaltung;
             // Start ist der Assistent; wer gerade von Hand gebucht oder abgesagt hat, bleibt auf „Manuelle Termine".
             $start = ! $mitReitern || session('elternsprechtag_reiter') === $s->id || old('plan_id') ? 'manuell' : 'assistent';
@@ -32,6 +33,21 @@
             </div>
             @if ($s->veroeffentlicht() && ! $s->buchungGeschlossen() && $s->buchungsschluss())
                 <p class="mt-1 text-sm text-gray-600">Buchen, umbuchen und absagen bis <strong>{{ $s->buchungsschluss()->format('d.m.Y, H:i') }} Uhr</strong>.</p>
+            @endif
+            @if ($hatTermine)
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="text-gray-600">Ihre Termine:</span>
+                    <a href="{{ route('module.elternsprechtag.eltern.liste', [$s] + $als) }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 hover:bg-gray-50"><i class="bx bx-file"></i> Als PDF ansehen</a>
+                    <a href="{{ route('module.elternsprechtag.eltern.liste', [$s, 'download' => 1] + $als) }}"
+                       class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 hover:bg-gray-50"><i class="bx bx-download"></i> Herunterladen</a>
+                    @if (filled($eltern->email))
+                        <form method="POST" action="{{ route('module.elternsprechtag.eltern.listemail', [$s] + $als) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 hover:bg-gray-50"><i class="bx bx-envelope"></i> Per Mail schicken</button>
+                        </form>
+                    @endif
+                </div>
             @endif
             @if ($s->hinweis)
                 <p class="mt-2 whitespace-pre-line text-sm text-gray-600">{{ $s->hinweis }}</p>
@@ -160,7 +176,8 @@
             </div>
 
             {{-- Rückmeldung „keine Zeit": dann muss niemand hinterhertelefonieren. --}}
-            @if ($s->veroeffentlicht() && ($offen || $verwaltung))
+            {{-- Wer schon gebucht hat, hat die möglichen Termine gebucht – dann keine Frage nach „keine Zeit". --}}
+            @if ($s->veroeffentlicht() && ($offen || $verwaltung) && ! $hatTermine)
                 @php $kz = $keineZeit[$s->id] ?? null; @endphp
                 <div id="keine-zeit-{{ $s->id }}" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700" x-data="{ auf: false }">
                     @if ($kz)

@@ -14,6 +14,7 @@ use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Termin;
 use Intranet\Modules\Elternsprechtag\Support\Assistent;
 use Intranet\Modules\Elternsprechtag\Support\Buchung;
+use Intranet\Modules\Elternsprechtag\Support\Elternliste;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Lehrerinfo;
 use Intranet\Modules\Elternsprechtag\Support\Namen;
@@ -58,6 +59,29 @@ class ElternController
             'personen' => $verwaltung ? $this->alleEltern() : collect(),
             'keineZeit' => DB::table('elternsprechtag_besuche')->where('user_id', $eltern->id)->whereNotNull('keine_zeit_am')->get()->keyBy('sprechtag_id'),
         ]);
+    }
+
+    /** Terminliste der Familie als PDF – im Browser ansehen bzw. mit ?download=1 herunterladen. */
+    public function liste(Request $request, Sprechtag $sprechtag)
+    {
+        $eltern = $this->eltern($request);
+        abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
+
+        return response(Elternliste::pdf($eltern, $sprechtag), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline').'; filename="'.Elternliste::dateiname($sprechtag).'"',
+        ]);
+    }
+
+    /** Terminliste der Familie per Mail an das Elternteil schicken. */
+    public function listeMailen(Request $request, Sprechtag $sprechtag): RedirectResponse
+    {
+        $eltern = $this->eltern($request);
+        abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
+
+        return $this->zurueck($request, $eltern)->with(...(Elternliste::senden($eltern, $sprechtag)
+            ? ['status', 'Ihre Terminliste ist unterwegs an '.$eltern->email.'.']
+            : ['error', 'Für dieses Konto ist keine Mailadresse hinterlegt.']));
     }
 
     /**

@@ -43,6 +43,8 @@ Route::middleware(['web', 'auth'])
         Route::post('termine/{sprechtag}', [ElternController::class, 'buchen'])->name('eltern.buchen');
         Route::post('termine/{sprechtag}/assistent', [ElternController::class, 'assistent'])->name('eltern.assistent');
         Route::post('termine/{sprechtag}/assistent/buchen', [ElternController::class, 'vorschlagBuchen'])->name('eltern.vorschlag');
+        Route::get('termine/{sprechtag}/liste', [ElternController::class, 'liste'])->name('eltern.liste');
+        Route::post('termine/{sprechtag}/liste', [ElternController::class, 'listeMailen'])->middleware('throttle:5,10')->name('eltern.listemail');
         Route::post('termine/{sprechtag}/keine-zeit', [ElternController::class, 'keineZeit'])->name('eltern.keinezeit');
         Route::delete('termine/termin/{termin}', [ElternController::class, 'absagen'])->name('eltern.absagen');
     });

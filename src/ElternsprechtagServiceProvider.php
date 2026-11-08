@@ -26,6 +26,9 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 
     public const VORLAGE_ABSAGE = 'elternsprechtag_absage';
 
+    /** Terminliste der Familie als PDF an das Elternteil (Knopf auf der Buchungsseite). */
+    public const VORLAGE_ELTERNLISTE = 'elternsprechtag_elternliste';
+
     /** Terminliste als PDF an die Lehrkraft (Plan voll, Buchungsschluss, spätere Änderung). */
     public const VORLAGE_TERMINLISTE = 'elternsprechtag_terminliste';
 
@@ -36,7 +39,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.keinezeit')
+            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.keinezeit', 'eltern.liste', 'eltern.listemail')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }
 
@@ -172,6 +175,30 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 ausloeser: 'Elternsprechtag-Absage',
             ));
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                schluessel: self::VORLAGE_ELTERNLISTE,
+                titel: 'Elternsprechtag: Terminliste an die Eltern',
+                beschreibung: 'Schicken sich Eltern auf der Buchungsseite über „Per Mail schicken" selbst zu – mit ihren gebuchten Terminen als PDF im Anhang.',
+                platzhalter: [
+                    'name' => 'Name des Elternteils',
+                    'sprechtag' => 'Titel des Sprechtags',
+                    'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
+                    'termine' => 'Liste der gebuchten Termine (Zeit, Lehrkraft, Kind, Raum)',
+                    'anzahl' => 'Anzahl der gebuchten Termine',
+                    'link' => 'Link zur Terminbuchung im Intranet',
+                ],
+                betreff: 'Elternsprechtag: {{ sprechtag }} – Ihre Termine',
+                html: self::ELTERNLISTE_HTML,
+                text: self::ELTERNLISTE_TEXT,
+                beispiele: [
+                    'sprechtag' => 'Elternsprechtag Herbst',
+                    'tage' => 'Do 12.11.2026',
+                    'anzahl' => '2',
+                    'termine' => '<div style="margin:0 0 16px;padding:12px 16px;background:#eef2ff;border-left:4px solid #4f46e5;border-radius:4px;"><ul style="margin:0;padding-left:20px;"><li><strong>Do 12.11.2026, 15:00–15:15 Uhr</strong>: Muster, Anna für Max (Raum 12)</li><li><strong>Do 12.11.2026, 15:20–15:30 Uhr</strong>: Beispiel, Tom für Max (Raum 21)</li></ul></div>',
+                ],
+                modul: 'Elternsprechtag',
+                ausloeser: Support\Elternliste::QUELLE,
+            ));
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_TERMINLISTE,
                 titel: 'Elternsprechtag: Terminliste an die Lehrkraft',
                 beschreibung: 'Geht mit der Terminliste als PDF an die Lehrkraft, sobald ihr Plan voll ist (nach einer Absage beim nächsten Vollwerden erneut), am Vorabend um 18 Uhr beim Buchungsschluss an alle übrigen teilnehmenden Lehrkräfte und danach bei jeder Änderung durch die Verwaltung.',
@@ -236,6 +263,32 @@ Termine: {{ tage }}{{ klassen_zeile }}
 {{ hinweis }}
 
 Termin buchen: {{ link }}
+
+Mit freundlichen Grüßen
+Ihr Kollegium
+TEXT;
+
+    private const ELTERNLISTE_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;">Liebe Eltern, hallo {{ name }}!</p>
+<p style="margin:0 0 16px;">hier sind Ihre gebuchten Termine zum <strong>{{ sprechtag }}</strong> ({{ tage }}):</p>
+{{ termine }}
+<p style="margin:0 0 16px;">Die Liste hängt außerdem als PDF an.</p>
+<p style="margin:0 0 24px;">
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Termine ansehen</a>
+</p>
+<p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
+HTML;
+
+    private const ELTERNLISTE_TEXT = <<<'TEXT'
+Liebe Eltern, hallo {{ name }}!
+
+hier sind Ihre gebuchten Termine zum {{ sprechtag }} ({{ tage }}):
+
+{{ termine }}
+
+Die Liste hängt außerdem als PDF an.
+
+Termine ansehen: {{ link }}
 
 Mit freundlichen Grüßen
 Ihr Kollegium
