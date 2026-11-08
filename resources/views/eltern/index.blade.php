@@ -30,6 +30,9 @@
                 <h2 class="text-lg font-semibold text-gray-800">{{ $s->titel }}</h2>
                 <span class="text-sm text-gray-600">{{ $s->tageText() }}</span>
             </div>
+            @if ($s->veroeffentlicht() && ! $s->buchungGeschlossen() && $s->buchungsschluss())
+                <p class="mt-1 text-sm text-gray-600">Buchen, umbuchen und absagen bis <strong>{{ $s->buchungsschluss()->format('d.m.Y, H:i') }} Uhr</strong>.</p>
+            @endif
             @if ($s->hinweis)
                 <p class="mt-2 whitespace-pre-line text-sm text-gray-600">{{ $s->hinweis }}</p>
             @endif

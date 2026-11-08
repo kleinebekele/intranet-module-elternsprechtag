@@ -95,6 +95,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'name' => 'Name des Elternteils',
                     'sprechtag' => 'Titel des Sprechtags',
                     'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
+                    'frist' => 'Frist für die Eltern (Buchen und Absagen), z. B. „11.11.2026, 18:00 Uhr"',
                     'klassen' => 'Klassen der Kinder dieses Elternteils',
                     'klassen_zeile' => 'Zeile „Klassen: …" unter den Terminen; entfällt, wenn es nur eine Klasse ist',
                     'hinweis' => 'Hinweistext, der beim Sprechtag eingetragen ist',
@@ -107,6 +108,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 beispiele: [
                     'sprechtag' => 'Elternsprechtag Herbst',
                     'tage' => 'Do 12.11.2026, Fr 13.11.2026',
+                    'frist' => '11.11.2026, 18:00 Uhr',
                     'klassen' => '5a, 7a',
                     'klassen_zeile' => '<br><strong>Klassen:</strong> 5a, 7a',
                     'hinweis' => 'Die Terminbuchung öffnet in Kürze im Intranet.',
@@ -123,6 +125,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'name' => 'Name des Elternteils',
                     'sprechtag' => 'Titel des Sprechtags',
                     'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
+                    'frist' => 'Frist für die Eltern (Buchen und Absagen), z. B. „11.11.2026, 18:00 Uhr"',
                     'klassen' => 'Klassen der Kinder dieses Elternteils',
                     'klassen_zeile' => 'Zeile „Klassen: …" unter den Terminen; entfällt, wenn es nur eine Klasse ist',
                     'hinweis' => 'Hinweistext, der beim Sprechtag eingetragen ist',
@@ -135,6 +138,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 beispiele: [
                     'sprechtag' => 'Elternsprechtag Herbst',
                     'tage' => 'Do 12.11.2026, Fr 13.11.2026',
+                    'frist' => '11.11.2026, 18:00 Uhr',
                     'klassen' => '5a, 7a',
                     'klassen_zeile' => '<br><strong>Klassen:</strong> 5a, 7a',
                     'hinweis' => 'Die Gespräche finden in den Klassenräumen statt.',

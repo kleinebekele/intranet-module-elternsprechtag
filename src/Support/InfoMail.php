@@ -231,6 +231,7 @@ class InfoMail
             'name' => $eltern->name,
             'sprechtag' => $sprechtag->titel,
             'tage' => $sprechtag->tageText(),
+            'frist' => $sprechtag->buchungsschluss()?->format('d.m.Y, H:i').' Uhr',
             'klassen' => $klassenText,
             'klassen_zeile' => count($klassen) > 1 ? "
 Klassen: {$klassenText}" : '',
