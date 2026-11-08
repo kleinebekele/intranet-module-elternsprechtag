@@ -256,6 +256,14 @@
                                 <button type="button" @click="tage[id].pausen.push({ von: '', bis: '' })"
                                         class="mt-2 rounded-lg border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50">+ Pause</button>
                             @endif
+                            {{-- Nur ein Hinweis, keine Sperre: ob das Arbeitszeitgesetz greift, hängt vom Arbeitsverhältnis ab. --}}
+                            <template x-if="pausenHinweis(id)">
+                                <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                                    <span x-text="pausenHinweis(id)"></span>
+                                    Das Arbeitszeitgesetz sieht bei mehr als 6 Stunden Arbeit mindestens 30 Minuten Pause vor, bei mehr als 9 Stunden 45 Minuten.
+                                    Denk an dich – plane gern etwas mehr Pause ein.
+                                </p>
+                            </template>
                         </div>
                         <div>
                             <div class="text-sm text-gray-600">Ergibt diese Termine</div>
@@ -421,6 +429,19 @@
                 },
                 gebucht(id, von) {
                     return (start.gebucht[id] || {})[von] || null;
+                },
+                // Pausen nach dem Arbeitszeitgesetz (§ 4 ArbZG): > 6 h → 30 Min., > 9 h → 45 Min.
+                pausenHinweis(id) {
+                    const t = this.tage[id];
+                    const a = min(t.von), e = min(t.bis);
+                    if (! t.dabei || a === null || e === null || e <= a) return '';
+                    const pause = t.pausen.map(p => [Math.max(a, min(p.von) ?? 0), Math.min(e, min(p.bis) ?? 0)])
+                        .filter(([x, y]) => y > x).reduce((s, [x, y]) => s + y - x, 0);
+                    const arbeit = e - a - pause;
+                    const noetig = arbeit > 540 ? 45 : (arbeit > 360 ? 30 : 0);
+                    if (pause >= noetig) return '';
+                    const std = (n) => (Math.round(n / 6) / 10).toString().replace('.', ',');
+                    return `Geplant: ${std(arbeit)} Std. Gesprächszeit mit ${pause} Min. Pause.`;
                 },
                 farbe(g) {
                     if (! g) return 'bg-gray-100 text-gray-700';

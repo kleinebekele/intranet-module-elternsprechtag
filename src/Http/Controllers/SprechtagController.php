@@ -219,6 +219,15 @@ class SprechtagController
         return response()->file($anhang['pfad'], ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="'.$anhang['name'].'"']);
     }
 
+    /** Anleitung für Lehrkräfte (für das Sekretariat beim „Handeln als"). */
+    public function lehrerPdf(): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $pfad = dirname(__DIR__, 3).'/resources/pdf/Elternsprechtag-Lehrkraefte.pdf';
+        abort_unless(is_file($pfad), 404);
+
+        return response()->file($pfad, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="Elternsprechtag-Lehrkraefte.pdf"']);
+    }
+
     /** @return Collection<int, Plan>  Schlüssel = Lehrer-ID */
     private function plaene(Sprechtag $sprechtag): Collection
     {

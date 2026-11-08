@@ -18,6 +18,7 @@ Route::middleware(['web', 'auth'])
         Route::get('sprechtage', [SprechtagController::class, 'index'])->name('sprechtage.index');
         // Ohne .pdf-Endung: der Webserver liefert *.pdf sonst als statische Datei (404).
         Route::get('sprechtage/elterninfo', [SprechtagController::class, 'elternPdf'])->name('sprechtage.elterninfo');
+        Route::get('sprechtage/lehrerinfo', [SprechtagController::class, 'lehrerPdf'])->name('sprechtage.lehrerinfo');
         Route::get('sprechtage/anlegen', [SprechtagController::class, 'create'])->name('sprechtage.create');
         Route::post('sprechtage', [SprechtagController::class, 'store'])->name('sprechtage.store');
         Route::get('sprechtage/{sprechtag}', [SprechtagController::class, 'show'])->name('sprechtage.show');

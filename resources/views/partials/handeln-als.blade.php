@@ -14,4 +14,11 @@
     @unless ($aktuell->is(auth()->user()))
         <span class="text-amber-900">Du handelst gerade als <strong>{{ $aktuell->name }}</strong>.</span>
     @endunless
+    {{-- Die Anleitung, die diese Personen selbst haben – zum Erklären am Telefon. --}}
+    @php $anleitung = $param === 'eltern' ? 'module.elternsprechtag.sprechtage.elterninfo' : 'module.elternsprechtag.sprechtage.lehrerinfo'; @endphp
+    @if (\Illuminate\Support\Facades\Route::has($anleitung))
+        <a href="{{ route($anleitung) }}" target="_blank" rel="noopener" class="ml-auto inline-flex items-center gap-1 text-amber-900 underline hover:text-amber-700">
+            <i class="bx bx-file"></i> Anleitung für {{ $param === 'eltern' ? 'Eltern' : 'Lehrkräfte' }} (PDF)
+        </a>
+    @endif
 </form>
