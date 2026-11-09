@@ -61,6 +61,36 @@ class ElternController
         ]);
     }
 
+    /**
+     * Freie Uhrzeiten eines Gesprächs (JSON) – für die Sprechtag-Übersicht, wo
+     * die Verwaltung ein Wunschgespräch direkt aus der Liste heraus bucht.
+     * `plan` darf irgendein Plan des (gemeinsamen) Gesprächs sein.
+     */
+    public function zeiten(Request $request, Sprechtag $sprechtag): \Illuminate\Http\JsonResponse
+    {
+        abort_unless(Rechte::istVerwaltung($request->user()), 403);
+        $eltern = $this->eltern($request);
+        $kindId = (int) $request->query('kind');
+        $planId = (int) $request->query('plan');
+
+        $eintrag = Buchung::angebot($eltern, $sprechtag)->first(fn ($z) => $z['kind']->id === $kindId)['lehrer']
+            ?->first(fn ($l) => $l['plan']->id === $planId || ($l['team'] && $l['team']->contains('id', $planId)));
+        abort_if($eintrag === null, 404);
+
+        return response()->json([
+            'namen' => $eintrag['namen'],
+            'team' => (bool) $eintrag['team'],
+            'ausweichen' => $eintrag['ausweichen'],
+            'termin' => $eintrag['termin'] ? $eintrag['termin']->loadMissing('tag')->beschriftung() : null,
+            'plan_id' => $eintrag['plan']->id,
+            'slots' => collect($eintrag['slots'])->where('frei', true)->map(fn ($sl) => [
+                'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
+                'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''),
+                'tag' => $sl['tag'],
+            ])->values(),
+        ]);
+    }
+
     /** Terminliste der Familie als PDF – im Browser ansehen bzw. mit ?download=1 herunterladen. */
     public function liste(Request $request, Sprechtag $sprechtag)
     {
@@ -124,6 +154,13 @@ class ElternController
         [$tagId, $von, $nurPlan] = explode('|', $daten['slot']) + [2 => null];
         $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, (int) $daten['plan_id'], (int) $daten['kind_id'], (int) $tagId, $von, $nurPlan !== null ? (int) $nurPlan : null);
         abort_if($ergebnis === null, 404);
+
+        // Gebucht aus der Sprechtag-Übersicht (Wunschgespräche) → dorthin zurück.
+        if ($verwaltung && $request->input('zurueck') === 'sprechtag') {
+            return redirect()->to(route('module.elternsprechtag.sprechtage.show', $sprechtag).'#wunschgespraeche')
+                ->with('elternsprechtag_wunsch_offen', true)
+                ->with($ergebnis[0] ? 'status' : 'error', $ergebnis[1]);
+        }
 
         return $this->zurueckManuell($request, $eltern, $sprechtag)->with($ergebnis[0] ? 'status' : 'error', $ergebnis[1]);
     }

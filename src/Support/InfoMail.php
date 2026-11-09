@@ -108,6 +108,7 @@ class InfoMail
                 $schluessel = $w->kind_user_id.'-'.$mit->pluck('id')->sort()->join('.');
                 $je[$schluessel] ??= [
                     'kind' => $w->kind,
+                    'plan_id' => $mit->first()->id,
                     'klasse' => implode(', ', $klassen),
                     'lehrer' => $team ? Team::namen($mit) : Namen::anzeige($plan->user->name),
                     'eltern' => $w->kind->parents,

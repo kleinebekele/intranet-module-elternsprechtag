@@ -146,7 +146,7 @@
             {{-- Stand der Wunschgespräche: wer hat schon gebucht, wen muss man evtl. anrufen. --}}
             @if ($wunschgespraeche->isNotEmpty())
                 @php $offeneWuensche = $wunschgespraeche->count() - $gebuchteWuensche; @endphp
-                <div class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: false }">
+                <div id="wunschgespraeche" class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: @js((bool) session('elternsprechtag_wunsch_offen')) }">
                     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
                         <div class="text-sm">
                             @if ($sprechtag->veroeffentlicht())
@@ -169,8 +169,13 @@
                             <thead class="text-left text-xs uppercase tracking-wide text-gray-500">
                                 <tr><th class="py-1 pr-3">Kind</th><th class="py-1 pr-3">Klasse</th><th class="py-1 pr-3">Gespräch mit</th><th class="py-1 pr-3">Eltern</th><th class="py-1">Termin</th></tr>
                             </thead>
-                            <tbody class="divide-y divide-indigo-100">
+                            @php $darfBuchen = \Intranet\Modules\Elternsprechtag\Support\Rechte::istVerwaltung(auth()->user()) && $sprechtag->veroeffentlicht(); @endphp
                                 @foreach ($wunschgespraeche as $w)
+                                    @php
+                                        $buchbar = $darfBuchen && ! $w['termin'] && $w['eltern']->isNotEmpty();
+                                        $zeitenUrl = route('module.elternsprechtag.eltern.zeiten', [$sprechtag, 'kind' => $w['kind']->id, 'plan' => $w['plan_id']]);
+                                    @endphp
+                                    <tbody class="border-t border-indigo-100" @if ($buchbar) x-data="wunschBuchen(@js($zeitenUrl), @js((string) $w['eltern']->first()->id))" @endif>
                                     <tr>
                                         <td class="py-1 pr-3 text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($w['kind']->name) }}</td>
                                         <td class="py-1 pr-3 text-gray-600">{{ $w['klasse'] }}</td>
@@ -190,17 +195,82 @@
                                             @endforelse
                                         </td>
                                         <td class="py-1">
+                                            @php $kz = $w['termin'] ? null : $w['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first(); @endphp
                                             @if ($w['termin'])
                                                 <span class="text-green-700">✓ {{ $w['termin']->tag?->beschriftung() }}, {{ $w['termin']->von }} Uhr</span>
-                                            @elseif ($kz = $w['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first())
+                                            @elseif ($buchbar)
+                                                <button type="button" @click="umschalten()" class="inline-flex items-center gap-1 text-left hover:underline {{ $kz ? 'text-gray-500' : 'text-amber-700' }}" title="Freie Uhrzeiten zeigen und Termin vereinbaren">
+                                                    {{ $kz ? 'keine Zeit gemeldet'.($kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '') : 'noch kein Termin' }}
+                                                    <i class="bx bx-calendar-plus text-base"></i>
+                                                </button>
+                                            @elseif ($kz)
                                                 <span class="text-gray-500">keine Zeit gemeldet{{ $kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '' }}</span>
                                             @else
                                                 <span class="text-amber-700">noch kein Termin</span>
                                             @endif
                                         </td>
                                     </tr>
+                                    @if ($buchbar)
+                                        <tr x-show="offen" x-cloak>
+                                            <td colspan="5" class="pb-3 pt-1">
+                                                <div class="rounded-lg border border-indigo-200 bg-white px-3 py-2">
+                                                    <template x-if="laedt"><p class="text-sm text-gray-500">Freie Uhrzeiten werden geladen …</p></template>
+                                                    <template x-if="! laedt && daten">
+                                                        <form method="POST" action="{{ route('module.elternsprechtag.eltern.buchen', $sprechtag) }}" class="flex flex-wrap items-end gap-3 text-sm">
+                                                            @csrf
+                                                            <input type="hidden" name="zurueck" value="sprechtag">
+                                                            <input type="hidden" name="kind_id" value="{{ $w['kind']->id }}">
+                                                            <input type="hidden" name="plan_id" :value="daten.plan_id">
+                                                            <div class="w-full">
+                                                                <span class="font-medium text-gray-800" x-text="daten.namen"></span>
+                                                                <span x-show="daten.team" class="text-indigo-700">· gemeinsames Gespräch</span>
+                                                                <span x-show="daten.ausweichen" class="text-amber-800">· gemeinsam ist keine Uhrzeit mehr frei – gebucht wird nur bei der genannten Lehrkraft</span>
+                                                            </div>
+                                                            @if ($w['eltern']->count() > 1)
+                                                                <label class="flex flex-col gap-1">
+                                                                    <span class="text-xs text-gray-500">Für</span>
+                                                                    <select name="eltern" x-model="eltern" @change="laden()" class="rounded-lg border-gray-300 py-1.5 text-sm">
+                                                                        @foreach ($w['eltern'] as $e)
+                                                                            <option value="{{ $e->id }}">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                </label>
+                                                            @else
+                                                                <input type="hidden" name="eltern" value="{{ $w['eltern']->first()->id }}">
+                                                            @endif
+                                                            <template x-if="daten.slots.length">
+                                                                <div class="w-full space-y-2">
+                                                                    <template x-for="tag in tage()" :key="tag">
+                                                                        <div>
+                                                                            <div class="text-xs text-gray-500">Frei am <span x-text="tag"></span>:</div>
+                                                                            <div class="mt-1 flex flex-wrap gap-1.5">
+                                                                                <template x-for="s in daten.slots.filter(x => x.tag === tag)" :key="s.wert">
+                                                                                    <label class="cursor-pointer">
+                                                                                        <input type="radio" name="slot" required :value="s.wert" x-model="slot" class="sr-only">
+                                                                                        <span class="inline-block rounded-md border px-2 py-1 text-xs"
+                                                                                              :class="slot === s.wert ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-800 hover:border-indigo-400'" x-text="s.text.replace(' Uhr', '')"></span>
+                                                                                    </label>
+                                                                                </template>
+                                                                            </div>
+                                                                        </div>
+                                                                    </template>
+                                                                </div>
+                                                            </template>
+                                                            <template x-if="daten.slots.length">
+                                                                <button type="submit" :disabled="! slot" :class="slot ? 'hover:bg-indigo-700' : 'cursor-not-allowed opacity-50'" class="rounded-lg bg-indigo-600 px-3 py-1.5 font-medium text-white">Termin buchen</button>
+                                                            </template>
+                                                            <template x-if="! daten.slots.length">
+                                                                <p class="text-red-700">Keine freie Uhrzeit mehr – bitte mit den Lehrkräften klären.</p>
+                                                            </template>
+                                                        </form>
+                                                    </template>
+                                                    <template x-if="fehler"><p class="text-sm text-red-700" x-text="fehler"></p></template>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                    </tbody>
                                 @endforeach
-                            </tbody>
                         </table>
                         <p class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                             <span><i class="bx bx-user-check align-middle text-green-600"></i>/<i class="bx bx-user-x align-middle text-gray-400"></i> Konto eingerichtet / noch nicht</span>
@@ -209,6 +279,33 @@
                         </p>
                     </div>
                 </div>
+            @endif
+
+            @if ($wunschgespraeche->isNotEmpty())
+                <script>
+                    // Wunschgespräch direkt aus der Liste buchen: freie Uhrzeiten erst beim Aufklappen laden.
+                    function wunschBuchen(url, eltern) {
+                        return {
+                            offen: false, laedt: false, daten: null, fehler: '', eltern: eltern, slot: '',
+                            umschalten() {
+                                this.offen = ! this.offen;
+                                if (this.offen && ! this.daten) this.laden();
+                            },
+                            async laden() {
+                                this.laedt = true; this.fehler = ''; this.slot = '';
+                                try {
+                                    const antwort = await fetch(url + '&eltern=' + encodeURIComponent(this.eltern), { headers: { Accept: 'application/json' } });
+                                    if (! antwort.ok) throw new Error();
+                                    this.daten = await antwort.json();
+                                } catch (e) {
+                                    this.daten = null; this.fehler = 'Die freien Uhrzeiten konnten nicht geladen werden.';
+                                }
+                                this.laedt = false;
+                            },
+                            tage() { return [...new Set(this.daten.slots.map(s => s.tag))]; },
+                        };
+                    }
+                </script>
             @endif
 
             {{-- Stand der normalen Einladung: alle Eltern, wer hat schon gebucht. --}}
