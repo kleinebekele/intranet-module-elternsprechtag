@@ -205,7 +205,7 @@
                             </form>
                         </div>
                     @else
-                        <button type="button" @click="auf = ! auf" class="font-medium text-amber-800 underline">Sie können diesmal keinen Termin wahrnehmen? Geben Sie uns kurz Bescheid.</button>
+                        <button type="button" @click="auf = ! auf" class="font-medium text-amber-800 underline">Sie wollen/können diesmal keinen Termin wahrnehmen? Geben Sie uns kurz Bescheid.</button>
                         <form x-show="auf" x-cloak method="POST" action="{{ route('module.elternsprechtag.eltern.keinezeit', [$s] + $als) }}" class="mt-2 space-y-2">
                             @csrf <input type="hidden" name="melden" value="1">
                             <textarea name="bemerkung" rows="2" maxlength="1000" class="w-full rounded-lg border-amber-300 text-sm"
