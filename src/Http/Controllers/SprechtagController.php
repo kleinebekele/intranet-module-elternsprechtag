@@ -88,6 +88,7 @@ class SprechtagController
             'plaene' => $plaene,
             'eltern' => $eltern,
             'elternStand' => $sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null,
+            'teamStand' => \Intranet\Modules\Elternsprechtag\Support\TeamStand::fuer($sprechtag, $plaene),
             'einladungen' => InfoMail::einladungen($sprechtag),
             'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
             'besuche' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('letzter_besuch_am')->pluck('letzter_besuch_am', 'user_id'),
