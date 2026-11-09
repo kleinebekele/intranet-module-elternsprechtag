@@ -200,11 +200,14 @@
                                                 <span class="text-green-700">✓ {{ $w['termin']->tag?->beschriftung() }}, {{ $w['termin']->von }} Uhr</span>
                                             @elseif ($buchbar)
                                                 <button type="button" @click="umschalten()" class="inline-flex items-center gap-1 text-left hover:underline {{ $kz ? 'text-gray-500' : 'text-amber-700' }}" title="Freie Uhrzeiten zeigen und Termin vereinbaren">
-                                                    {{ $kz ? 'keine Zeit gemeldet'.($kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '') : 'noch kein Termin' }}
+                                                    {{ $kz ? 'keine Zeit gemeldet' : 'noch kein Termin' }}
                                                     <i class="bx bx-calendar-plus text-base"></i>
                                                 </button>
+                                                @if ($kz && $kz->keine_zeit_bemerkung)
+                                                    <i class="bx bx-info-circle text-base align-middle text-gray-500 cursor-help" title="{{ $kz->keine_zeit_bemerkung }}"></i>
+                                                @endif
                                             @elseif ($kz)
-                                                <span class="text-gray-500">keine Zeit gemeldet{{ $kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '' }}</span>
+                                                <span class="text-gray-500">keine Zeit gemeldet @if ($kz->keine_zeit_bemerkung)<i class="bx bx-info-circle text-base align-middle cursor-help" title="{{ $kz->keine_zeit_bemerkung }}"></i>@endif</span>
                                             @else
                                                 <span class="text-amber-700">noch kein Termin</span>
                                             @endif
@@ -358,7 +361,7 @@
                                                 <span class="text-green-700">✓ {{ $z['termine'] }} gebucht</span>
                                             @else
                                                 @if ($kz = $kzVon($z))
-                                                    <span class="text-gray-500">keine Zeit gemeldet{{ $kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '' }}</span>
+                                                    <span class="text-gray-500">keine Zeit gemeldet @if ($kz->keine_zeit_bemerkung)<i class="bx bx-info-circle text-base align-middle cursor-help" title="{{ $kz->keine_zeit_bemerkung }}"></i>@endif</span>
                                                 @else
                                                     <span class="text-amber-700">noch keins</span>
                                                 @endif
