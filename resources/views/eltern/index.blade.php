@@ -100,9 +100,7 @@
                         <p class="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                             <i class="bx bx-info-circle align-middle"></i>
                             Hinweis für die Verwaltung: Die Klassenlehrkräfte stehen hier getrennt – ein Termin gilt dann nur bei der jeweiligen Lehrkraft.
-                            Ein gemeinsames Gespräch gibt es nur, wenn eine von beiden das Gespräch gewünscht hat oder im Terminplan für die Klasse „Alle Gespräche der Klasse“ eingestellt ist.
-                            Den Grund zeigt die Sprechtag-Übersicht unter „Gemeinsame Gespräche der Klassenlehrkräfte“.
-                        </p>
+                            Ein gemeinsames Gespräch gibt es nur, wenn eine von beiden das Gespräch gewünscht hat oder im Terminplan für die Klasse „Alle Gespräche der Klasse“ eingestellt ist.                        </p>
                     @endif
                     <div class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
                         @foreach ($z['lehrer'] as $l)
@@ -171,7 +169,7 @@
                                                 'name' => 'slot',
                                                 'optionen' => $freie->map(fn ($sl) => [
                                                     'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
-                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : '').(! empty($sl['geblockt']) ? ' (geblockt)' : ''), 'gruppe' => $sl['tag'],
+                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''), 'gruppe' => $sl['tag'],
                                                 ])->values()->all(),
                                                 'leer' => 'Uhrzeit wählen …',
                                                 'breite' => 'w-56',

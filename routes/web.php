@@ -37,8 +37,6 @@ Route::middleware(['web', 'auth'])
         Route::get('plan/{sprechtag}/ansicht', [PlanController::class, 'ansicht'])->name('plan.ansicht');
         Route::post('plan/{sprechtag}/teilnahme', [PlanController::class, 'teilnahme'])->name('plan.teilnahme');
         Route::delete('plan/termin/{termin}', [PlanController::class, 'absagen'])->name('plan.absagen');
-        Route::post('plan/{sprechtag}/blocken', [PlanController::class, 'blocken'])->name('plan.blocken');
-        Route::delete('plan/blockade/{blockade}', [PlanController::class, 'freigeben'])->name('plan.freigeben');
         Route::post('plan/termin/{termin}/notiz', [PlanController::class, 'notiz'])->name('plan.notiz');
 
         // Eltern: Termine buchen (Verwaltung auch für andere über ?eltern=).

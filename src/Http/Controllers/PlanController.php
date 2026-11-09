@@ -168,43 +168,6 @@ class PlanController
         ]);
     }
 
-    /** Verwaltung: eine Zeit im Plan blocken – Eltern können sie dann nicht mehr buchen. */
-    public function blocken(Request $request, Sprechtag $sprechtag): RedirectResponse
-    {
-        abort_unless(Rechte::istVerwaltung($request->user()), 403);
-        $lehrer = $this->lehrer($request, $sprechtag);
-        $plan = Plan::with('tage')->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
-        $daten = $request->validate([
-            'tag_id' => ['required', 'integer'],
-            'von' => ['required', 'date_format:H:i'],
-            'grund' => ['nullable', 'string', 'max:255'],
-        ]);
-        $pt = $plan->tage->firstWhere('tag_id', (int) $daten['tag_id']);
-        abort_unless($pt && collect(Slots::fuer($plan, $pt))->contains('von', $daten['von']), 404);
-
-        \Intranet\Modules\Elternsprechtag\Models\Blockade::updateOrCreate(
-            ['plan_id' => $plan->id, 'tag_id' => (int) $daten['tag_id'], 'von' => $daten['von']],
-            ['grund' => trim((string) ($daten['grund'] ?? '')) ?: null, 'erstellt_von' => $request->user()->id],
-        );
-
-        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
-            ->with('status', $daten['von'].' Uhr ist geblockt – Eltern können diese Zeit nicht mehr buchen, nur die Verwaltung.');
-    }
-
-    /** Verwaltung: Blockade wieder aufheben. */
-    public function freigeben(Request $request, \Intranet\Modules\Elternsprechtag\Models\Blockade $blockade): RedirectResponse
-    {
-        abort_unless(Rechte::istVerwaltung($request->user()), 403);
-        $blockade->load('plan.sprechtag');
-        $sprechtag = $blockade->plan->sprechtag;
-        $lehrer = $this->lehrer($request, $sprechtag);
-        abort_unless((int) $blockade->plan->user_id === $lehrer->id, 404);
-        $von = $blockade->von;
-        $blockade->delete();
-
-        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $von.' Uhr ist wieder für alle buchbar.');
-    }
-
     /** Notiz der Lehrkraft zu einem gebuchten Termin (aus der Vorschau, speichert beim Tippen). */
     public function notiz(Request $request, Termin $termin)
     {
@@ -227,13 +190,12 @@ class PlanController
     /** Inhalt der Terminliste eines Lehrers – auch für die Mail mit PDF (Support\Lehrerinfo). */
     public function terminliste(User $lehrer, Sprechtag $sprechtag): array
     {
-        $plan =Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles', 'blockaden'])
+        $plan =Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
             ->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
 
         $tage = $plan->tage->filter(fn ($pt) => $pt->tag !== null)->sortBy(fn ($pt) => $pt->tag->datum)->map(function ($pt) use ($plan) {
             $termine = $plan->termine->where('tag_id', $pt->tag_id)->keyBy('von');
-            $blockaden = $plan->blockaden->where('tag_id', $pt->tag_id)->keyBy('von');
-            $zeilen = collect(Slots::fuer($plan, $pt))->map(fn ($s) => $s + ['termin' => $termine->get($s['von']), 'pause' => false, 'blockade' => $blockaden->get($s['von']), 'tag_id' => (int) $pt->tag_id])
+            $zeilen = collect(Slots::fuer($plan, $pt))->map(fn ($s) => $s + ['termin' => $termine->get($s['von']), 'pause' => false])
                 ->concat(collect($pt->pausenListe())->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis'], 'termin' => null, 'pause' => true]))
                 // Termine, die nicht mehr zu den Zeiten passen, trotzdem aufführen.
                 ->concat($termine->reject(fn ($t, $von) => collect(Slots::fuer($plan, $pt))->contains('von', $von))

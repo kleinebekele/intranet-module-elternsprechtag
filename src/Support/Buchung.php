@@ -58,7 +58,7 @@ class Buchung
             return $kinder;
         }
 
-        $plaene = Plan::with(['user.roles', 'tage.tag', 'termine', 'wuensche', 'blockaden'])
+        $plaene = Plan::with(['user.roles', 'tage.tag', 'termine', 'wuensche'])
             ->where('sprechtag_id', $sprechtag->id)
             ->get()
             ->filter(fn (Plan $p) => $p->user !== null && $p->tage->isNotEmpty() && ! $p->abgesagt());
@@ -153,23 +153,18 @@ class Buchung
     public static function slots(Plan $plan, Collection $andere): array
     {
         $liste = [];
-        // Geblockte Zeiten bucht nur die Verwaltung (auch beim Handeln als Eltern).
-        $verwaltung = auth()->check() && Rechte::istVerwaltung(auth()->user());
         foreach ($plan->tage->sortBy(fn (PlanTag $pt) => $pt->tag?->datum) as $pt) {
             if ($pt->tag === null) {
                 continue;
             }
             $vergeben = $plan->termine->where('tag_id', $pt->tag_id)->pluck('von')->all();
             foreach (Slots::fuer($plan, $pt) as $s) {
-                $geblockt = $plan->geblockt((int) $pt->tag_id, $s['von']);
                 $liste[] = [
                     'tag_id' => (int) $pt->tag_id,
                     'tag' => $pt->tag->beschriftung(),
                     'von' => $s['von'],
                     'bis' => $s['bis'],
-                    'geblockt' => $geblockt,
                     'frei' => ! in_array($s['von'], $vergeben, true)
-                        && (! $geblockt || $verwaltung)
                         && ! self::ueberschneidet((int) $pt->tag_id, $s['von'], $s['bis'], $andere)
                         && $pt->tag->datum->copy()->setTimeFromTimeString($s['von'])->isFuture(),
                 ];

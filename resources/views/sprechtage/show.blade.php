@@ -264,38 +264,6 @@
                                                             </template>
                                                         </form>
                                                     </template>
-                                                    <template x-if="! laedt && daten && daten.diagnose">
-                                                        <details class="mt-3 border-t border-gray-100 pt-2 text-xs">
-                                                            <summary class="cursor-pointer text-indigo-700">Warum diese Zeiten? (Diagnose)</summary>
-                                                            <ul class="mt-2 list-disc space-y-0.5 pl-5 text-gray-700">
-                                                                <template x-for="h in daten.diagnose.hinweise"><li x-text="h"></li></template>
-                                                            </ul>
-                                                            <template x-if="daten.diagnose.zeilen.length">
-                                                                <div class="mt-2 max-h-96 overflow-auto">
-                                                                    <table class="w-full">
-                                                                        <thead class="sticky top-0 bg-white text-left text-gray-500">
-                                                                            <tr>
-                                                                                <th class="py-1 pr-3">Uhrzeit</th>
-                                                                                <template x-for="l in daten.diagnose.lehrer"><th class="py-1 pr-3" x-text="l"></th></template>
-                                                                                <th class="py-1 pr-3">Familie</th>
-                                                                                <th class="py-1">gemeinsam buchbar</th>
-                                                                            </tr>
-                                                                        </thead>
-                                                                        <tbody class="divide-y divide-gray-100">
-                                                                            <template x-for="r in daten.diagnose.zeilen">
-                                                                                <tr>
-                                                                                    <td class="whitespace-nowrap py-0.5 pr-3 text-gray-800"><span class="text-gray-400" x-text="r.tag.split(' ')[0] + ' '"></span><span x-text="r.zeit"></span></td>
-                                                                                    <template x-for="j in r.je"><td class="py-0.5 pr-3" :class="j === 'frei' ? 'text-green-700' : (j === 'geblockt' ? 'text-amber-700' : 'text-red-700')" x-text="j"></td></template>
-                                                                                    <td class="py-0.5 pr-3" :class="r.familie === 'frei' ? 'text-green-700' : 'text-red-700'" x-text="r.familie"></td>
-                                                                                    <td class="py-0.5" :class="r.gemeinsam ? 'text-green-700' : 'text-gray-400'" x-text="r.gemeinsam ? '✓' : '–'"></td>
-                                                                                </tr>
-                                                                            </template>
-                                                                        </tbody>
-                                                                    </table>
-                                                                </div>
-                                                            </template>
-                                                        </details>
-                                                    </template>
                                                     <template x-if="fehler"><p class="text-sm text-red-700" x-text="fehler"></p></template>
                                                 </div>
                                             </td>
@@ -404,83 +372,6 @@
                 </div>
             @endif
 
-            {{-- Klassen mit mehreren Klassenlehrkräften: kommt das gemeinsame Gespräch zustande, und welche Termine liegen nur bei einer? --}}
-            @if ($teamStand !== [])
-                @php
-                    $tsProbleme = collect($teamStand)->sum(fn ($k) => count($k['einzeln']) + ($k['team'] ? 0 : 1));
-                    $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
-                @endphp
-                <div class="mt-4 rounded-lg border px-3 py-2 {{ $tsProbleme ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-gray-50' }}" x-data="{ offen: false }">
-                    <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
-                        <div class="text-sm">
-                            <span class="font-semibold text-gray-800">Gemeinsame Gespräche der Klassenlehrkräfte ({{ count($teamStand) }} {{ count($teamStand) === 1 ? 'Klasse' : 'Klassen' }})</span>
-                            @php $tsEinzeln = collect($teamStand)->sum(fn ($k) => count($k['einzeln'])); @endphp
-                            @if ($tsEinzeln)
-                                <span class="text-amber-800">· {{ $tsEinzeln }} {{ $tsEinzeln === 1 ? 'Termin' : 'Termine' }} nur bei einer Lehrkraft</span>
-                            @endif
-                            @if (collect($teamStand)->contains('team', false))
-                                <span class="text-amber-800">· nicht überall gemeinsam möglich</span>
-                            @endif
-                        </div>
-                        <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
-                    </div>
-                    <div x-show="offen" x-cloak class="mt-3 space-y-3 text-sm">
-                        @foreach ($teamStand as $k)
-                            <div>
-                                <div class="font-medium text-gray-800">Klasse {{ $k['klasse'] }}:
-                                    @foreach ($k['lehrer'] as $l)
-                                        {{ $l['name'] }}@if ($l['grund']) <span class="text-amber-800">({{ $l['grund'] }})</span>@endif{{ $loop->last ? '' : ' & ' }}
-                                    @endforeach
-                                </div>
-                                <div class="text-gray-600">
-                                    @if ($k['team'])
-                                        <span class="text-green-700">✓ gemeinsames Gespräch</span> ·
-                                        {{ $k['modus'] === 'alle' ? 'für alle Gespräche der Klasse' : 'nur bei Gesprächswunsch einer der beiden – sonst bucht man getrennt' }}
-                                        <div>
-                                            @if ($k['gemeinsam'] === 0)
-                                                <span class="font-medium text-red-700">Keine einzige gemeinsame Uhrzeit:</span>
-                                                <span class="text-red-700">Die Terminpläne liegen nicht übereinander (Beginn, Gesprächsdauer, Vorbereitung oder Pausen weichen ab). Eltern können deshalb nur bei einer der beiden buchen.</span>
-                                            @else
-                                                Gemeinsame Uhrzeiten: {{ $k['gemeinsam'] }}, davon frei:
-                                                <span class="{{ $k['gemeinsamFrei'] === 0 ? 'font-medium text-red-700' : '' }}">{{ $k['gemeinsamFrei'] }}</span>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <span class="text-amber-800">kein gemeinsames Gespräch – Eltern buchen bei jeder Lehrkraft einzeln</span>
-                                    @endif
-                                </div>
-                                @if ($k['einzeln'] !== [])
-                                    <table class="mt-1 w-full text-sm">
-                                        <thead class="text-left text-xs uppercase tracking-wide text-gray-500">
-                                            <tr><th class="py-1 pr-3">Kind</th><th class="py-1 pr-3">Eltern</th><th class="py-1 pr-3">Termin nur bei</th><th class="py-1">Grund</th></tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-amber-100">
-                                            @foreach ($k['einzeln'] as $e)
-                                                <tr>
-                                                    <td class="py-1 pr-3 text-gray-800">{{ $e['kind'] }}</td>
-                                                    <td class="py-1 pr-3">
-                                                        @if ($e['eltern'])
-                                                            @darfRoute('module.elternsprechtag.eltern.index')
-                                                                <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e['eltern']->id]) }}" class="text-indigo-700 hover:underline" title="Als dieses Elternteil handeln und umbuchen">{{ $nv($e['eltern']->name) }}</a>
-                                                            @else
-                                                                {{ $nv($e['eltern']->name) }}
-                                                            @enddarfRoute
-                                                        @else
-                                                            –
-                                                        @endif
-                                                    </td>
-                                                    <td class="py-1 pr-3 text-gray-600">{{ $e['lehrer'] }} · {{ $e['termin'] }}</td>
-                                                    <td class="py-1 text-amber-800">{{ $e['grund'] }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
             @if ($pflichtFehlt->isNotEmpty())
                 <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                     Veröffentlichen geht erst, wenn alle Klassenlehrkräfte ihren Plan freigegeben oder ihre Teilnahme abgesagt haben. Es fehlen noch:

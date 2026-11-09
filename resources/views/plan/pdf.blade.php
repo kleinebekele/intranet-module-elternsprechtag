@@ -8,7 +8,7 @@
     $zusammenfassen = function ($zeilen) {
         $aus = [];
         foreach ($zeilen as $z) {
-            $frei = ! $z['pause'] && ! $z['termin'] && empty($z['blockade']);
+            $frei = ! $z['pause'] && ! $z['termin'];
             $letzte = end($aus);
             if ($frei && $letzte && ($letzte['frei'] ?? false)) {
                 $aus[array_key_last($aus)]['bis'] = $z['bis'];
@@ -43,7 +43,6 @@
         td.notiz { width: 160px; }
         tr.pause td { background: #f3f4f6; color: #6b7280; font-style: italic; }
         .frei { color: #9ca3af; }
-        tr.geblockt td { background: #fffbeb; color: #92400e; }
         .wunsch { color: #4338ca; font-size: 9px; }
         .seite { page-break-inside: avoid; }
         .leer { color: #6b7280; font-style: italic; }
@@ -60,8 +59,6 @@
             .absage span:not([hidden]) { display: block; white-space: normal; width: 9rem; }
             .link { background: none; border: 0; padding: 0; cursor: pointer; font-size: 11px; color: #b91c1c; text-decoration: underline; }
             .rot { font-weight: bold; }
-            .blau { color: #4338ca; }
-            .grundfeld { width: 9rem; font-size: 11px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 4px; }
         @endif
     </style>
 </head>
@@ -118,37 +115,9 @@
                                 <td class="notiz">{{ $z['termin']->notiz }}</td>
                             @endif
                         </tr>
-                    @elseif (! empty($z['blockade']))
-                        <tr class="geblockt">
-                            @if ($vorschau)
-                                <td class="aktion">
-                                    @if ($verwaltung)
-                                        <form method="POST" target="_top" class="absage" action="{{ route('module.elternsprechtag.plan.freigeben', [$z['blockade'], ...$param]) }}">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="link blau">freigeben</button>
-                                        </form>
-                                    @endif
-                                </td>
-                            @endif
-                            <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
-                            <td colspan="3">geblockt – nur über das Sekretariat buchbar @if ($z['blockade']->grund)<span class="wunsch">({{ $z['blockade']->grund }})</span>@endif</td>
-                            <td class="notiz"></td>
-                        </tr>
                     @else
                         <tr>
-                            @if ($vorschau)
-                                <td class="aktion">
-                                    @if ($verwaltung && isset($z['tag_id']))
-                                        <form method="POST" target="_top" class="absage" action="{{ route('module.elternsprechtag.plan.blocken', [$sprechtag, ...$param]) }}">
-                                            @csrf
-                                            <input type="hidden" name="tag_id" value="{{ $z['tag_id'] }}">
-                                            <input type="hidden" name="von" value="{{ $z['von'] }}">
-                                            <button type="button" class="link blau" onclick="this.hidden = true; this.nextElementSibling.hidden = false; this.nextElementSibling.querySelector('input').focus()">blocken</button>
-                                            <span hidden><input type="text" name="grund" maxlength="255" placeholder="Grund (optional)" class="grundfeld"> <button type="submit" class="link blau rot">Blocken</button></span>
-                                        </form>
-                                    @endif
-                                </td>
-                            @endif
+                            @if ($vorschau)<td></td>@endif
                             <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
                             <td class="frei" colspan="3">frei @if (($z['anzahl'] ?? 1) > 1)({{ $z['anzahl'] }} Termine)@endif</td>
                             <td class="notiz"></td>
