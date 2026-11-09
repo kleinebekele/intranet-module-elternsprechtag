@@ -308,19 +308,22 @@
                 </script>
             @endif
 
-            {{-- Stand der normalen Einladung: alle Eltern, wer hat schon gebucht. --}}
+            {{-- Stand der normalen Einladung: je Kind, ob schon ein Gespräch gebucht ist (egal von welchem Elternteil). --}}
             @if ($elternStand)
-                @php $mitTermin = $elternStand->filter(fn ($z) => $z['termine'] > 0)->count(); @endphp
+                @php
+                    $mitTermin = $elternStand->filter(fn ($z) => $z['termine'] > 0)->count();
+                    $kzVon = fn ($z) => $z['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first();
+                    $ohneZeit = $elternStand->filter(fn ($z) => $z['termine'] === 0 && $kzVon($z))->count();
+                @endphp
                 <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2" x-data="{ offen: false }">
                     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
                         <div class="text-sm">
-                            <span class="font-semibold text-gray-800">Alle Eltern: {{ $mitTermin }} von {{ $elternStand->count() }} haben gebucht</span>
-                            @php $ohneZeit = $elternStand->filter(fn ($z) => $z['termine'] === 0 && isset($keineZeit[$z['eltern']->id]))->count(); @endphp
+                            <span class="font-semibold text-gray-800">Alle Kinder: {{ $mitTermin }} von {{ $elternStand->count() }} haben einen Termin</span>
                             @if ($elternStand->count() - $mitTermin - $ohneZeit > 0)
                                 <span class="text-amber-800">· {{ $elternStand->count() - $mitTermin - $ohneZeit }} noch ohne Termin</span>
                             @endif
                             @if ($ohneZeit > 0)
-                                <span class="text-gray-500">· {{ $ohneZeit }} haben „keine Zeit“ gemeldet</span>
+                                <span class="text-gray-500">· bei {{ $ohneZeit }} haben die Eltern „keine Zeit“ gemeldet</span>
                             @endif
                         </div>
                         <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
@@ -331,28 +334,30 @@
                     <div x-show="offen" x-cloak class="mt-3 overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="text-left text-xs uppercase tracking-wide text-gray-500">
-                                <tr><th class="py-1 pr-3">Eltern</th><th class="py-1 pr-3">Kinder</th><th class="py-1">Gespräche</th></tr>
+                                <tr><th class="py-1 pr-3">Kind</th><th class="py-1 pr-3">Klasse</th><th class="py-1 pr-3">Eltern</th><th class="py-1">Gespräche</th></tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
                                 @foreach ($elternStand as $z)
-                                    @php $e = $z['eltern']; @endphp
                                     <tr>
+                                        <td class="py-1 pr-3 text-gray-800">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['kind']->name) }}</td>
+                                        <td class="py-1 pr-3 text-gray-600">{{ $z['klassen'] }}</td>
                                         <td class="py-1 pr-3 text-gray-600">
-                                            <span class="whitespace-nowrap">
-                                            @darfRoute('module.elternsprechtag.eltern.index')
-                                                <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>
-                                            @else
-                                                {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}
-                                            @enddarfRoute
-                                            @include('elternsprechtag::partials.eltern-status')
-                                            </span>
+                                            @foreach ($z['eltern'] as $e)
+                                                <span class="whitespace-nowrap">
+                                                @darfRoute('module.elternsprechtag.eltern.index')
+                                                    <a href="{{ route('module.elternsprechtag.eltern.index', ['eltern' => $e->id]) }}" class="text-indigo-700 hover:underline" title="Für dieses Elternteil buchen (z. B. nach einem Anruf)">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}</a>
+                                                @else
+                                                    {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($e->name) }}
+                                                @enddarfRoute
+                                                @include('elternsprechtag::partials.eltern-status')@if (! $loop->last),@endif
+                                                </span>
+                                            @endforeach
                                         </td>
-                                        <td class="py-1 pr-3 text-gray-600">{{ $z['kinder'] ?: '–' }}</td>
                                         <td class="py-1">
                                             @if ($z['termine'] > 0)
                                                 <span class="text-green-700">✓ {{ $z['termine'] }} gebucht</span>
                                             @else
-                                                @if ($kz = $keineZeit[$e->id] ?? null)
+                                                @if ($kz = $kzVon($z))
                                                     <span class="text-gray-500">keine Zeit gemeldet{{ $kz->keine_zeit_bemerkung ? ': „'.$kz->keine_zeit_bemerkung.'“' : '' }}</span>
                                                 @else
                                                     <span class="text-amber-700">noch keins</span>

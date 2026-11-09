@@ -116,19 +116,22 @@ class SprechtagController
         $jeKind = $termine->groupBy('kind_user_id')->map(fn ($ts) => $ts->unique(fn ($t) => $t->gruppe ?: 'p'.$t->plan_id)->count());
         $klassen = $sprechtag->klassenListe();
 
-        return User::with('children.roles')->whereIn('id', $eltern->pluck('id'))->whereNull('gesperrt_am')->get()
-            ->map(function (User $e) use ($jeKind, $klassen) {
-                $kinder = $e->children
-                    ->map(fn (User $k) => ['kind' => $k, 'klassen' => array_values(array_intersect(Klassen::vonKind($k), $klassen))])
-                    ->filter(fn ($z) => $z['klassen'] !== []);
+        // Je Kind (nicht je Elternteil): Hat irgendein Elternteil für das Kind gebucht?
+        $kinder = [];
+        foreach (User::with('children.roles')->whereIn('id', $eltern->pluck('id'))->whereNull('gesperrt_am')->get() as $e) {
+            foreach ($e->children as $k) {
+                $kl = array_values(array_intersect(Klassen::vonKind($k), $klassen));
+                if ($kl === []) {
+                    continue;
+                }
+                $kinder[$k->id] ??= ['kind' => $k, 'klassen' => implode(', ', $kl), 'eltern' => collect(), 'termine' => $jeKind[$k->id] ?? 0];
+                $kinder[$k->id]['eltern']->push($e);
+            }
+        }
 
-                return [
-                    'eltern' => $e,
-                    'kinder' => $kinder->map(fn ($z) => Namen::anzeige($z['kind']->name).' ('.implode(', ', $z['klassen']).')')->join(', '),
-                    'termine' => $kinder->sum(fn ($z) => $jeKind[$z['kind']->id] ?? 0),
-                ];
-            })
-            ->sortBy(fn ($z) => [$z['termine'] > 0 ? 1 : 0, Namen::schluessel($z['eltern']->name)])
+        return collect($kinder)
+            ->map(fn ($z) => ['eltern' => $z['eltern']->sortBy(fn (User $e) => Namen::schluessel($e->name))->values()] + $z)
+            ->sortBy(fn ($z) => [$z['termine'] > 0 ? 1 : 0, $z['klassen'], Namen::schluessel($z['kind']->name)])
             ->values();
     }
 
