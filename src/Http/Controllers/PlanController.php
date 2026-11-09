@@ -365,12 +365,14 @@ class PlanController
         }
 
         $text = $termin->beschriftung();
-        $benachrichtigt = $this->terminAbsagen($termin, $sprechtag, $lehrer, $mailer);
+        // Die Verwaltung kann still absagen (z. B. nach Rücksprache am Telefon).
+        $ohneMail = Rechte::istVerwaltung($request->user()) && $request->boolean('ohne_mail');
+        $benachrichtigt = $this->terminAbsagen($termin, $sprechtag, $lehrer, $mailer, ! $ohneMail);
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
-            ->with('status', 'Termin abgesagt: '.$text.'.'.($benachrichtigt
+            ->with('status', 'Termin abgesagt: '.$text.'.'.($ohneMail ? ' Es wurde keine Mail verschickt.' : ($benachrichtigt
                 ? ' Die Eltern bekommen eine Mail.'
-                : ' Für die Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.'));
+                : ' Für die Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.')));
     }
 
     /**
@@ -419,17 +421,17 @@ class PlanController
      * Termin löschen – bei einem gemeinsamen Gespräch für alle Klassenlehrer –
      * und die Eltern per Mail benachrichtigen; true, wenn die Mail rausging.
      */
-    private function terminAbsagen(Termin $termin, Sprechtag $sprechtag, User $lehrer, VorlagenMailer $mailer): bool
+    private function terminAbsagen(Termin $termin, Sprechtag $sprechtag, User $lehrer, VorlagenMailer $mailer, bool $mailen = true): bool
     {
         $text = $termin->beschriftung();
         $gruppe = $termin->gruppeTermine();
         $namen = $gruppe->map(fn (Termin $t) => $t->plan?->user?->name)->filter()->join(' und ') ?: $lehrer->name;
         $termin->absagenMitGruppe();
-        \Intranet\Modules\Elternsprechtag\Support\Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
+        \Intranet\Modules\Elternsprechtag\Support\Lehrerinfo::pruefen($gruppe->pluck('plan_id'), $mailen);
 
         $eltern = $termin->eltern;
         $benachrichtigt = false;
-        if ($eltern && ! $eltern->istGesperrt() && filled($eltern->email)) {
+        if ($mailen && $eltern && ! $eltern->istGesperrt() && filled($eltern->email)) {
             $werte = [
                 'name' => $eltern->name,
                 'sprechtag' => $sprechtag->titel,

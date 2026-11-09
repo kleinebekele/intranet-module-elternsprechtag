@@ -92,7 +92,7 @@
                                               action="{{ route('module.elternsprechtag.plan.absagen', [$z['termin'], ...$param]) }}">
                                             @csrf @method('DELETE')
                                             <button type="button" class="link" onclick="this.hidden = true; this.nextElementSibling.hidden = false">absagen</button>
-                                            <span hidden>Eltern bekommen eine Mail. <button type="submit" class="link rot">Ja, absagen</button></span>
+                                            <span hidden>Eltern bekommen eine Mail. <button type="submit" class="link rot">Ja, absagen</button>@if ($verwaltung) · <button type="submit" name="ohne_mail" value="1" class="link rot">ohne Mail absagen</button>@endif</span>
                                         </form>
                                     @endif
                                 </td>

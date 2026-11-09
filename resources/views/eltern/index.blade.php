@@ -145,6 +145,15 @@
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
                                             </form>
+                                            @if ($verwaltung)
+                                                <form method="POST" action="{{ route('module.elternsprechtag.eltern.absagen', [$termin] + $als) }}"
+                                                      data-bestaetigen="Den Termin bei {{ $l['namen'] }} absagen, ohne dass jemand eine Mail bekommt?"
+                                                      data-titel="Termin ohne Mail absagen" data-knopf="Ohne Mail absagen">
+                                                    @csrf @method('DELETE')
+                                                    <input type="hidden" name="ohne_mail" value="1">
+                                                    <button type="submit" class="text-xs text-red-700 hover:underline">ohne Mail absagen</button>
+                                                </form>
+                                            @endif
                                         @endif
                                     </div>
                                 @endif

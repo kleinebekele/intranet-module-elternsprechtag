@@ -360,11 +360,12 @@ class ElternController
         $text = $termin->beschriftung();
         $gruppe = $termin->gruppeTermine();
         $lehrer = $gruppe->pluck('plan.user_id')->all();
+        $ohneMail = Rechte::istVerwaltung($request->user()) && $request->boolean('ohne_mail');
         $termin->absagenMitGruppe();
-        Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
-        $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $lehrer, 'kind' => $termin->kind_user_id]);
+        Lehrerinfo::pruefen($gruppe->pluck('plan_id'), ! $ohneMail);
+        $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $lehrer, 'kind' => $termin->kind_user_id, 'ohne_mail' => $ohneMail]);
 
-        return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', 'Termin abgesagt: '.$text.'.');
+        return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', 'Termin abgesagt: '.$text.'.'.($ohneMail ? ' Es wurde keine Mail verschickt.' : ''));
     }
 
     /** Wer bucht? Man selbst – oder für die Verwaltung das Elternteil aus `?eltern=`. */

@@ -50,9 +50,12 @@ class Lehrerinfo
     /**
      * Nach jeder Buchung bzw. Absage für die betroffenen Pläne aufrufen.
      *
+     * $mailen = false (Verwaltung sagt „ohne Mail" ab): nur die Voll-Marke
+     * nachziehen, keine Liste verschicken.
+     *
      * @param  iterable<int|string>  $planIds
      */
-    public static function pruefen(iterable $planIds): void
+    public static function pruefen(iterable $planIds, bool $mailen = true): void
     {
         $ids = collect($planIds)->map(fn ($id) => (int) $id)->unique()->values();
         if ($ids->isEmpty()) {
@@ -66,7 +69,7 @@ class Lehrerinfo
             }
 
             if ($plan->sprechtag->schluss_gemeldet_am !== null) {
-                if (auth()->id() !== (int) $plan->user_id) {
+                if ($mailen && auth()->id() !== (int) $plan->user_id) {
                     self::senden($plan, 'geaendert');
                 }
 
@@ -74,7 +77,7 @@ class Lehrerinfo
             }
 
             $voll = self::voll($plan);
-            if ($voll && $plan->voll_gemeldet_am === null) {
+            if ($voll && $plan->voll_gemeldet_am === null && $mailen) {
                 if (self::senden($plan, 'voll')) {
                     $plan->forceFill(['voll_gemeldet_am' => now()])->save();
                 }
