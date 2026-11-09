@@ -97,7 +97,10 @@ class Team
 
         return $erste
             ->filter(fn ($s, $k) => $je->every(fn ($liste) => $liste->has($k)))
-            ->map(fn ($s, $k) => ['frei' => $s['frei'] && $je->every(fn ($liste) => $liste[$k]['frei'])] + $s)
+            ->map(fn ($s, $k) => [
+                'frei' => $s['frei'] && $je->every(fn ($liste) => $liste[$k]['frei']),
+                'geblockt' => $s['geblockt'] || $je->contains(fn ($liste) => $liste[$k]['geblockt']),
+            ] + $s)
             ->values()->all();
     }
 

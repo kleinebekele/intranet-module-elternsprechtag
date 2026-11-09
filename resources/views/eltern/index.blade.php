@@ -171,7 +171,7 @@
                                                 'name' => 'slot',
                                                 'optionen' => $freie->map(fn ($sl) => [
                                                     'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
-                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''), 'gruppe' => $sl['tag'],
+                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : '').(! empty($sl['geblockt']) ? ' (geblockt)' : ''), 'gruppe' => $sl['tag'],
                                                 ])->values()->all(),
                                                 'leer' => 'Uhrzeit wählen …',
                                                 'breite' => 'w-56',

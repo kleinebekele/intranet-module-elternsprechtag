@@ -264,6 +264,38 @@
                                                             </template>
                                                         </form>
                                                     </template>
+                                                    <template x-if="! laedt && daten && daten.diagnose">
+                                                        <details class="mt-3 border-t border-gray-100 pt-2 text-xs">
+                                                            <summary class="cursor-pointer text-indigo-700">Warum diese Zeiten? (Diagnose)</summary>
+                                                            <ul class="mt-2 list-disc space-y-0.5 pl-5 text-gray-700">
+                                                                <template x-for="h in daten.diagnose.hinweise"><li x-text="h"></li></template>
+                                                            </ul>
+                                                            <template x-if="daten.diagnose.zeilen.length">
+                                                                <div class="mt-2 max-h-96 overflow-auto">
+                                                                    <table class="w-full">
+                                                                        <thead class="sticky top-0 bg-white text-left text-gray-500">
+                                                                            <tr>
+                                                                                <th class="py-1 pr-3">Uhrzeit</th>
+                                                                                <template x-for="l in daten.diagnose.lehrer"><th class="py-1 pr-3" x-text="l"></th></template>
+                                                                                <th class="py-1 pr-3">Familie</th>
+                                                                                <th class="py-1">gemeinsam buchbar</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody class="divide-y divide-gray-100">
+                                                                            <template x-for="r in daten.diagnose.zeilen">
+                                                                                <tr>
+                                                                                    <td class="whitespace-nowrap py-0.5 pr-3 text-gray-800"><span class="text-gray-400" x-text="r.tag.split(' ')[0] + ' '"></span><span x-text="r.zeit"></span></td>
+                                                                                    <template x-for="j in r.je"><td class="py-0.5 pr-3" :class="j === 'frei' ? 'text-green-700' : (j === 'geblockt' ? 'text-amber-700' : 'text-red-700')" x-text="j"></td></template>
+                                                                                    <td class="py-0.5 pr-3" :class="r.familie === 'frei' ? 'text-green-700' : 'text-red-700'" x-text="r.familie"></td>
+                                                                                    <td class="py-0.5" :class="r.gemeinsam ? 'text-green-700' : 'text-gray-400'" x-text="r.gemeinsam ? '✓' : '–'"></td>
+                                                                                </tr>
+                                                                            </template>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </template>
+                                                        </details>
+                                                    </template>
                                                     <template x-if="fehler"><p class="text-sm text-red-700" x-text="fehler"></p></template>
                                                 </div>
                                             </td>

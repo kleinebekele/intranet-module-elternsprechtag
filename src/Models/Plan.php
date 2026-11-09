@@ -73,6 +73,17 @@ class Plan extends Model
         return $this->hasMany(Termin::class, 'plan_id');
     }
 
+    public function blockaden(): HasMany
+    {
+        return $this->hasMany(Blockade::class, 'plan_id');
+    }
+
+    /** Ist diese Zeit geblockt (nur die Verwaltung darf sie buchen)? */
+    public function geblockt(int $tagId, string $von): bool
+    {
+        return $this->blockaden->contains(fn (Blockade $b) => (int) $b->tag_id === $tagId && $b->von === $von);
+    }
+
     /** Anzahl Termine über alle Tage. */
     public function anzahlTermine(): int
     {

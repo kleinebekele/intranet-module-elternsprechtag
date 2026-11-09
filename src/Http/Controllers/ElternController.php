@@ -78,6 +78,7 @@ class ElternController
         abort_if($eintrag === null, 404);
 
         return response()->json([
+            'diagnose' => \Intranet\Modules\Elternsprechtag\Support\Diagnose::gespraech($eltern, $sprechtag, $kindId),
             'namen' => $eintrag['namen'],
             'team' => (bool) $eintrag['team'],
             'ausweichen' => $eintrag['ausweichen'],
@@ -85,7 +86,7 @@ class ElternController
             'plan_id' => $eintrag['plan']->id,
             'slots' => collect($eintrag['slots'])->where('frei', true)->map(fn ($sl) => [
                 'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
-                'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''),
+                'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : '').(! empty($sl['geblockt']) ? ' (geblockt)' : ''),
                 'tag' => $sl['tag'],
             ])->values(),
         ]);
