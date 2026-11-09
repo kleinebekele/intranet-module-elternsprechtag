@@ -131,7 +131,13 @@ class SprechtagController
 
         return collect($kinder)
             ->map(fn ($z) => ['eltern' => $z['eltern']->sortBy(fn (User $e) => Namen::schluessel($e->name))->values()] + $z)
-            ->sortBy(fn ($z) => [$z['termine'] > 0 ? 1 : 0, $z['klassen'], Namen::schluessel($z['kind']->name)])
+            // Nach Stufe (führende Zahl, „1EA“ vor „09a“), dann Klassenzeichen, dann Name.
+            ->sortBy(fn ($z) => [
+                $z['termine'] > 0 ? 1 : 0,
+                preg_match('/^\d+/', $z['klassen'], $m) ? (int) $m[0] : 99,
+                mb_strtolower($z['klassen']),
+                Namen::schluessel($z['kind']->name),
+            ])
             ->values();
     }
 
