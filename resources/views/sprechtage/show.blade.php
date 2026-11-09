@@ -307,6 +307,15 @@
                                     @if ($k['team'])
                                         <span class="text-green-700">✓ gemeinsames Gespräch</span> ·
                                         {{ $k['modus'] === 'alle' ? 'für alle Gespräche der Klasse' : 'nur bei Gesprächswunsch einer der beiden – sonst bucht man getrennt' }}
+                                        <div>
+                                            @if ($k['gemeinsam'] === 0)
+                                                <span class="font-medium text-red-700">Keine einzige gemeinsame Uhrzeit:</span>
+                                                <span class="text-red-700">Die Terminpläne liegen nicht übereinander (Beginn, Gesprächsdauer, Vorbereitung oder Pausen weichen ab). Eltern können deshalb nur bei einer der beiden buchen.</span>
+                                            @else
+                                                Gemeinsame Uhrzeiten: {{ $k['gemeinsam'] }}, davon frei:
+                                                <span class="{{ $k['gemeinsamFrei'] === 0 ? 'font-medium text-red-700' : '' }}">{{ $k['gemeinsamFrei'] }}</span>
+                                            @endif
+                                        </div>
                                     @else
                                         <span class="text-amber-800">kein gemeinsames Gespräch – Eltern buchen bei jeder Lehrkraft einzeln</span>
                                     @endif

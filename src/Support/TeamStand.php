@@ -59,8 +59,13 @@ class TeamStand
                     },
                 ])->values()->all();
 
+            // Gemeinsam buchbar sind nur Uhrzeiten, die in allen Plänen genau gleich liegen.
+            $gemeinsam = isset($teams[$klasse]) ? collect(Team::slots($teams[$klasse]['plaene'], collect())) : collect();
+
             $liste[] = [
                 'klasse' => $klasse,
+                'gemeinsam' => $gemeinsam->count(),
+                'gemeinsamFrei' => $gemeinsam->where('frei', true)->count(),
                 'modus' => $modi[$klasse] ?? 'wunsch',
                 'team' => isset($teams[$klasse]),
                 'lehrer' => $lehrer,
