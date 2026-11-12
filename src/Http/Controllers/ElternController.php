@@ -200,6 +200,7 @@ class ElternController
 
         $verwaltung = Rechte::istVerwaltung($request->user());
         $wuensche = [];
+        $gruende = [];
         foreach (Buchung::angebot($eltern, $sprechtag) as $z) {
             foreach ($z['lehrer'] as $l) {
                 $key = $l['plan']->id.'-'.$z['kind']->id;
@@ -207,15 +208,23 @@ class ElternController
                 if ($prio < 1 || $l['termin'] || ($l['gesperrt'] && ! $verwaltung)) {
                     continue;
                 }
-                $slots = collect($l['slots'])->where('frei', true)->filter(function ($s) use ($fenster) {
+                $imFenster = collect($l['slots'])->filter(function ($s) use ($fenster) {
                     $f = $fenster($s['tag_id']);
                     if ($f === false) {
                         return false;
                     }
 
                     return (! $f[0] || $s['von'] >= $f[0]) && (! $f[1] || $s['bis'] <= $f[1]);
-                })->map(fn ($s) => array_intersect_key($s, array_flip(['tag_id', 'tag', 'von', 'bis', 'plan', 'nur'])))->values()->all();
+                });
+                $slots = $imFenster->where('frei', true)
+                    ->map(fn ($s) => array_intersect_key($s, array_flip(['tag_id', 'tag', 'von', 'bis', 'plan', 'nur'])))->values()->all();
                 $wuensche[] = ['key' => $key, 'prio' => $prio, 'lehrer' => $l['plan']->user_id, 'slots' => $slots];
+
+                // Warum es bei dieser Lehrkraft nicht klappen kann – für die Anzeige, falls sie offen bleibt.
+                $familie = $imFenster->where('familie', true);
+                $gruende[$key] = $slots !== [] ? ['grund' => 'kollision']
+                    : ($familie->isNotEmpty() ? ['grund' => 'familie', 'zeiten' => $familie->map(fn ($s) => $s['tag'].' '.$s['von'])->unique()->values()->all()]
+                    : (collect($l['slots'])->contains(fn ($s) => $s['frei'] || ($s['familie'] ?? false)) ? ['grund' => 'fenster'] : ['grund' => 'voll']));
             }
         }
 
@@ -224,6 +233,7 @@ class ElternController
         }
 
         $ergebnis = Assistent::planen($wuensche, (int) ($daten['abstand'] ?? 0));
+        $ergebnis['gruende'] = array_intersect_key($gruende, array_flip($ergebnis['offen']));
         session()->put($schluessel, $ergebnis + ['eingaben' => $request->only(['tage', 'prio', 'abstand'])]);
 
         return $this->zurueck($request, $eltern, '#assistent-'.$sprechtag->id);

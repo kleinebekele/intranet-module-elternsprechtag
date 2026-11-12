@@ -106,7 +106,7 @@
                 </div>
 
                 @if ($zeilen->isEmpty())
-                    <p class="px-4 py-3 text-sm text-gray-600">Leider ließ sich kein Gespräch unterbringen – versuchen Sie es mit einem größeren Zeitfenster.</p>
+                    <p class="px-4 py-3 text-sm text-gray-600">Leider ließ sich kein Gespräch unterbringen – die Gründe stehen unten.</p>
                 @else
                     <div class="divide-y divide-gray-100">
                         @foreach ($zeilen as $i => $z)
@@ -144,10 +144,24 @@
                 @endif
 
                 @if ($vorschlag['offen'] !== [])
+                    @php
+                        $grundText = fn ($g) => match ($g['grund'] ?? null) {
+                            'familie' => 'frei wäre noch '.collect($g['zeiten'])->join(', ', ' und ').' Uhr – da haben Sie aber schon ein anderes Gespräch.',
+                            'fenster' => 'im gewählten Zeitraum ist nichts frei – versuchen Sie es mit einem größeren Zeitfenster.',
+                            'voll' => 'alle Termine sind vergeben.',
+                            'kollision' => 'die freien Uhrzeiten überschneiden sich mit den anderen Gesprächen des Vorschlags.',
+                            default => 'im gewählten Zeitraum sind keine passenden Uhrzeiten frei.',
+                        };
+                    @endphp
                     <div class="border-t border-amber-100 bg-amber-50 px-4 py-2 text-sm text-amber-900">
                         Nicht unterzubringen:
-                        {!! collect($vorschlag['offen'])->map(fn ($k) => $paare->has($k) ? e($paare[$k]['namen']).' (für '.$kn($paare[$k]['kind']).')' : null)->filter()->join(' · ') !!}
-                        – dort sind im gewählten Zeitraum keine passenden Uhrzeiten frei.
+                        <ul class="mt-1 list-disc pl-5">
+                            @foreach ($vorschlag['offen'] as $k)
+                                @if ($paare->has($k))
+                                    <li>{{ $paare[$k]['namen'] }} (für {!! $kn($paare[$k]['kind']) !!}): {{ $grundText($vorschlag['gruende'][$k] ?? []) }}</li>
+                                @endif
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
 
