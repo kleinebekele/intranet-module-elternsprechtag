@@ -84,7 +84,7 @@ class Team
      * Die Slots, die in allen Plänen gleich liegen; frei nur, wenn sie überall frei sind.
      *
      * @param  Collection<int, Plan>  $plaene
-     * @return list<array{tag_id: int, tag: string, von: string, bis: string, frei: bool}>
+     * @return list<array{tag_id: int, tag: string, von: string, bis: string, frei: bool, familie: bool}>
      */
     public static function slots(Collection $plaene, Collection $andere): array
     {
@@ -97,7 +97,11 @@ class Team
 
         return $erste
             ->filter(fn ($s, $k) => $je->every(fn ($liste) => $liste->has($k)))
-            ->map(fn ($s, $k) => ['frei' => $s['frei'] && $je->every(fn ($liste) => $liste[$k]['frei'])] + $s)
+            ->map(fn ($s, $k) => [
+                'frei' => $s['frei'] && $je->every(fn ($liste) => $liste[$k]['frei']),
+                'familie' => ($s['frei'] || $s['familie']) && $je->every(fn ($liste) => $liste[$k]['frei'] || $liste[$k]['familie'])
+                    && ($s['familie'] || $je->contains(fn ($liste) => $liste[$k]['familie'])),
+            ] + $s)
             ->values()->all();
     }
 
@@ -107,7 +111,7 @@ class Team
      * Eine Uhrzeit, die bei mehreren frei ist, steht nur einmal da.
      *
      * @param  Collection<int, Plan>  $plaene
-     * @return list<array{tag_id: int, tag: string, von: string, bis: string, frei: bool, plan: int, nur: string}>
+     * @return list<array{tag_id: int, tag: string, von: string, bis: string, frei: bool, familie: bool, plan: int, nur: string}>
      */
     public static function einzelSlots(Collection $plaene, Collection $andere): array
     {

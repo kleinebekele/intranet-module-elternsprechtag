@@ -159,14 +159,17 @@ class Buchung
             }
             $vergeben = $plan->termine->where('tag_id', $pt->tag_id)->pluck('von')->all();
             foreach (Slots::fuer($plan, $pt) as $s) {
+                $offen = ! in_array($s['von'], $vergeben, true)
+                    && $pt->tag->datum->copy()->setTimeFromTimeString($s['von'])->isFuture();
+                $belegt = self::ueberschneidet((int) $pt->tag_id, $s['von'], $s['bis'], $andere);
                 $liste[] = [
                     'tag_id' => (int) $pt->tag_id,
                     'tag' => $pt->tag->beschriftung(),
                     'von' => $s['von'],
                     'bis' => $s['bis'],
-                    'frei' => ! in_array($s['von'], $vergeben, true)
-                        && ! self::ueberschneidet((int) $pt->tag_id, $s['von'], $s['bis'], $andere)
-                        && $pt->tag->datum->copy()->setTimeFromTimeString($s['von'])->isFuture(),
+                    'frei' => $offen && ! $belegt,
+                    // Bei der Lehrkraft frei, aber die Familie hat zur selben Zeit schon ein Gespräch.
+                    'familie' => $offen && $belegt,
                 ];
             }
         }

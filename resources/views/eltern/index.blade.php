@@ -158,7 +158,17 @@
 
                                 @if ($darfBuchen)
                                     @if ($freie->isEmpty())
-                                        <p class="mt-2 text-sm text-gray-500">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
+                                        @php $familie = collect($l['slots'])->where('familie', true); @endphp
+                                        @if ($familie->isNotEmpty())
+                                            <p class="mt-2 text-sm text-amber-800">
+                                                Frei {{ $familie->count() === 1 ? 'wäre' : 'wären' }} noch
+                                                {{ $familie->map(fn ($x) => ($familie->pluck('tag_id')->unique()->count() > 1 ? $x['tag'].' ' : '').$x['von'])->join(', ', ' und ') }} Uhr –
+                                                da haben Sie aber schon {{ $familie->count() === 1 ? 'ein anderes Gespräch' : 'andere Gespräche' }}.
+                                                Wenn Sie dort absagen, wird die Zeit hier buchbar.
+                                            </p>
+                                        @else
+                                            <p class="mt-2 text-sm text-gray-500">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
+                                        @endif
                                     @else
                                         <form method="POST" action="{{ route('module.elternsprechtag.eltern.buchen', [$s] + $als) }}"
                                               class="mt-2 flex flex-wrap items-center gap-2">
