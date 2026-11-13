@@ -97,8 +97,11 @@ class Klassen
             ->all();
     }
 
+    /** Grundrolle „Lehrer" aus dem Linear-Import (Adresse.Lehrer = J). */
+    public const ROLLE_LEHRER = 'teacher';
+
     /**
-     * Alle Lehrer mit irgendeiner Linear-Lehrerrolle, nach Name.
+     * Alle Lehrer – mit Linear-Klassenrolle oder mit der Grundrolle „Lehrer" –, nach Name.
      *
      * @return Collection<int, User>
      */
@@ -107,8 +110,26 @@ class Klassen
         return User::query()
             ->whereHas('roles', fn ($q) => $q->where('roles.role_id', 'like', self::PRAEFIX.'%-lehrer'))
             ->get()
+            ->concat(self::ohneKlasse())
+            ->unique('id')
             ->sortBy(fn (User $u) => Namen::schluessel($u->name))
             ->values();
+    }
+
+    /**
+     * Lehrer mit der Grundrolle „Lehrer", denen Linear keine Klasse zuordnet
+     * (WD_Lehrer leer). Sie wählen ihre Klassen im Terminplan selbst.
+     *
+     * @return Collection<int, User>
+     */
+    public static function ohneKlasse(): Collection
+    {
+        return User::query()
+            ->whereNull('gesperrt_am')
+            ->whereHas('roles', fn ($q) => $q->where('roles.role_id', self::ROLLE_LEHRER))
+            ->whereDoesntHave('roles', fn ($q) => $q->where('roles.role_id', 'like', self::PRAEFIX.'%-lehrer'))
+            ->with('roles')
+            ->get();
     }
 
     /**

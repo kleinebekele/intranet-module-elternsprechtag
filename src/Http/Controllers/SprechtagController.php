@@ -256,8 +256,8 @@ class SprechtagController
     }
 
     /**
-     * Lehrer laut Linear, Klassenlehrer der Klassen und alle, die selbst einen
-     * Plan angelegt haben. `klassen` ist die eigene Wahl (sonst die Linear-
+     * Lehrer laut Linear, Klassenlehrer der Klassen, Lehrer ohne Klasse in Linear
+     * und alle, die selbst einen Plan angelegt haben. `klassen` ist die eigene Wahl (sonst die Linear-
      * Vorauswahl) ohne die Klassen, für die er Klassenlehrer ist – die stehen in
      * `klassenlehrer`. Für Klassenlehrer ist eine Angabe Pflicht: freigegeben
      * oder abgesagt.
@@ -271,6 +271,7 @@ class SprechtagController
 
         $liste = Klassen::lehrer($klassen)->pluck('user')
             ->concat(Klassen::klassenlehrer($klassen))
+            ->concat(Klassen::ohneKlasse())
             ->concat($plaene->pluck('user')->filter())
             ->unique('id')
             ->sortBy(fn (User $u) => Namen::schluessel($u->name))

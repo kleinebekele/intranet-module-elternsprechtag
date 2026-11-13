@@ -46,9 +46,9 @@ class Rechte
         return $user->is($lehrer) && ! $sprechtag->fristVorbei() && ! $sprechtag->veroeffentlicht();
     }
 
-    /** Für den Menüpunkt „Mein Terminplan": irgendeine Linear-Lehrerrolle. */
+    /** Für den Menüpunkt „Mein Terminplan": irgendeine Linear-Lehrerrolle oder die Grundrolle „Lehrer". */
     public static function istLehrer(?User $user): bool
     {
-        return $user !== null && Klassen::vonLehrer($user) !== [];
+        return $user !== null && (Klassen::vonLehrer($user) !== [] || $user->roles->contains('role_id', Klassen::ROLLE_LEHRER));
     }
 }
