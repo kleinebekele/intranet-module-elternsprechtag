@@ -85,6 +85,7 @@ class SprechtagController
         return view('elternsprechtag::sprechtage.show', [
             'sprechtag' => $sprechtag,
             'lehrer' => $this->lehrer($sprechtag, $plaene),
+            'ohneMail' => $this->lehrerOhneMail($sprechtag, $plaene),
             'plaene' => $plaene,
             'eltern' => $eltern,
             'elternStand' => $sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null,
@@ -253,6 +254,19 @@ class SprechtagController
             ->where('sprechtag_id', $sprechtag->id)
             ->get()
             ->keyBy('user_id');
+    }
+
+    /** Wie viele Lehrer fehlen in der Liste, weil sie in Linear keine Mailadresse haben (künstliche .intern)? */
+    private function lehrerOhneMail(Sprechtag $sprechtag, Collection $plaene): int
+    {
+        $klassen = $sprechtag->klassenListe();
+
+        return Klassen::lehrer($klassen)->pluck('user')
+            ->concat(Klassen::klassenlehrer($klassen))
+            ->concat(Klassen::ohneKlasse())
+            ->filter(fn (User $u) => $u->gesperrt_am === null && ! Klassen::kannAnmelden($u) && ! $plaene->has($u->id))
+            ->unique('id')
+            ->count();
     }
 
     /**

@@ -491,6 +491,12 @@
                 $farbZahl = $lehrer->countBy($farbeVon);
             @endphp
             <div x-data="{ farbe: '' }">
+            @if ($ohneMail > 0)
+                <p class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    <i class="bx bx-info-circle align-middle"></i>
+                    {{ $ohneMail === 1 ? 'Ein Lehrer fehlt' : $ohneMail.' Lehrer fehlen' }} in der Liste, weil in Linear keine Mailadresse eingetragen ist – ohne Adresse ist keine Anmeldung möglich.
+                </p>
+            @endif
             <div class="mt-3 flex flex-wrap gap-2 text-sm">
                 @foreach (['' => ['Alle', $lehrer->count(), 'border-gray-300 bg-white'], 'gruen' => ['alle Termine vergeben', $farbZahl['gruen'] ?? 0, 'border-green-300 bg-green-50'], 'grau' => ['nimmt nicht teil', $farbZahl['grau'] ?? 0, 'border-gray-300 bg-gray-100'], 'rot' => ['noch nichts eingetragen', $farbZahl['rot'] ?? 0, 'border-red-300 bg-red-50']] as $f => [$text, $n, $stil])
                     <button type="button" @click="farbe = @js($f)" class="rounded-full border px-3 py-1 {{ $stil }}"
