@@ -2,7 +2,23 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h1 class="text-xl font-semibold text-gray-800">{{ $sprechtag->titel }}</h1>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+                @if ($ohneFreieZeit !== [])
+                    <a href="#wunschgespraeche" onclick="window.dispatchEvent(new CustomEvent('wunsch-oeffnen'))"
+                       class="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+                       title="Für diese Wunschgespräche ist keine Uhrzeit mehr frei – weder gemeinsam noch bei einer Lehrkraft allein, oder die Familie hat zur freien Zeit schon andere Gespräche.">
+                        <i class="bx bx-error-circle text-base"></i>
+                        {{ count($ohneFreieZeit) }} {{ count($ohneFreieZeit) === 1 ? 'Wunschgespräch' : 'Wunschgespräche' }} ohne freie Zeit
+                    </a>
+                @endif
+                @if ($kinderOhneFreieZeit !== [])
+                    <a href="#allekinder" onclick="window.dispatchEvent(new CustomEvent('kinder-oeffnen'))"
+                       class="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+                       title="Kinder ohne Termin, bei denen keine Lehrkraft der Klasse mehr eine Uhrzeit frei hat, die für die Familie passt.">
+                        <i class="bx bx-error-circle text-base"></i>
+                        {{ count($kinderOhneFreieZeit) }} {{ count($kinderOhneFreieZeit) === 1 ? 'Kind' : 'Kinder' }} ohne freie Zeit
+                    </a>
+                @endif
                 @darfRoute('module.elternsprechtag.sprechtage.edit')
                     <a href="{{ route('module.elternsprechtag.sprechtage.edit', $sprechtag) }}"
                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Bearbeiten</a>
@@ -146,7 +162,7 @@
             {{-- Stand der Wunschgespräche: wer hat schon gebucht, wen muss man evtl. anrufen. --}}
             @if ($wunschgespraeche->isNotEmpty())
                 @php $offeneWuensche = $wunschgespraeche->count() - $gebuchteWuensche; @endphp
-                <div id="wunschgespraeche" class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: @js((bool) session('elternsprechtag_wunsch_offen')) }">
+                <div id="wunschgespraeche" class="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2" x-data="{ offen: @js((bool) session('elternsprechtag_wunsch_offen')) }" @wunsch-oeffnen.window="offen = true">
                     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
                         <div class="text-sm">
                             @if ($sprechtag->veroeffentlicht())
@@ -196,6 +212,11 @@
                                         </td>
                                         <td class="py-1">
                                             @php $kz = $w['termin'] ? null : $w['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first(); @endphp
+                                            @if (isset($ohneFreieZeit[$w['kind']->id.'-'.$w['plan_id']]))
+                                                <div class="text-xs font-medium text-red-700" title="Weder gemeinsam noch bei einer Lehrkraft allein ist eine Uhrzeit frei, oder die Familie hat zur freien Zeit schon andere Gespräche.">
+                                                    <i class="bx bx-error-circle align-middle"></i> keine freie Zeit mehr – bitte mit den Lehrkräften klären
+                                                </div>
+                                            @endif
                                             @if ($w['termin'])
                                                 <span class="text-green-700">✓ {{ $w['termin']->tag?->beschriftung() }}, {{ $w['termin']->von }} Uhr</span>
                                             @elseif ($buchbar)
@@ -318,7 +339,7 @@
                     $kzVon = fn ($z) => $z['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first();
                     $ohneZeit = $elternStand->filter(fn ($z) => $z['termine'] === 0 && $kzVon($z))->count();
                 @endphp
-                <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2" x-data="{ offen: false }">
+                <div id="allekinder" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2" x-data="{ offen: false }" @kinder-oeffnen.window="offen = true">
                     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
                         <div class="text-sm">
                             <span class="font-semibold text-gray-800">Alle Kinder: {{ $mitTermin }} von {{ $elternStand->count() }} haben einen Termin</span>
@@ -360,6 +381,11 @@
                                             @if ($z['termine'] > 0)
                                                 <span class="text-green-700">✓ {{ $z['termine'] }} gebucht</span>
                                             @else
+                                                @if (isset($kinderOhneFreieZeit[$z['kind']->id]))
+                                                    <div class="text-xs font-medium text-red-700" title="Keine Lehrkraft der Klasse hat mehr eine Uhrzeit frei, die für die Familie passt.">
+                                                        <i class="bx bx-error-circle align-middle"></i> keine freie Zeit mehr
+                                                    </div>
+                                                @endif
                                                 @if ($kz = $kzVon($z))
                                                     <span class="text-gray-500">keine Zeit gemeldet @if ($kz->keine_zeit_bemerkung)<i class="bx bx-info-circle text-base align-middle cursor-help" title="{{ $kz->keine_zeit_bemerkung }}"></i>@endif</span>
                                                 @else
@@ -491,10 +517,10 @@
                 $farbZahl = $lehrer->countBy($farbeVon);
             @endphp
             <div x-data="{ farbe: '' }">
-            @if ($ohneMail > 0)
-                <p class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            @if ($ohneMail->isNotEmpty())
+                <p class="mt-3 cursor-help rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" title="{{ $ohneMail->join(', ') }}">
                     <i class="bx bx-info-circle align-middle"></i>
-                    {{ $ohneMail === 1 ? 'Ein Lehrer fehlt' : $ohneMail.' Lehrer fehlen' }} in der Liste, weil in Linear keine Mailadresse eingetragen ist – ohne Adresse ist keine Anmeldung möglich.
+                    {{ $ohneMail->count() === 1 ? 'Ein Lehrer fehlt' : $ohneMail->count().' Lehrer fehlen' }} in der Liste, weil in Linear keine Mailadresse eingetragen ist – ohne Adresse ist keine Anmeldung möglich.
                 </p>
             @endif
             <div class="mt-3 flex flex-wrap gap-2 text-sm">

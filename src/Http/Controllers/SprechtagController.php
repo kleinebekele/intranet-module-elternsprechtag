@@ -13,6 +13,7 @@ use Illuminate\View\View;
 use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
+use Intranet\Modules\Elternsprechtag\Support\Buchung;
 use Intranet\Modules\Elternsprechtag\Support\InfoMail;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Namen;
@@ -88,9 +89,11 @@ class SprechtagController
             'ohneMail' => $this->lehrerOhneMail($sprechtag, $plaene),
             'plaene' => $plaene,
             'eltern' => $eltern,
-            'elternStand' => $sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null,
+            'elternStand' => $stand = ($sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null),
+            'kinderOhneFreieZeit' => $stand ? $this->kinderOhneFreieZeit($sprechtag, $stand) : [],
             'einladungen' => InfoMail::einladungen($sprechtag),
-            'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
+            'wunschgespraeche' => $wunsch = InfoMail::wunschgespraeche($sprechtag),
+            'ohneFreieZeit' => $this->ohneFreieZeit($sprechtag, $wunsch),
             'besuche' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('letzter_besuch_am')->pluck('letzter_besuch_am', 'user_id'),
             'keineZeit' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('keine_zeit_am')->get()->keyBy('user_id'),
             // Wer selbst gebucht hat, war auf der Seite – auch vor der Besuchszählung.
@@ -256,8 +259,94 @@ class SprechtagController
             ->keyBy('user_id');
     }
 
-    /** Wie viele Lehrer fehlen in der Liste, weil sie in Linear keine Mailadresse haben (künstliche .intern)? */
-    private function lehrerOhneMail(Sprechtag $sprechtag, Collection $plaene): int
+    /**
+     * Wunschgespräche ohne Termin, für die die Familie keine einzige freie Uhrzeit
+     * mehr findet (weder gemeinsam noch ausweichend) – vergeben oder durch eigene
+     * Gespräche blockiert. Schlüssel „kind_id-plan_id". Nur solange gebucht wird.
+     *
+     * @param  Collection<int, array>  $wuensche
+     * @return array<string, true>
+     */
+    private function ohneFreieZeit(Sprechtag $sprechtag, Collection $wuensche): array
+    {
+        if (! $this->buchungLaeuft($sprechtag)) {
+            return [];
+        }
+
+        $angebot = [];
+        $ergebnis = [];
+        foreach ($wuensche as $w) {
+            if ($w['termin'] || $w['eltern']->isEmpty()) {
+                continue;
+            }
+            $gefunden = false;
+            $frei = false;
+            foreach ($w['eltern'] as $e) {
+                $angebot[$e->id] ??= Buchung::angebot($e, $sprechtag);
+                $l = ($angebot[$e->id]->first(fn ($z) => $z['kind']->id === $w['kind']->id)['lehrer'] ?? collect())
+                    ->first(fn ($l) => $l['plan']->id === $w['plan_id'] || ($l['team'] && $l['team']->contains('id', $w['plan_id'])));
+                if ($l === null) {
+                    continue;
+                }
+                $gefunden = true;
+                if (collect($l['slots'])->contains('frei', true)) {
+                    $frei = true;
+                    break;
+                }
+            }
+            if ($gefunden && ! $frei) {
+                $ergebnis[$w['kind']->id.'-'.$w['plan_id']] = true;
+            }
+        }
+
+        return $ergebnis;
+    }
+
+    /** Veröffentlicht und der letzte Tag noch nicht vorbei – nur dann ist „frei" aussagekräftig. */
+    private function buchungLaeuft(Sprechtag $sprechtag): bool
+    {
+        $letzterTag = $sprechtag->tage->max('datum');
+
+        return $sprechtag->veroeffentlicht() && $letzterTag !== null && ! $letzterTag->copy()->endOfDay()->isPast();
+    }
+
+    /**
+     * Kinder ohne Termin, bei denen keine Lehrkraft mehr eine freie Uhrzeit für
+     * die Familie hat (vergeben oder durch eigene Gespräche blockiert; bei
+     * gemeinsamen Gesprächen zählt auch eine Lehrkraft allein). Schlüssel kind_id.
+     *
+     * @param  Collection<int, array>  $stand  aus elternStand()
+     * @return array<int, true>
+     */
+    private function kinderOhneFreieZeit(Sprechtag $sprechtag, Collection $stand): array
+    {
+        if (! $this->buchungLaeuft($sprechtag)) {
+            return [];
+        }
+
+        $ergebnis = [];
+        foreach ($stand as $z) {
+            if ($z['termine'] > 0 || $z['eltern']->isEmpty()) {
+                continue;
+            }
+            // Die Familie teilt sich die Kinder – ein Elternteil genügt für die Prüfung.
+            $lehrer = Buchung::angebot($z['eltern']->first(), $sprechtag)
+                ->first(fn ($a) => $a['kind']->id === $z['kind']->id)['lehrer'] ?? collect();
+            if ($lehrer->isNotEmpty() && ! $lehrer->contains(fn ($l) => collect($l['slots'])->contains('frei', true))) {
+                $ergebnis[$z['kind']->id] = true;
+            }
+        }
+
+        return $ergebnis;
+    }
+
+    /**
+     * Lehrer, die in der Liste fehlen, weil sie in Linear keine Mailadresse haben
+     * (künstliche .intern) – Namen für den Tooltip, nach Name sortiert.
+     *
+     * @return Collection<int, string>
+     */
+    private function lehrerOhneMail(Sprechtag $sprechtag, Collection $plaene): Collection
     {
         $klassen = $sprechtag->klassenListe();
 
@@ -266,7 +355,9 @@ class SprechtagController
             ->concat(Klassen::ohneKlasse())
             ->filter(fn (User $u) => $u->gesperrt_am === null && ! Klassen::kannAnmelden($u) && ! $plaene->has($u->id))
             ->unique('id')
-            ->count();
+            ->sortBy(fn (User $u) => Namen::schluessel($u->name))
+            ->map(fn (User $u) => Namen::anzeige($u->name))
+            ->values();
     }
 
     /**
