@@ -498,8 +498,8 @@
                     return match (true) {
                         ! $p => 'rot',
                         $p->abgesagt() => 'grau',
-                        $p->anzahlTermine() > 0 && $p->termine->count() >= $p->anzahlTermine() => 'gruen',
-                        default => 'offen',
+                        $p->anzahlTermine() > 0 && $p->termine->count() >= $p->anzahlTermine() => 'gelb',
+                        default => 'gruen',
                     };
                 };
                 $farbZahl = $lehrer->countBy($farbeVon);
@@ -512,7 +512,7 @@
                 </p>
             @endif
             <div class="mt-3 flex flex-wrap gap-2 text-sm">
-                @foreach (['' => ['Alle', $lehrer->count(), 'border-gray-300 bg-white'], 'gruen' => ['alle Termine vergeben', $farbZahl['gruen'] ?? 0, 'border-green-300 bg-green-50'], 'grau' => ['nimmt nicht teil', $farbZahl['grau'] ?? 0, 'border-gray-300 bg-gray-100'], 'rot' => ['noch nichts eingetragen', $farbZahl['rot'] ?? 0, 'border-red-300 bg-red-50']] as $f => [$text, $n, $stil])
+                @foreach (['' => ['Alle', $lehrer->count(), 'border-gray-300 bg-white'], 'gruen' => ['noch Termine frei', $farbZahl['gruen'] ?? 0, 'border-green-300 bg-green-50'], 'gelb' => ['alle Termine vergeben', $farbZahl['gelb'] ?? 0, 'border-amber-300 bg-amber-50'], 'grau' => ['nimmt nicht teil', $farbZahl['grau'] ?? 0, 'border-gray-300 bg-gray-100'], 'rot' => ['noch nichts eingetragen', $farbZahl['rot'] ?? 0, 'border-red-300 bg-red-50']] as $f => [$text, $n, $stil])
                     <button type="button" @click="farbe = @js($f)" class="rounded-full border px-3 py-1 {{ $stil }}"
                             :class="farbe === @js($f) ? 'ring-2 ring-indigo-500 font-medium' : ''">{{ $text }} ({{ $n }})</button>
                 @endforeach
@@ -535,9 +535,9 @@
                         @forelse ($lehrer as $z)
                             @php
                                 $plan = $plaene->get($z['user']->id);
-                                // Grün = alle Termine vergeben, grau = nimmt nicht teil, rot = noch nichts eingetragen.
+                                // Grün = noch Termine frei, gelb = alle vergeben, grau = nimmt nicht teil, rot = noch nichts eingetragen.
                                 $farbe = $farbeVon($z);
-                                $zeile = ['rot' => 'bg-red-50', 'grau' => 'bg-gray-100 text-gray-500', 'gruen' => 'bg-green-50'][$farbe] ?? 'hover:bg-gray-50';
+                                $zeile = ['rot' => 'bg-red-50', 'grau' => 'bg-gray-100 text-gray-500', 'gruen' => 'bg-green-50', 'gelb' => 'bg-amber-50'][$farbe];
                             @endphp
                             <tr class="{{ $zeile }}" x-show="farbe === '' || farbe === @js($farbe)">
                                 <td class="py-2 pr-4">
