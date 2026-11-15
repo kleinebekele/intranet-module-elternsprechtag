@@ -111,6 +111,7 @@ class Klassen
             ->whereHas('roles', fn ($q) => $q->where('roles.role_id', 'like', self::PRAEFIX.'%-lehrer'))
             ->get()
             ->concat(self::ohneKlasse())
+            ->filter(fn (User $u) => self::kannAnmelden($u))
             ->unique('id')
             ->sortBy(fn (User $u) => Namen::schluessel($u->name))
             ->values();
@@ -189,6 +190,15 @@ class Klassen
             ->unique('id')
             ->sortBy(fn (User $u) => Namen::schluessel($u->name))
             ->values();
+    }
+
+    /**
+     * Hat der Benutzer eine echte Mailadresse? Der Linear-Import vergibt Personen
+     * ohne Adresse eine künstliche `…@….intern` – damit kann sich niemand anmelden.
+     */
+    public static function kannAnmelden(User $user): bool
+    {
+        return ! str_ends_with(mb_strtolower(trim((string) $user->email)), '.intern');
     }
 
     public static function rolle(string $klasse, string $art): string

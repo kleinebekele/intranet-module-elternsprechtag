@@ -477,6 +477,26 @@
         <div class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3">
             <h2 class="text-base font-semibold text-gray-800">Lehrer ({{ $lehrer->count() }})</h2>
             <p class="mt-1 text-sm text-gray-500">Lehrer laut Linear und alle, die selbst einen Plan angelegt haben. Klick auf den Namen öffnet den Terminplan.</p>
+            @php
+                $farbeVon = function ($z) use ($plaene) {
+                    $p = $plaene->get($z['user']->id);
+
+                    return match (true) {
+                        ! $p => 'rot',
+                        $p->abgesagt() => 'grau',
+                        $p->anzahlTermine() > 0 && $p->termine->count() >= $p->anzahlTermine() => 'gruen',
+                        default => 'offen',
+                    };
+                };
+                $farbZahl = $lehrer->countBy($farbeVon);
+            @endphp
+            <div x-data="{ farbe: '' }">
+            <div class="mt-3 flex flex-wrap gap-2 text-sm">
+                @foreach (['' => ['Alle', $lehrer->count(), 'border-gray-300 bg-white'], 'gruen' => ['alle Termine vergeben', $farbZahl['gruen'] ?? 0, 'border-green-300 bg-green-50'], 'grau' => ['nimmt nicht teil', $farbZahl['grau'] ?? 0, 'border-gray-300 bg-gray-100'], 'rot' => ['noch nichts eingetragen', $farbZahl['rot'] ?? 0, 'border-red-300 bg-red-50']] as $f => [$text, $n, $stil])
+                    <button type="button" @click="farbe = @js($f)" class="rounded-full border px-3 py-1 {{ $stil }}"
+                            :class="farbe === @js($f) ? 'ring-2 ring-indigo-500 font-medium' : ''">{{ $text }} ({{ $n }})</button>
+                @endforeach
+            </div>
             <div class="mt-3 overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="text-left text-xs uppercase text-gray-500">
@@ -495,8 +515,11 @@
                         @forelse ($lehrer as $z)
                             @php
                                 $plan = $plaene->get($z['user']->id);
+                                // Grün = alle Termine vergeben, grau = nimmt nicht teil, rot = noch nichts eingetragen.
+                                $farbe = $farbeVon($z);
+                                $zeile = ['rot' => 'bg-red-50', 'grau' => 'bg-gray-100 text-gray-500', 'gruen' => 'bg-green-50'][$farbe] ?? 'hover:bg-gray-50';
                             @endphp
-                            <tr class="hover:bg-gray-50">
+                            <tr class="{{ $zeile }}" x-show="farbe === '' || farbe === @js($farbe)">
                                 <td class="py-2 pr-4">
                                     <a href="{{ route('module.elternsprechtag.plan.zeigen', [$sprechtag, 'lehrer' => $z['user']->id]) }}"
                                        class="font-medium text-indigo-700 hover:underline">{{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($z['user']->name) }}</a>
@@ -530,6 +553,7 @@
                         @endforelse
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
     </div>

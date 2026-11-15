@@ -272,6 +272,8 @@ class SprechtagController
         $liste = Klassen::lehrer($klassen)->pluck('user')
             ->concat(Klassen::klassenlehrer($klassen))
             ->concat(Klassen::ohneKlasse())
+            // Ohne echte Mailadresse kein Zugang – es sei denn, es gibt schon einen Plan.
+            ->filter(fn (User $u) => Klassen::kannAnmelden($u))
             ->concat($plaene->pluck('user')->filter())
             ->unique('id')
             ->sortBy(fn (User $u) => Namen::schluessel($u->name))
