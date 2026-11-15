@@ -89,11 +89,11 @@ class SprechtagController
             'ohneMail' => $this->lehrerOhneMail($sprechtag, $plaene),
             'plaene' => $plaene,
             'eltern' => $eltern,
-            'elternStand' => $stand = ($sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null),
-            'kinderOhneFreieZeit' => $stand ? $this->kinderOhneFreieZeit($sprechtag, $stand) : [],
+            'elternStand' => $sprechtag->fuerAlleOffen() ? $this->elternStand($sprechtag, $eltern) : null,
+            // "Ohne freie Zeit" rechnet lange - die Seite holt es per Ajax nach (freieZeit()).
+            'freieZeitPruefen' => $this->buchungLaeuft($sprechtag),
             'einladungen' => InfoMail::einladungen($sprechtag),
-            'wunschgespraeche' => $wunsch = InfoMail::wunschgespraeche($sprechtag),
-            'ohneFreieZeit' => $this->ohneFreieZeit($sprechtag, $wunsch),
+            'wunschgespraeche' => InfoMail::wunschgespraeche($sprechtag),
             'besuche' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('letzter_besuch_am')->pluck('letzter_besuch_am', 'user_id'),
             'keineZeit' => DB::table('elternsprechtag_besuche')->where('sprechtag_id', $sprechtag->id)->whereNotNull('keine_zeit_am')->get()->keyBy('user_id'),
             // Wer selbst gebucht hat, war auf der Seite – auch vor der Besuchszählung.
@@ -302,42 +302,28 @@ class SprechtagController
         return $ergebnis;
     }
 
+    /**
+     * Für die Übersicht nachgeladen: Wunschgespräche ("kind-plan"), für die
+     * keine Uhrzeit mehr frei ist.
+     */
+    public function freieZeit(Sprechtag $sprechtag): JsonResponse
+    {
+        $sprechtag->load('tage');
+        if (! $this->buchungLaeuft($sprechtag)) {
+            return response()->json(['wunsch' => []]);
+        }
+
+        return response()->json([
+            'wunsch' => array_keys($this->ohneFreieZeit($sprechtag, InfoMail::wunschgespraeche($sprechtag))),
+        ]);
+    }
+
     /** Veröffentlicht und der letzte Tag noch nicht vorbei – nur dann ist „frei" aussagekräftig. */
     private function buchungLaeuft(Sprechtag $sprechtag): bool
     {
         $letzterTag = $sprechtag->tage->max('datum');
 
         return $sprechtag->veroeffentlicht() && $letzterTag !== null && ! $letzterTag->copy()->endOfDay()->isPast();
-    }
-
-    /**
-     * Kinder ohne Termin, bei denen keine Lehrkraft mehr eine freie Uhrzeit für
-     * die Familie hat (vergeben oder durch eigene Gespräche blockiert; bei
-     * gemeinsamen Gesprächen zählt auch eine Lehrkraft allein). Schlüssel kind_id.
-     *
-     * @param  Collection<int, array>  $stand  aus elternStand()
-     * @return array<int, true>
-     */
-    private function kinderOhneFreieZeit(Sprechtag $sprechtag, Collection $stand): array
-    {
-        if (! $this->buchungLaeuft($sprechtag)) {
-            return [];
-        }
-
-        $ergebnis = [];
-        foreach ($stand as $z) {
-            if ($z['termine'] > 0 || $z['eltern']->isEmpty()) {
-                continue;
-            }
-            // Die Familie teilt sich die Kinder – ein Elternteil genügt für die Prüfung.
-            $lehrer = Buchung::angebot($z['eltern']->first(), $sprechtag)
-                ->first(fn ($a) => $a['kind']->id === $z['kind']->id)['lehrer'] ?? collect();
-            if ($lehrer->isNotEmpty() && ! $lehrer->contains(fn ($l) => collect($l['slots'])->contains('frei', true))) {
-                $ergebnis[$z['kind']->id] = true;
-            }
-        }
-
-        return $ergebnis;
     }
 
     /**

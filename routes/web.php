@@ -26,6 +26,7 @@ Route::middleware(['web', 'auth'])
         Route::put('sprechtage/{sprechtag}', [SprechtagController::class, 'update'])->name('sprechtage.update');
         Route::delete('sprechtage/{sprechtag}', [SprechtagController::class, 'destroy'])->name('sprechtage.destroy');
         Route::get('sprechtage/{sprechtag}/vorschau', [SprechtagController::class, 'vorschau'])->name('sprechtage.vorschau');
+        Route::get('sprechtage/{sprechtag}/freie-zeit', [SprechtagController::class, 'freieZeit'])->name('sprechtage.freiezeit');
         Route::post('sprechtage/{sprechtag}/info', [SprechtagController::class, 'info'])->name('sprechtage.info');
 
         // Lehrer: eigener Terminplan je Sprechtag (Verwaltung auch für andere über ?lehrer=).

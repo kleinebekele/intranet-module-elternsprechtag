@@ -3,20 +3,12 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h1 class="text-xl font-semibold text-gray-800">{{ $sprechtag->titel }}</h1>
             <div class="flex flex-wrap items-center gap-2">
-                @if ($ohneFreieZeit !== [])
-                    <a href="#wunschgespraeche" onclick="window.dispatchEvent(new CustomEvent('wunsch-oeffnen'))"
+                @if ($freieZeitPruefen)
+                    <span id="freiezeit-laden" class="text-xs text-gray-400"><i class="bx bx-loader-alt bx-spin align-middle"></i> prüfe freie Zeiten …</span>
+                    <a href="#wunschgespraeche" data-freiezeit-knopf="wunsch" style="display: none" onclick="window.dispatchEvent(new CustomEvent('wunsch-oeffnen'))"
                        class="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
                        title="Für diese Wunschgespräche ist keine Uhrzeit mehr frei – weder gemeinsam noch bei einer Lehrkraft allein, oder die Familie hat zur freien Zeit schon andere Gespräche.">
-                        <i class="bx bx-error-circle text-base"></i>
-                        {{ count($ohneFreieZeit) }} {{ count($ohneFreieZeit) === 1 ? 'Wunschgespräch' : 'Wunschgespräche' }} ohne freie Zeit
-                    </a>
-                @endif
-                @if ($kinderOhneFreieZeit !== [])
-                    <a href="#allekinder" onclick="window.dispatchEvent(new CustomEvent('kinder-oeffnen'))"
-                       class="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
-                       title="Kinder ohne Termin, bei denen keine Lehrkraft der Klasse mehr eine Uhrzeit frei hat, die für die Familie passt.">
-                        <i class="bx bx-error-circle text-base"></i>
-                        {{ count($kinderOhneFreieZeit) }} {{ count($kinderOhneFreieZeit) === 1 ? 'Kind' : 'Kinder' }} ohne freie Zeit
+                        <i class="bx bx-error-circle text-base"></i> <span data-anzahl></span>
                     </a>
                 @endif
                 @darfRoute('module.elternsprechtag.sprechtage.edit')
@@ -174,6 +166,7 @@
                             @if ($offeneWuensche > 0 && $sprechtag->veroeffentlicht())
                                 <span class="text-amber-800">· {{ $offeneWuensche }} noch ohne Termin</span>
                             @endif
+                            <span data-freiezeit-zeile="wunsch" style="display: none" class="font-medium text-red-700">· davon <span data-anzahl></span> ohne freie Zeit</span>
                         </div>
                         <i class="bx bx-chevron-down text-2xl text-gray-500 transition-transform" :class="offen && 'rotate-180'"></i>
                     </div>
@@ -212,8 +205,8 @@
                                         </td>
                                         <td class="py-1">
                                             @php $kz = $w['termin'] ? null : $w['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first(); @endphp
-                                            @if (isset($ohneFreieZeit[$w['kind']->id.'-'.$w['plan_id']]))
-                                                <div class="text-xs font-medium text-red-700" title="Weder gemeinsam noch bei einer Lehrkraft allein ist eine Uhrzeit frei, oder die Familie hat zur freien Zeit schon andere Gespräche.">
+                                            @if (! $w['termin'])
+                                                <div data-freiezeit-wunsch="{{ $w['kind']->id.'-'.$w['plan_id'] }}" style="display: none" class="text-xs font-medium text-red-700" title="Weder gemeinsam noch bei einer Lehrkraft allein ist eine Uhrzeit frei, oder die Familie hat zur freien Zeit schon andere Gespräche.">
                                                     <i class="bx bx-error-circle align-middle"></i> keine freie Zeit mehr – bitte mit den Lehrkräften klären
                                                 </div>
                                             @endif
@@ -339,7 +332,7 @@
                     $kzVon = fn ($z) => $z['eltern']->map(fn ($e) => $keineZeit[$e->id] ?? null)->filter()->first();
                     $ohneZeit = $elternStand->filter(fn ($z) => $z['termine'] === 0 && $kzVon($z))->count();
                 @endphp
-                <div id="allekinder" class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2" x-data="{ offen: false }" @kinder-oeffnen.window="offen = true">
+                <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2" x-data="{ offen: false }">
                     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
                         <div class="text-sm">
                             <span class="font-semibold text-gray-800">Alle Kinder: {{ $mitTermin }} von {{ $elternStand->count() }} haben einen Termin</span>
@@ -381,11 +374,6 @@
                                             @if ($z['termine'] > 0)
                                                 <span class="text-green-700">✓ {{ $z['termine'] }} gebucht</span>
                                             @else
-                                                @if (isset($kinderOhneFreieZeit[$z['kind']->id]))
-                                                    <div class="text-xs font-medium text-red-700" title="Keine Lehrkraft der Klasse hat mehr eine Uhrzeit frei, die für die Familie passt.">
-                                                        <i class="bx bx-error-circle align-middle"></i> keine freie Zeit mehr
-                                                    </div>
-                                                @endif
                                                 @if ($kz = $kzVon($z))
                                                     <span class="text-gray-500">keine Zeit gemeldet @if ($kz->keine_zeit_bemerkung)<i class="bx bx-info-circle text-base align-middle cursor-help" title="{{ $kz->keine_zeit_bemerkung }}"></i>@endif</span>
                                                 @else
@@ -589,4 +577,28 @@
             </div>
         </div>
     </div>
+    @if ($freieZeitPruefen)
+        <script>
+            // "Ohne freie Zeit" rechnet lange - erst nach dem Laden der Seite holen.
+            fetch(@js(route('module.elternsprechtag.sprechtage.freiezeit', $sprechtag)), { headers: { Accept: 'application/json' } })
+                .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+                .then((daten) => {
+                    const zeigen = (art, attr, liste, einzahl, mehrzahl) => {
+                        const n = liste.length;
+                        const werte = liste.map(String);
+                        document.querySelectorAll('[' + attr + ']').forEach((el) => {
+                            el.style.display = werte.includes(el.getAttribute(attr)) ? '' : 'none';
+                        });
+                        document.querySelectorAll('[data-freiezeit-zeile="' + art + '"], [data-freiezeit-knopf="' + art + '"]').forEach((el) => {
+                            el.style.display = n > 0 ? '' : 'none';
+                            el.querySelector('[data-anzahl]').textContent = el.hasAttribute('data-freiezeit-knopf')
+                                ? n + ' ' + (n === 1 ? einzahl : mehrzahl) + ' ohne freie Zeit' : n;
+                        });
+                    };
+                    zeigen('wunsch', 'data-freiezeit-wunsch', daten.wunsch, 'Wunschgespräch', 'Wunschgespräche');
+                })
+                .catch(() => {})
+                .finally(() => document.getElementById('freiezeit-laden')?.remove());
+        </script>
+    @endif
 </x-app-layout>
