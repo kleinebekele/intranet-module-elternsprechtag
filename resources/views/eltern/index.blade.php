@@ -170,11 +170,8 @@
                                                 da haben Sie aber schon {{ $familie->count() === 1 ? 'ein anderes Gespräch' : 'andere Gespräche' }}.
                                                 Wenn Sie dort absagen, wird die Zeit hier buchbar.
                                             </p>
-                                        @else
-                                            <p class="mt-2 text-sm {{ $termin ? 'text-gray-500' : 'text-red-800' }}">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
-                                        @endif
-                                        @if ($nichtsFrei && $l['wunsch'])
-                                            <p class="mt-1 text-sm text-gray-600">{{ $l['team'] ? 'Die Lehrkräfte möchten' : 'Die Lehrkraft möchte' }} Sie gern sprechen – bitte melden Sie sich im Sekretariat, dann finden wir einen anderen Termin.</p>
+                                        @elseif ($termin)
+                                            <p class="mt-2 text-sm text-gray-500">Keine andere Uhrzeit frei.</p>
                                         @endif
                                     @else
                                         <form method="POST" action="{{ route('module.elternsprechtag.eltern.buchen', [$s] + $als) }}"
