@@ -11,6 +11,8 @@
     $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->reject(fn ($l) => $l['gesperrt'] && ! $verwaltung)->map(fn ($l) => [
         'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
         'klassenlehrer' => $l['klassenlehrer'], 'namen' => $l['namen'], 'team' => $l['team'],
+        // Keine Uhrzeit mehr frei (vergeben oder durch eigene Gespräche blockiert) – dann gibt es nichts zu planen.
+        'nichtsFrei' => ! $l['termin'] && ! collect($l['slots'])->contains('frei', true) && $l['plan']->anzahlTermine() > 0,
     ]))->sortBy(fn ($p) => $p['klassenlehrer'] ? 0 : 1)->keyBy('key');
     $prioText = [1 => 'unbedingt', 2 => 'gern', 3 => 'wenn es passt'];
     $prioFarbe = [1 => 'bg-indigo-600 text-white', 2 => 'bg-indigo-100 text-indigo-800', 3 => 'bg-gray-100 text-gray-700'];
@@ -29,7 +31,7 @@
             <p class="mt-1 text-xs text-gray-500">1 = unbedingt · 2 = gern · 3 = wenn es passt. Wichtigere Gespräche haben Vorrang, wenn nicht alle unterzubringen sind.</p>
             <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-3">
                 @foreach ($paare as $key => $p)
-                    <div class="flex flex-col gap-2 rounded-lg px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $p['termin'] ? 'border border-green-200 bg-green-50/60' : ($p['klassenlehrer'] ? 'border-2 border-indigo-400 bg-indigo-50/60' : 'border border-gray-200') }}">
+                    <div class="flex flex-col gap-2 rounded-lg px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $p['termin'] ? 'border border-green-200 bg-green-50/60' : ($p['nichtsFrei'] ? 'border-2 border-red-300 bg-gray-50' : ($p['klassenlehrer'] ? 'border-2 border-indigo-400 bg-indigo-50/60' : 'border border-gray-200')) }}">
                         <div class="min-w-0 text-sm">
                             <div class="font-medium text-gray-800">{{ $p['namen'] }}
                                 @if ($p['klassenlehrer'])
@@ -41,8 +43,11 @@
                         </div>
                         @if ($p['termin'])
                             <span class="whitespace-nowrap text-xs font-medium text-green-800">gebucht {{ $p['termin']->von }} Uhr</span>
+                        @elseif ($p['nichtsFrei'])
+                            <span class="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800"
+                                  title="Alle Termine sind vergeben oder fallen auf Zeiten, zu denen Sie schon andere Gespräche haben.">keine Uhrzeit mehr frei</span>
                         @else
-                            {{-- Vorbelegt mit 1: Gesprächswunsch der Lehrkraft und Klassenlehrkraft. --}}
+                            {{-- Vorbelegt mit 1: Gesprächswunsch der Lehrkraft. --}}
                             @php $wert = (int) ($eingaben['prio'][$key] ?? ($p['wunsch'] ? 1 : 0)); @endphp
                             <select name="prio[{{ $key }}]" class="w-full rounded-lg border-gray-300 py-1 text-sm sm:w-auto">
                                 <option value="0" @selected($wert === 0)>–</option>

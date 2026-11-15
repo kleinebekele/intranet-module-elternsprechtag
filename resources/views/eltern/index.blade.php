@@ -109,9 +109,11 @@
                                 $termin = $l['termin'];
                                 $freie = collect($l['slots'])->where('frei', true);
                                 $darfBuchen = ($offen && ! $l['gesperrt']) || $verwaltung;
+                                // Kein Termin und keine Uhrzeit mehr frei (vergeben oder durch eigene Gespräche blockiert).
+                                $nichtsFrei = ! $termin && $freie->isEmpty() && $plan->anzahlTermine() > 0;
                             @endphp
                             {{-- Klassenlehrer stehen vorn und sind kräftiger gerahmt – sie sind der erste Ansprechpartner. --}}
-                            <div class="rounded-lg px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : ($l['klassenlehrer'] ? 'bg-indigo-50/60' : '') }} {{ $l['klassenlehrer'] ? 'border-2 border-indigo-400 shadow-sm' : 'border '.($termin ? '' : 'border-gray-200') }}">
+                            <div class="rounded-lg px-4 py-3 {{ $termin ? 'border-green-300 bg-green-50/60' : ($nichtsFrei ? 'bg-gray-50' : ($l['klassenlehrer'] ? 'bg-indigo-50/60' : '')) }} {{ $nichtsFrei ? 'border-2 border-red-300' : ($l['klassenlehrer'] ? 'border-2 border-indigo-400 shadow-sm' : 'border '.($termin ? '' : 'border-gray-200')) }}">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
                                         @if ($l['klassenlehrer'] && ! $l['team'])
@@ -125,7 +127,9 @@
                                             <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
                                         @endif
                                     </div>
-                                    @if ($l['wunsch'] && ! $termin)
+                                    @if ($nichtsFrei)
+                                        <span class="whitespace-nowrap rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">keine Uhrzeit mehr frei</span>
+                                    @elseif ($l['wunsch'] && ! $termin)
                                         <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs text-indigo-800">{{ $l['team'] ? 'möchten' : 'möchte' }} Sie gern sprechen</span>
                                     @endif
                                 </div>
@@ -160,14 +164,17 @@
                                     @if ($freie->isEmpty())
                                         @php $familie = collect($l['slots'])->where('familie', true); @endphp
                                         @if ($familie->isNotEmpty())
-                                            <p class="mt-2 text-sm text-amber-800">
+                                            <p class="mt-2 text-sm text-red-800">
                                                 Frei {{ $familie->count() === 1 ? 'wäre' : 'wären' }} noch
                                                 {{ $familie->map(fn ($x) => ($familie->pluck('tag_id')->unique()->count() > 1 ? $x['tag'].' ' : '').$x['von'])->join(', ', ' und ') }} Uhr –
                                                 da haben Sie aber schon {{ $familie->count() === 1 ? 'ein anderes Gespräch' : 'andere Gespräche' }}.
                                                 Wenn Sie dort absagen, wird die Zeit hier buchbar.
                                             </p>
                                         @else
-                                            <p class="mt-2 text-sm text-gray-500">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
+                                            <p class="mt-2 text-sm {{ $termin ? 'text-gray-500' : 'text-red-800' }}">{{ $termin ? 'Keine andere Uhrzeit frei.' : 'Leider sind alle Termine vergeben.' }}</p>
+                                        @endif
+                                        @if ($nichtsFrei && $l['wunsch'])
+                                            <p class="mt-1 text-sm text-gray-600">{{ $l['team'] ? 'Die Lehrkräfte möchten' : 'Die Lehrkraft möchte' }} Sie gern sprechen – bitte melden Sie sich im Sekretariat, dann finden wir einen anderen Termin.</p>
                                         @endif
                                     @else
                                         <form method="POST" action="{{ route('module.elternsprechtag.eltern.buchen', [$s] + $als) }}"
