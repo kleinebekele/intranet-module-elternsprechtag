@@ -9,7 +9,7 @@
     $eingaben = $vorschlag['eingaben'] ?? [];
     // Erste Stufe: Eltern sehen im Assistenten nur ihre Wunschgespräche, die Verwaltung alles.
     $paare = $eintrag['kinder']->flatMap(fn ($z) => $z['lehrer']->reject(fn ($l) => $l['gesperrt'] && ! $verwaltung)->map(fn ($l) => [
-        'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
+        'key' => $l['plan']->id.'-'.$z['kind']->id, 'kind' => $z['kind'], 'klasse' => implode(', ', $z['klassen']), 'plan' => $l['plan'], 'termin' => $l['termin'], 'wunsch' => $l['wunsch'],
         'klassenlehrer' => $l['klassenlehrer'], 'namen' => $l['namen'], 'team' => $l['team'],
         // Keine Uhrzeit mehr frei (vergeben oder durch eigene Gespräche blockiert) – dann gibt es nichts zu planen.
         'nichtsFrei' => ! $l['termin'] && ! collect($l['slots'])->contains('frei', true) && $l['plan']->anzahlTermine() > 0,
@@ -38,7 +38,7 @@
                                     <span class="ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">{{ $p['team'] ? 'Klassenlehrkräfte gemeinsam' : 'Klassenlehrkraft' }}</span>
                                 @endif
                             </div>
-                            <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
+                            <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!} · Klasse {{ $p['klasse'] }}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
                                 @if ($p['wunsch'] && ! $p['termin']) · <span class="text-indigo-700">möchte Sie gern sprechen</span>@endif</div>
                         </div>
                         @if ($p['termin'])
@@ -137,7 +137,7 @@
                                     @if (isset($z['slot']['nur']))
                                         <span class="text-xs text-amber-800">(nur {{ $z['slot']['nur'] }})</span>
                                     @endif
-                                    <span class="text-gray-500">für {!! $p ? $kn($p['kind']) : '' !!}@if ($p && $p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif</span>
+                                    <span class="text-gray-500">für {!! $p ? $kn($p['kind']).' · Klasse '.e($p['klasse']) : '' !!}@if ($p && $p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif</span>
                                 </span>
                                 <span class="rounded-full px-2 py-0.5 text-xs {{ $prioFarbe[$z['prio']] }}">Prio {{ $z['prio'] }}</span>
                                 @if ($gebucht)
