@@ -49,5 +49,6 @@ Route::middleware(['web', 'auth'])
         Route::get('termine/{sprechtag}/liste', [ElternController::class, 'liste'])->name('eltern.liste');
         Route::post('termine/{sprechtag}/liste', [ElternController::class, 'listeMailen'])->middleware('throttle:5,10')->name('eltern.listemail');
         Route::post('termine/{sprechtag}/keine-zeit', [ElternController::class, 'keineZeit'])->name('eltern.keinezeit');
+        Route::post('termine/{sprechtag}/teilnahme', [ElternController::class, 'teilnahmeAbsagen'])->name('eltern.teilnahme');
         Route::delete('termine/termin/{termin}', [ElternController::class, 'absagen'])->name('eltern.absagen');
     });

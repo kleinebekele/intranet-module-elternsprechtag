@@ -83,6 +83,8 @@ Sobald Eltern buchen:
 - Gebuchte Uhrzeiten sind bei den Tagen **grün** markiert. Mit der Maus darüber siehst du Kind
   und Eltern.
 - Im blauen Kasten steht „(… gebucht)“. Ein Klick öffnet die Liste aller Buchungen.
+- Sagen Eltern über „Teilnahme absagen“ alle ihre Termine ab, bekommst du eine E-Mail mit deinen
+  entfallenen Terminen und ihrer Nachricht.
 - Dort kannst du einen einzelnen Termin **absagen**, solange er noch nicht begonnen hat. Die Eltern
   bekommen automatisch eine E-Mail und können neu buchen.
 

@@ -26,6 +26,9 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 
     public const VORLAGE_ABSAGE = 'elternsprechtag_absage';
 
+    /** Eltern sagen ihre Teilnahme ab: eine Mail je Lehrkraft mit den entfallenen Terminen. */
+    public const VORLAGE_ELTERN_ABSAGE = 'elternsprechtag_eltern_absage';
+
     /** Lehrkraft fällt aus (Teilnahme abgesagt): eine Mail je Elternteil mit allen betroffenen Terminen. */
     public const VORLAGE_AUSFALL = 'elternsprechtag_ausfall';
 
@@ -42,7 +45,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.keinezeit', 'eltern.liste', 'eltern.listemail', 'eltern.zeiten')
+            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.teilnahme', 'eltern.keinezeit', 'eltern.liste', 'eltern.listemail', 'eltern.zeiten')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }
 
@@ -81,6 +84,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.absage_lehrer' => 'Elternsprechtag: Termin von der Lehrkraft abgesagt',
                 'elternsprechtag.freigabe' => 'Elternsprechtag: Terminplan freigegeben bzw. Freigabe zurückgenommen',
                 'elternsprechtag.teilnahme' => 'Elternsprechtag: Teilnahme abgesagt bzw. wieder zugesagt',
+                'elternsprechtag.eltern_teilnahme' => 'Elternsprechtag: Eltern sagen ihre Teilnahme ab',
             ]);
         }
     }
@@ -176,6 +180,30 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 ],
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Absage',
+            ));
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                schluessel: self::VORLAGE_ELTERN_ABSAGE,
+                titel: 'Elternsprechtag: Eltern sagen ab',
+                beschreibung: 'Geht an jede betroffene Lehrkraft, wenn Eltern über „Teilnahme absagen" alle ihre Termine absagen – mit diesen Terminen und der Nachricht der Eltern.',
+                platzhalter: [
+                    'name' => 'Name der Lehrkraft',
+                    'sprechtag' => 'Titel des Sprechtags',
+                    'eltern' => 'Name des Elternteils',
+                    'termine' => 'Liste der abgesagten Termine (Zeit und Kind)',
+                    'nachricht' => 'Nachricht der Eltern (leer, wenn keine geschrieben wurde)',
+                    'link' => 'Link zu „Mein Terminplan"',
+                ],
+                betreff: 'Elternsprechtag: {{ eltern }} sagt ab',
+                html: self::ELTERN_ABSAGE_HTML,
+                text: self::ELTERN_ABSAGE_TEXT,
+                beispiele: [
+                    'sprechtag' => 'Elternsprechtag Herbst',
+                    'eltern' => 'Muster, Sabine',
+                    'termine' => '<ul style="margin:0 0 16px;padding-left:20px;"><li><strong>Do 12.11.2026, 14:00–14:15 Uhr</strong> (Muster, Mia)</li></ul>',
+                    'nachricht' => '<div style="margin:0 0 16px;padding:12px 16px;background:#f3f4f6;border-left:4px solid #9ca3af;border-radius:4px;">Wir sind leider krank und melden uns für einen neuen Termin.</div>',
+                ],
+                modul: 'Elternsprechtag',
+                ausloeser: 'Elternsprechtag-Elternabsage',
             ));
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_AUSFALL,
@@ -366,6 +394,30 @@ Bitte buchen Sie bei Bedarf einen neuen Termin: {{ link }}
 
 Mit freundlichen Grüßen
 Ihr Kollegium
+TEXT;
+
+    private const ELTERN_ABSAGE_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;">Hallo {{ name }},</p>
+<p style="margin:0 0 16px;">{{ eltern }} hat die Teilnahme am {{ sprechtag }} abgesagt. Diese Termine bei dir entfallen:</p>
+{{ termine }}
+{{ nachricht }}
+<p style="margin:0 0 24px;">
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Mein Terminplan</a>
+</p>
+<p style="margin:0;color:#6b7280;font-size:14px;">Viele Grüße<br>Deine Verwaltung</p>
+HTML;
+
+    private const ELTERN_ABSAGE_TEXT = <<<'TEXT'
+Hallo {{ name }},
+
+{{ eltern }} hat die Teilnahme am {{ sprechtag }} abgesagt. Diese Termine bei dir entfallen:
+
+{{ termine }}
+
+{{ nachricht }}Mein Terminplan: {{ link }}
+
+Viele Grüße
+Deine Verwaltung
 TEXT;
 
     private const AUSFALL_HTML = <<<'HTML'

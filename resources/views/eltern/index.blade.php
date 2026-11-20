@@ -48,6 +48,85 @@
                         </form>
                     @endif
                 </div>
+
+                {{-- Übersicht der gebuchten Termine, zeitlich sortiert, mit Absagen und „Teilnahme absagen". --}}
+                @php
+                    $meine = collect($eintrag['kinder'])->flatMap(fn ($z) => $z['lehrer']->filter(fn ($l) => $l['termin'])
+                        ->map(fn ($l) => ['kind' => $z['kind'], 'klassen' => $z['klassen'], 'l' => $l, 'termin' => $l['termin']]))
+                        ->sortBy(fn ($x) => $x['termin']->tag?->datum?->format('Y-m-d').' '.$x['termin']->von)->values();
+                    $darfAbsagen = $offen || $verwaltung;
+                    $absage = $darfAbsagen ? \Intranet\Modules\Elternsprechtag\Support\ElternAbsage::vorschau($s, $eltern, \Intranet\Modules\Elternsprechtag\Support\ElternAbsage::termine($eltern, $s)) : null;
+                @endphp
+                <ul class="mt-3 divide-y divide-gray-100 rounded-lg border border-green-200 bg-green-50/40 text-sm">
+                    @foreach ($meine as $x)
+                        @php
+                            $t = $x['termin']; $l = $x['l'];
+                            $nur = $l['team'] && ! $t->gruppe ? \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($l['team']->firstWhere('id', $t->plan_id)?->user?->name) : null;
+                            $raum = $t->plan?->raum ?: $l['plan']->raum;
+                        @endphp
+                        <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 py-2">
+                            <span>
+                                <span class="font-medium text-green-900">{{ $t->tag?->beschriftung() }}, {{ $t->von }}–{{ $t->bis }} Uhr</span>
+                                <span class="text-gray-700">· {{ $nur ?: $l['namen'] }}</span>
+                                <span class="text-gray-500">· für {{ \Intranet\Modules\Elternsprechtag\Support\Namen::vorname($x['kind']->name) }} · Klasse {{ implode(', ', $x['klassen']) }}@if ($raum) · Raum {{ $raum }}@endif</span>
+                            </span>
+                            @if ($darfAbsagen && ($verwaltung || ! $t->beginn()->isPast()))
+                                <form method="POST" action="{{ route('module.elternsprechtag.eltern.absagen', [$t] + $als) }}"
+                                      data-bestaetigen="Den Termin bei {{ $nur ?: $l['namen'] }} wirklich absagen?"
+                                      data-titel="Termin absagen" data-knopf="Absagen">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-xs text-red-700 hover:underline">absagen</button>
+                                </form>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+
+                @if ($darfAbsagen)
+                    <div class="mt-2 flex justify-end">
+                        <button type="button" @click="$dispatch('eltern-teilnahme-absagen-{{ $s->id }}')" x-data
+                                class="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50">Teilnahme absagen</button>
+                    </div>
+                    <div x-data="ausfallFenster(@js($absage['html'] ?? ''), @js(\Intranet\Modules\Elternsprechtag\Support\Ausfall::MARKE))"
+                         @eltern-teilnahme-absagen-{{ $s->id }}.window="offen = true; $nextTick(() => $refs.nachricht.focus())" @keydown.escape.window="offen = false">
+                        <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
+                             @click.self="offen = false">
+                            <form method="POST" action="{{ route('module.elternsprechtag.eltern.teilnahme', [$s] + $als) }}" class="w-full {{ $absage ? 'max-w-7xl' : 'max-w-lg' }} rounded-xl bg-white p-5 shadow-xl">
+                                @csrf
+                                <div class="flex items-center justify-between gap-2">
+                                    <h2 class="text-base font-semibold text-gray-800">Teilnahme absagen</h2>
+                                    <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
+                                </div>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    Sie nehmen an diesem Elternsprechtag nicht teil.
+                                    <strong class="text-red-700">{{ $meine->count() === 1 ? 'Ihr gebuchter Termin wird' : 'Alle '.$meine->count().' gebuchten Termine werden' }} abgesagt{{ $absage ? ', die Lehrkräfte bekommen eine E-Mail' : '' }}.</strong>
+                                    Buchen können Sie danach trotzdem wieder.
+                                </p>
+                                <div class="mt-4 grid grid-cols-1 gap-4 {{ $absage ? 'lg:grid-cols-3' : '' }}">
+                                    <div>
+                                        <label class="block text-sm"><span class="text-gray-600">Nachricht an die Lehrkräfte und die Schule (optional)</span>
+                                            <textarea name="nachricht" rows="5" maxlength="2000" x-ref="nachricht" x-model="nachricht" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
+                                                      placeholder="z. B. Wir sind leider krank und melden uns für einen neuen Termin."></textarea></label>
+                                        @if ($verwaltung)
+                                            <label class="mt-3 flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" name="ohne_mail" value="1" class="rounded border-gray-300"> ohne Mail an die Lehrkräfte</label>
+                                        @endif
+                                    </div>
+                                    @if ($absage)
+                                        <div class="min-w-0 lg:col-span-2">
+                                            <div class="text-sm text-gray-600">Vorschau der Mail an die Lehrkräfte{{ $absage['lehrer'] > 1 ? ' – eine von '.$absage['lehrer'].', jede mit ihren eigenen Terminen' : '' }}</div>
+                                            <div class="mt-1 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"><span class="text-gray-500">Betreff:</span> {{ $absage['betreff'] }}</div>
+                                            <iframe :srcdoc="vorschau" style="height: 60vh" class="w-full rounded-b-lg border border-gray-200 bg-white" title="Mailvorschau"></iframe>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="mt-4 flex justify-end gap-2">
+                                    <button type="button" @click="offen = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Abbrechen</button>
+                                    <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Teilnahme absagen</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endif
             @endif
             @if ($s->hinweis)
                 <p class="mt-2 whitespace-pre-line text-sm text-gray-600">{{ $s->hinweis }}</p>
@@ -239,4 +318,5 @@
             @endif
         </p>
     @endforelse
+    @include('elternsprechtag::partials.mailvorschau-js')
 </x-app-layout>

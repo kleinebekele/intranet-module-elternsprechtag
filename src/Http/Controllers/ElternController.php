@@ -2,6 +2,7 @@
 
 namespace Intranet\Modules\Elternsprechtag\Http\Controllers;
 
+use App\Mail\Vorlagen\VorlagenMailer;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,8 @@ use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Termin;
 use Intranet\Modules\Elternsprechtag\Support\Assistent;
 use Intranet\Modules\Elternsprechtag\Support\Buchung;
+use Intranet\Modules\Elternsprechtag\ElternsprechtagServiceProvider;
+use Intranet\Modules\Elternsprechtag\Support\ElternAbsage;
 use Intranet\Modules\Elternsprechtag\Support\Elternliste;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Lehrerinfo;
@@ -134,6 +137,68 @@ class ElternController
         return $this->zurueck($request, $eltern, '#keine-zeit-'.$sprechtag->id)->with('status', $melden
             ? 'Danke für Ihre Rückmeldung – wir wissen jetzt, dass Sie diesmal keinen Termin wahrnehmen können.'
             : 'Ihre Meldung „keine Zeit" ist zurückgenommen.');
+    }
+
+    /**
+     * Eltern sagen ihre Teilnahme ab: alle Termine ihrer Kinder entfallen, jede
+     * betroffene Lehrkraft bekommt eine Mail mit der Nachricht, und die Familie
+     * gilt als „keine Zeit" gemeldet (mit der Nachricht als Bemerkung).
+     */
+    public function teilnahmeAbsagen(Request $request, Sprechtag $sprechtag, VorlagenMailer $mailer): RedirectResponse
+    {
+        $eltern = $this->eltern($request);
+        $verwaltung = Rechte::istVerwaltung($request->user());
+        abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
+        $daten = $request->validate(['nachricht' => ['nullable', 'string', 'max:2000']]);
+        $nachricht = trim((string) ($daten['nachricht'] ?? ''));
+
+        if (! $verwaltung && $sprechtag->buchungGeschlossen()) {
+            return $this->zurueck($request, $eltern)->with('error', 'Die Terminbuchung ist geschlossen. Bitte sagen Sie direkt bei den Lehrkräften ab.');
+        }
+
+        $termine = ElternAbsage::termine($eltern, $sprechtag);
+        if (! $verwaltung && $termine->contains(fn (Termin $t) => $t->beginn()->isPast())) {
+            return $this->zurueck($request, $eltern)->with('error', 'Ein Termin hat schon begonnen. Bitte sagen Sie direkt bei den Lehrkräften ab.');
+        }
+        $ohneMail = $verwaltung && $request->boolean('ohne_mail');
+        $jeLehrer = ElternAbsage::jeLehrer($termine);
+
+        foreach ($termine as $termin) {
+            if (Termin::whereKey($termin->id)->exists()) {
+                $termin->absagenMitGruppe();
+            }
+        }
+        Lehrerinfo::pruefen($termine->pluck('plan_id'), ! $ohneMail);
+
+        $gemailt = 0;
+        if (! $ohneMail) {
+            foreach ($jeLehrer as $eintrag) {
+                [$html, $text] = ElternAbsage::werte($sprechtag, $eintrag['lehrer'], $eltern->name, $eintrag['termine'], $nachricht);
+                try {
+                    $mailer->senden(
+                        ElternsprechtagServiceProvider::VORLAGE_ELTERN_ABSAGE, $eintrag['lehrer']->email, $html, $text,
+                        quelle: 'Elternsprechtag-Elternabsage', referenz: 'elternsprechtag-elternabsage:'.$sprechtag->id.':'.$eltern->id, modul: 'Elternsprechtag',
+                    );
+                    $gemailt++;
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Elternsprechtag-Elternabsage nicht verschickt.', ['user' => $eintrag['lehrer']->id, 'fehler' => $e->getMessage()]);
+                }
+            }
+        }
+
+        DB::table('elternsprechtag_besuche')->updateOrInsert(
+            ['sprechtag_id' => $sprechtag->id, 'user_id' => $eltern->id],
+            ['keine_zeit_am' => now(), 'keine_zeit_bemerkung' => $nachricht !== '' ? $nachricht : null],
+        );
+        $this->audit('elternsprechtag.eltern_teilnahme', $sprechtag, $eltern, [
+            'termine' => $termine->pluck('id')->all(), 'lehrer' => $jeLehrer->map(fn ($e) => $e['lehrer']->id)->all(), 'mails' => $gemailt, 'ohne_mail' => $ohneMail,
+        ]);
+
+        $anzahl = $termine->unique(fn (Termin $t) => $t->gruppe ?: 't'.$t->id)->count();
+
+        return $this->zurueck($request, $eltern)->with('status', 'Teilnahme abgesagt.'
+            .($anzahl > 0 ? ' '.($anzahl === 1 ? 'Ihr Termin wurde' : "Ihre {$anzahl} Termine wurden").' abgesagt'.($gemailt > 0 ? ', die Lehrkräfte sind per E-Mail informiert.' : '.') : '')
+            .($ohneMail ? ' Es wurde keine Mail verschickt.' : ''));
     }
 
     public function buchen(Request $request, Sprechtag $sprechtag): RedirectResponse

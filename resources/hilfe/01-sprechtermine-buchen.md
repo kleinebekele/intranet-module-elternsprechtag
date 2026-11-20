@@ -73,9 +73,16 @@ Assistent nicht.
 - Wer zuerst bucht, bekommt die Uhrzeit. Ist sie in der Zwischenzeit vergeben worden, erhalten
   Sie eine Meldung und wählen eine andere.
 
+## Ihre Termine
+
+Sobald Sie gebucht haben, stehen oben auf der Seite alle Ihre Termine untereinander – mit Uhrzeit,
+Lehrkraft, Kind, Klasse und Raum. Daneben gibt es die Liste als PDF, zum Herunterladen oder per
+E-Mail.
+
 ## Umbuchen und absagen
 
-Beides finden Sie auf dem Reiter **Manuelle Termine**.
+Absagen können Sie direkt oben in Ihrer Terminliste oder auf dem Reiter **Manuelle Termine**;
+umbuchen auf dem Reiter **Manuelle Termine**.
 
 - **Umbuchen:** Bei einem gebuchten Termin eine andere Uhrzeit wählen und auf **Umbuchen**
   klicken. Der alte Termin wird dabei freigegeben.
@@ -88,7 +95,12 @@ bleiben bestehen.
 
 ## Sie wollen oder können diesmal nicht kommen?
 
-Ganz unten auf der Seite steht **„Sie wollen/können diesmal keinen Termin wahrnehmen? Geben Sie
+**Schon gebucht?** Unter Ihren Terminen steht **Teilnahme absagen**. Im Fenster schreiben Sie auf
+Wunsch eine Nachricht an die Lehrkräfte und sehen die E-Mail, die sie bekommen. Danach sind alle
+Ihre Termine abgesagt, jede betroffene Lehrkraft erhält eine E-Mail, und die Schule weiß, dass Sie
+diesmal nicht kommen. Buchen können Sie trotzdem wieder.
+
+**Noch nichts gebucht?** Ganz unten auf der Seite steht **„Sie wollen/können diesmal keinen Termin wahrnehmen? Geben Sie
 uns kurz Bescheid.“** Dort können Sie eine Nachricht an die Schule schreiben und die Meldung
 abschicken. Sie lässt sich jederzeit zurücknehmen; buchen können Sie trotzdem weiterhin. Haben Sie
 schon Termine gebucht, erscheint die Frage nicht.

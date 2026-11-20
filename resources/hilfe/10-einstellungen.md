@@ -128,6 +128,9 @@ Den Wortlaut der Mails ändern Sie unter Verwaltung → Mailvorlagen:
 - „Elternsprechtag: Einladung zu Wunschgesprächen“ – erste Stufe
 - „Elternsprechtag: Info an alle Eltern“ – zweite Stufe bzw. alles auf einmal
 - „Elternsprechtag: Absage durch die Lehrkraft“ – ein einzelner Termin
+- „Elternsprechtag: Eltern sagen ab“ – an jede betroffene Lehrkraft, wenn Eltern über „Teilnahme
+  absagen“ alle ihre Termine absagen, mit deren Nachricht. Die Familie gilt danach als „keine Zeit“
+  gemeldet. Über **Handeln als** können Sie das auch ohne Mail tun.
 - „Elternsprechtag: Lehrkraft fällt aus“ – eine Mail je Familie, wenn eine Lehrkraft ihre Teilnahme
   absagt (z. B. krank), mit allen betroffenen Terminen und ihrer Nachricht
 
