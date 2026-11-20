@@ -149,7 +149,7 @@ class ElternController
         $eltern = $this->eltern($request);
         $verwaltung = Rechte::istVerwaltung($request->user());
         abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
-        $daten = $request->validate(['nachricht' => ['nullable', 'string', 'max:2000']]);
+        $daten = $request->validate(['nachricht' => ['nullable', 'string', 'max:500']]);
         $nachricht = trim((string) ($daten['nachricht'] ?? ''));
 
         if (! $verwaltung && $sprechtag->buchungGeschlossen()) {
@@ -173,7 +173,7 @@ class ElternController
         $gemailt = 0;
         if (! $ohneMail) {
             foreach ($jeLehrer as $eintrag) {
-                [$html, $text] = ElternAbsage::werte($sprechtag, $eintrag['lehrer'], $eltern->name, $eintrag['termine'], $nachricht);
+                [$html, $text] = ElternAbsage::werte($sprechtag, $eintrag['lehrer'], $eltern, $eintrag['termine'], $nachricht);
                 try {
                     $mailer->senden(
                         ElternsprechtagServiceProvider::VORLAGE_ELTERN_ABSAGE, $eintrag['lehrer']->email, $html, $text,

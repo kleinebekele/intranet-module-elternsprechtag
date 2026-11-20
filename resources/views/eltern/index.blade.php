@@ -104,16 +104,17 @@
                                 </p>
                                 <div class="mt-4 grid grid-cols-1 gap-4 {{ $absage ? 'lg:grid-cols-3' : '' }}">
                                     <div>
-                                        <label class="block text-sm"><span class="text-gray-600">Nachricht an die Lehrkräfte und die Schule (optional)</span>
-                                            <textarea name="nachricht" rows="5" maxlength="2000" x-ref="nachricht" x-model="nachricht" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
+                                        <label class="block text-sm"><span class="text-gray-600">Ihre Nachricht an die Lehrkräfte (optional)</span>
+                                            <textarea name="nachricht" rows="5" maxlength="500" x-ref="nachricht" x-model="nachricht" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
                                                       placeholder="z. B. Wir sind leider krank und melden uns für einen neuen Termin."></textarea></label>
+                                    <div class="mt-0.5 text-right text-xs" :class="nachricht.length >= 500 ? 'font-medium text-red-700' : 'text-gray-500'"><span x-text="nachricht.length"></span> / 500 Zeichen</div>
                                         @if ($verwaltung)
                                             <label class="mt-3 flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" name="ohne_mail" value="1" class="rounded border-gray-300"> ohne Mail an die Lehrkräfte</label>
                                         @endif
                                     </div>
                                     @if ($absage)
                                         <div class="min-w-0 lg:col-span-2">
-                                            <div class="text-sm text-gray-600">Vorschau der Mail an die Lehrkräfte{{ $absage['lehrer'] > 1 ? ' – eine von '.$absage['lehrer'].', jede mit ihren eigenen Terminen' : '' }}</div>
+                                            <div class="text-sm text-gray-600">So sieht Ihre Mail aus{{ $absage['lehrer'] > 1 ? ' – jede der '.$absage['lehrer'].' Lehrkräfte bekommt sie mit ihren eigenen Terminen' : '' }}</div>
                                             <div class="mt-1 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"><span class="text-gray-500">Betreff:</span> {{ $absage['betreff'] }}</div>
                                             <iframe :srcdoc="vorschau" style="height: 60vh" class="w-full rounded-b-lg border border-gray-200 bg-white" title="Mailvorschau"></iframe>
                                         </div>

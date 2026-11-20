@@ -56,26 +56,50 @@ class ElternAbsage
     }
 
     /** @return array{0: array<string, string>, 1: array<string, string>} [HTML-Werte, Textwerte] */
-    public static function werte(Sprechtag $sprechtag, User $lehrer, string $eltern, Collection $termine, string $nachricht): array
+    /**
+     * Anrede an die Lehrkraft. Ob Herr oder Frau, ist im Intranet (noch) nicht
+     * bekannt – bis dahin neutral mit vollem Namen.
+     */
+    public static function anrede(User $lehrer): string
+    {
+        return 'Guten Tag '.self::natuerlich($lehrer->name);
+    }
+
+    /** „Lindner, Paul" → „Paul Lindner" */
+    public static function natuerlich(?string $name): string
+    {
+        $name = trim((string) $name);
+        if (! str_contains($name, ',')) {
+            return $name;
+        }
+        [$nach, $vor] = array_map('trim', explode(',', $name, 2));
+
+        return trim($vor.' '.$nach);
+    }
+
+    public static function werte(Sprechtag $sprechtag, User $lehrer, User $eltern, Collection $termine, string $nachricht): array
     {
         $zeilen = $termine->sortBy(fn (Termin $t) => $t->tag?->datum?->format('Y-m-d').' '.$t->von)
-            ->map(fn (Termin $t) => [$t->beschriftung(), Namen::anzeige((string) $t->kind?->name)]);
+            ->map(fn (Termin $t) => [$t->beschriftung(), Namen::vorname((string) $t->kind?->name)]);
 
+        // Die Mail spricht aus Sicht der Eltern: Namen in der natürlichen Reihenfolge.
         $basis = [
-            'name' => $lehrer->name,
+            'anrede' => self::anrede($lehrer),
+            'name' => self::natuerlich($lehrer->name),
             'sprechtag' => $sprechtag->titel,
-            'eltern' => $eltern,
+            'eltern' => self::natuerlich($eltern->name),
+            'email' => (string) $eltern->email,
             'link' => route('module.elternsprechtag.plan.zeigen', $sprechtag),
         ];
 
         $html = array_map('e', $basis) + [
             'termine' => '<ul style="margin:0 0 16px;padding-left:20px;">'
-                .$zeilen->map(fn ($z) => '<li><strong>'.e($z[0]).'</strong> ('.e($z[1]).')</li>')->join('')
+                .$zeilen->map(fn ($z) => '<li><strong>'.e($z[0]).'</strong> (für '.e($z[1]).')</li>')->join('')
                 .'</ul>',
             'nachricht' => $nachricht === Ausfall::MARKE ? Ausfall::MARKE : Ausfall::nachrichtHtml($nachricht),
         ];
         $text = $basis + [
-            'termine' => $zeilen->map(fn ($z) => '- '.$z[0].' ('.$z[1].')')->join("\n"),
+            'termine' => $zeilen->map(fn ($z) => '- '.$z[0].' (für '.$z[1].')')->join("\n"),
             'nachricht' => Ausfall::nachrichtText($nachricht),
         ];
 
@@ -97,7 +121,7 @@ class ElternAbsage
         }
 
         try {
-            [$html] = self::werte($sprechtag, $erste['lehrer'], $eltern->name, $erste['termine'], Ausfall::MARKE);
+            [$html] = self::werte($sprechtag, $erste['lehrer'], $eltern, $erste['termine'], Ausfall::MARKE);
             $mail = app(VorlagenMailer::class)->rendern(ElternsprechtagServiceProvider::VORLAGE_ELTERN_ABSAGE, $html);
         } catch (\Throwable) {
             return null;

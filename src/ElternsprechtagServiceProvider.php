@@ -184,22 +184,27 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_ELTERN_ABSAGE,
                 titel: 'Elternsprechtag: Eltern sagen ab',
-                beschreibung: 'Geht an jede betroffene Lehrkraft, wenn Eltern über „Teilnahme absagen" alle ihre Termine absagen – mit diesen Terminen und der Nachricht der Eltern.',
+                beschreibung: 'Geht an jede betroffene Lehrkraft, wenn Eltern über „Teilnahme absagen" alle ihre Termine absagen – mit diesen Terminen und der Nachricht der Eltern. Geschrieben aus Sicht der Eltern (sie sehen die Vorschau).',
                 platzhalter: [
-                    'name' => 'Name der Lehrkraft',
+                    'anrede' => 'Anrede der Lehrkraft, z. B. „Hallo Herr Lindner" (ohne bekannte Anrede „Guten Tag Paul Lindner")',
+                    'name' => 'Name der Lehrkraft (Vorname Nachname)',
                     'sprechtag' => 'Titel des Sprechtags',
-                    'eltern' => 'Name des Elternteils',
+                    'eltern' => 'Name des Elternteils (Vorname Nachname)',
+                    'email' => 'Mailadresse des Elternteils (für Antworten)',
                     'termine' => 'Liste der abgesagten Termine (Zeit und Kind)',
                     'nachricht' => 'Nachricht der Eltern (leer, wenn keine geschrieben wurde)',
                     'link' => 'Link zu „Mein Terminplan"',
                 ],
-                betreff: 'Elternsprechtag: {{ eltern }} sagt ab',
+                betreff: 'Absage Elternsprechtag – {{ eltern }}',
                 html: self::ELTERN_ABSAGE_HTML,
                 text: self::ELTERN_ABSAGE_TEXT,
                 beispiele: [
                     'sprechtag' => 'Elternsprechtag Herbst',
-                    'eltern' => 'Muster, Sabine',
-                    'termine' => '<ul style="margin:0 0 16px;padding-left:20px;"><li><strong>Do 12.11.2026, 14:00–14:15 Uhr</strong> (Muster, Mia)</li></ul>',
+                    'anrede' => 'Hallo Herr Lindner',
+                    'name' => 'Paul Lindner',
+                    'eltern' => 'Sabine Muster',
+                    'email' => 'sabine.muster@example.org',
+                    'termine' => '<ul style="margin:0 0 16px;padding-left:20px;"><li><strong>Do 12.11.2026, 14:00–14:15 Uhr</strong> (für Mia)</li></ul>',
                     'nachricht' => '<div style="margin:0 0 16px;padding:12px 16px;background:#f3f4f6;border-left:4px solid #9ca3af;border-radius:4px;">Wir sind leider krank und melden uns für einen neuen Termin.</div>',
                 ],
                 modul: 'Elternsprechtag',
@@ -397,27 +402,27 @@ Ihr Kollegium
 TEXT;
 
     private const ELTERN_ABSAGE_HTML = <<<'HTML'
-<p style="margin:0 0 16px;font-size:16px;">Hallo {{ name }},</p>
-<p style="margin:0 0 16px;">{{ eltern }} hat die Teilnahme am {{ sprechtag }} abgesagt. Diese Termine bei dir entfallen:</p>
+<p style="margin:0 0 16px;font-size:16px;">{{ anrede }},</p>
+<p style="margin:0 0 16px;">leider können wir am {{ sprechtag }} nicht teilnehmen und sagen deshalb unsere Termine bei Ihnen ab:</p>
 {{ termine }}
 {{ nachricht }}
-<p style="margin:0 0 24px;">
-  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Mein Terminplan</a>
-</p>
-<p style="margin:0;color:#6b7280;font-size:14px;">Viele Grüße<br>Deine Verwaltung</p>
+<p style="margin:0 0 24px;">Mit freundlichen Grüßen<br>{{ eltern }}</p>
+<p style="margin:0;color:#6b7280;font-size:13px;">Diese Nachricht wurde über die Terminbuchung im Intranet verschickt. Antworten bitte an {{ email }}. Ihre aktuellen Termine: <a href="{{ link }}" style="color:#4f46e5;">Mein Terminplan</a></p>
 HTML;
 
     private const ELTERN_ABSAGE_TEXT = <<<'TEXT'
-Hallo {{ name }},
+{{ anrede }},
 
-{{ eltern }} hat die Teilnahme am {{ sprechtag }} abgesagt. Diese Termine bei dir entfallen:
+leider können wir am {{ sprechtag }} nicht teilnehmen und sagen deshalb unsere Termine bei Ihnen ab:
 
 {{ termine }}
 
-{{ nachricht }}Mein Terminplan: {{ link }}
+{{ nachricht }}Mit freundlichen Grüßen
+{{ eltern }}
 
-Viele Grüße
-Deine Verwaltung
+--
+Diese Nachricht wurde über die Terminbuchung im Intranet verschickt. Antworten bitte an {{ email }}.
+Ihre aktuellen Termine: {{ link }}
 TEXT;
 
     private const AUSFALL_HTML = <<<'HTML'

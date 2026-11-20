@@ -391,7 +391,7 @@ class PlanController
         $daten = $request->validate([
             'absagen' => ['boolean'],
             'grund' => ['nullable', 'string', 'max:500'],
-            'nachricht' => ['nullable', 'string', 'max:2000'],
+            'nachricht' => ['nullable', 'string', 'max:500'],
         ]);
         $absagen = (bool) ($daten['absagen'] ?? false);
         abort_unless($absagen

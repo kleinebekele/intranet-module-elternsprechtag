@@ -403,8 +403,9 @@
                         <div>
                             @if ($ausfall)
                                 <label class="block text-sm"><span class="text-gray-600">Nachricht an die Eltern (optional, erscheint in der Mail)</span>
-                                    <textarea name="nachricht" rows="5" maxlength="2000" x-ref="nachricht" x-model="nachricht" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
+                                    <textarea name="nachricht" rows="5" maxlength="500" x-ref="nachricht" x-model="nachricht" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
                                               placeholder="z. B. Ich bin leider erkrankt und melde mich nach meiner Rückkehr bei Ihnen."></textarea></label>
+                                    <div class="mt-0.5 text-right text-xs" :class="nachricht.length >= 500 ? 'font-medium text-red-700' : 'text-gray-500'"><span x-text="nachricht.length"></span> / 500 Zeichen</div>
                             @endif
                             <label class="mt-4 block text-sm"><span class="text-gray-600">Grund (nur für das Sekretariat, optional)</span>
                                 <textarea name="grund" rows="3" maxlength="500" x-ref="grund" class="mt-1 w-full rounded-lg border-gray-300 text-sm"></textarea></label>
