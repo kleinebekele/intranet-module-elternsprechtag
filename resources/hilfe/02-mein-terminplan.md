@@ -14,7 +14,8 @@ auf der Seite steht.
 
 Unter **Ich stehe zur Verfügung für** stehen alle Klassen dieses Sprechtags. Vorausgewählt sind
 die Klassen, in denen du laut Linear unterrichtest – das ist nur ein Vorschlag. Hak an, was
-stimmt. Eltern sehen dich nur bei Kindern aus den Klassen, die hier angehakt sind.
+stimmt. Bist du in Linear keiner Klasse zugeordnet, ist nichts vorausgewählt; dann hak deine
+Klassen selbst an. Eltern sehen dich nur bei Kindern aus den Klassen, die hier angehakt sind.
 
 ## Termine (in Minuten), Raum, Bemerkung
 

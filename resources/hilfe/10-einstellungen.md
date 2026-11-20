@@ -32,8 +32,20 @@ diesem Tag – ohne Mail an die Eltern.
 
 ## Die Übersicht der Lehrer
 
-Auf der Seite eines Sprechtags stehen alle Lehrkräfte laut Linear und alle, die selbst einen
-Plan angelegt haben:
+Auf der Seite eines Sprechtags stehen alle Lehrkräfte laut Linear – auch solche, die dort keiner
+Klasse zugeordnet sind, aber die Rolle Lehrer haben – und alle, die selbst einen Plan angelegt
+haben. Wer in Linear nur eine interne Ersatzadresse (`….intern`) hat, kann sich nicht anmelden und
+fehlt deshalb; ein gelber Hinweis über der Liste sagt, wie viele das sind. Mit der Maus darüber
+sehen Sie die Namen.
+
+Die Zeilen sind farbig, darüber filtern Knöpfe nach Farbe:
+
+- **grün** – noch Termine frei
+- **gelb** – alle Termine vergeben
+- **grau** – nimmt nicht teil
+- **rot** – noch nichts eingetragen
+
+Die Spalten:
 
 - **Klassenlehrer**: die beteiligten Klassen, für die die Lehrkraft laut Linear Klassenlehrkraft
   ist (sonst „–“).
@@ -44,6 +56,18 @@ Plan angelegt haben:
 - **Gebucht / Termine**: wie viele Termine schon vergeben sind.
 - Ein Klick auf den Namen öffnet den Plan der Lehrkraft – Sie handeln dann als sie und können
   alles ändern, auch nach der Frist.
+
+## Kinder und Wunschgespräche im Blick
+
+- **Wunschgespräche: x von y gebucht** – zum Aufklappen. Sobald die Buchung läuft, prüft die Seite
+  im Hintergrund, bei welchen Wunschgesprächen keine Uhrzeit mehr frei ist (vergeben oder nur zu
+  Zeiten frei, an denen die Familie schon andere Gespräche hat). Ihre Zahl steht in der Titelzeile
+  und oben rechts als roter Knopf; die betroffenen Zeilen sind markiert („keine freie Zeit mehr –
+  bitte mit den Lehrkräften klären“). Bei gemeinsamen Gesprächen reicht es, wenn eine der beiden
+  Lehrkräfte noch frei ist.
+- **Alle Kinder: x von y haben einen Termin** – ebenfalls zum Aufklappen, sortiert nach
+  Klassenstufe. Haben Eltern „keine Zeit“ gemeldet, steht das dabei; ihre Nachricht sehen Sie mit
+  der Maus über dem Info-Symbol.
 
 ## Veröffentlichen
 
@@ -103,7 +127,18 @@ Den Wortlaut der Mails ändern Sie unter Verwaltung → Mailvorlagen:
 
 - „Elternsprechtag: Einladung zu Wunschgesprächen“ – erste Stufe
 - „Elternsprechtag: Info an alle Eltern“ – zweite Stufe bzw. alles auf einmal
-- „Elternsprechtag: Absage durch die Lehrkraft“
+- „Elternsprechtag: Absage durch die Lehrkraft“ – ein einzelner Termin
+- „Elternsprechtag: Lehrkraft fällt aus“ – eine Mail je Familie, wenn eine Lehrkraft ihre Teilnahme
+  absagt (z. B. krank), mit allen betroffenen Terminen und ihrer Nachricht
+
+## Wenn eine Lehrkraft ausfällt
+
+Lehrkräfte können ihre Teilnahme bis zum Sprechtag selbst absagen – auch nach Freigabe und
+Veröffentlichung. Sie schreiben dabei eine Nachricht an die Eltern und sehen die Mail vorab. Danach
+sind sie für die Eltern nicht mehr buchbar, alle gebuchten Termine entfallen, und jede betroffene
+Familie bekommt eine Mail. In der Übersicht steht die Lehrkraft grau mit „✗ nimmt nicht teil“ und
+dem Grund für das Sekretariat. Über **Handeln als** können Sie das auch für eine Lehrkraft tun –
+etwa nach einem Anruf – und mit **Doch teilnehmen** zurücknehmen.
 
 ## Telefonische Anmeldungen
 

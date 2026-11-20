@@ -24,6 +24,10 @@ auf dem Reiter **Manuelle Termine**:
 2. Wählen Sie im Auswahlfeld eine freie Uhrzeit und klicken Sie auf **Buchen**.
 3. Der Termin erscheint grün hinterlegt als „Ihr Termin“.
 
+Ist bei einer Lehrkraft nichts mehr frei, ist ihre Karte rot umrandet: **„keine Uhrzeit mehr frei“**.
+Wäre eine Zeit nur deshalb nicht buchbar, weil Sie da schon ein anderes Gespräch haben, steht das
+in der Karte – dann können Sie das andere Gespräch umbuchen und so Platz schaffen.
+
 Steht bei einer Lehrkraft **„möchte Sie gern sprechen“**, wünscht sie sich ausdrücklich ein
 Gespräch mit Ihnen. Bitte buchen Sie dort möglichst einen Termin. Persönlich eingeladene Eltern
 erhalten die E-Mail zuerst und können diese Gespräche buchen, bevor die Buchung für alle öffnet. Bei
@@ -46,9 +50,14 @@ Sie möchten mehrere Lehrkräfte sprechen und dabei möglichst wenig warten? Daf
 3. Auf Wunsch etwas **Zeit für den Raumwechsel** zwischen zwei Gesprächen einplanen.
 4. **Vorschlag berechnen.**
 
+Jede Karte nennt Kind, Klasse und Raum. Lehrkräfte ohne freie Uhrzeit sind rot markiert
+(„keine Uhrzeit mehr frei“) und lassen sich nicht auswählen.
+
 Der Assistent bringt zuerst alle Gespräche mit Priorität 1 unter, dann 2, dann 3 – möglichst an
 einem Tag und mit möglichst wenig Wartezeit. Zwei Gespräche bei derselben Lehrkraft (etwa für
-Geschwister) legt er direkt hintereinander. Was nicht passt, steht unter „Nicht unterzubringen“.
+Geschwister) legt er direkt hintereinander. Was nicht passt, steht unter „Nicht unterzubringen“ –
+je Lehrkraft mit dem Grund (z. B. alles vergeben, außerhalb Ihres Zeitfensters oder nur zu
+Zeiten frei, an denen Sie schon ein anderes Gespräch haben).
 
 Im Vorschlag sind alle Termine angehakt. Entfernen Sie den Haken bei allem, was Sie nicht
 möchten, und klicken Sie auf **Buchen** – gebucht werden nur die angehakten Termine.
@@ -73,7 +82,16 @@ Beides finden Sie auf dem Reiter **Manuelle Termine**.
 - **Absagen:** Auf **absagen** klicken – möglich, bis der Termin beginnt.
 
 Muss eine Lehrkraft Ihren Termin absagen, erhalten Sie eine E-Mail und können einen neuen
-buchen.
+buchen. Fällt eine Lehrkraft ganz aus (z. B. wegen Krankheit), erhalten Sie eine E-Mail mit allen
+Terminen, die dadurch entfallen; bei ihr ist dann nichts mehr buchbar, Ihre übrigen Termine
+bleiben bestehen.
+
+## Sie wollen oder können diesmal nicht kommen?
+
+Ganz unten auf der Seite steht **„Sie wollen/können diesmal keinen Termin wahrnehmen? Geben Sie
+uns kurz Bescheid.“** Dort können Sie eine Nachricht an die Schule schreiben und die Meldung
+abschicken. Sie lässt sich jederzeit zurücknehmen; buchen können Sie trotzdem weiterhin. Haben Sie
+schon Termine gebucht, erscheint die Frage nicht.
 
 ## Lieber telefonisch?
 
