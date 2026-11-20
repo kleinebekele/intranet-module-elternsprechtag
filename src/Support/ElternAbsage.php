@@ -57,12 +57,14 @@ class ElternAbsage
 
     /** @return array{0: array<string, string>, 1: array<string, string>} [HTML-Werte, Textwerte] */
     /**
-     * Anrede an die Lehrkraft. Ob Herr oder Frau, ist im Intranet (noch) nicht
-     * bekannt – bis dahin neutral mit vollem Namen.
+     * Anrede an die Lehrkraft: „Hallo Frau Dr. Muster" aus `users.anrede`
+     * (Linear-Import); ohne bekannte Anrede neutral mit vollem Namen.
      */
     public static function anrede(User $lehrer): string
     {
-        return 'Guten Tag '.self::natuerlich($lehrer->name);
+        $anrede = trim((string) ($lehrer->anrede ?? ''));
+
+        return $anrede !== '' ? 'Hallo '.$anrede : 'Guten Tag '.self::natuerlich($lehrer->name);
     }
 
     /** „Lindner, Paul" → „Paul Lindner" */
