@@ -15,6 +15,7 @@ use Intranet\Modules\Elternsprechtag\Models\Klassenteam;
 use Intranet\Modules\Elternsprechtag\Models\Plan;
 use Intranet\Modules\Elternsprechtag\Models\Sprechtag;
 use Intranet\Modules\Elternsprechtag\Models\Termin;
+use Intranet\Modules\Elternsprechtag\Support\Ausfall;
 use Intranet\Modules\Elternsprechtag\Support\Klassen;
 use Intranet\Modules\Elternsprechtag\Support\Namen;
 use Intranet\Modules\Elternsprechtag\Support\Rechte;
@@ -99,6 +100,9 @@ class PlanController
             'kinder' => Klassen::kinder($sprechtag->klassenListe()),
             'wuensche' => $plan->wuensche->keyBy('kind_user_id'),
             'darfAendern' => Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer),
+            'darfAbsagen' => ! $plan->abgesagt() && Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer),
+            // Mailvorschau fürs Absage-Fenster (erstes betroffenes Elternteil).
+            'ausfall' => $plan->abgesagt() ? null : Ausfall::vorschau($sprechtag, $lehrer->name, $plan->termine),
             'verwaltung' => Rechte::istVerwaltung($request->user()),
             'personen' => $this->allePersonen($request),
             'team' => $team,
@@ -376,30 +380,31 @@ class PlanController
     }
 
     /**
-     * Teilnahme am Sprechtag absagen bzw. wieder zusagen. Beim Absagen wird der
-     * Plan zurückgezogen und alle gebuchten Termine werden mit Mail abgesagt.
+     * Teilnahme am Sprechtag absagen bzw. wieder zusagen. Beim Absagen (geht bis
+     * zum Ende des Sprechtags, auch nach der Freigabe – z. B. bei Krankheit)
+     * verschwindet die Lehrkraft für die Eltern, alle gebuchten Termine werden
+     * abgesagt und jedes Elternteil bekommt eine Mail mit der Nachricht.
      */
     public function teilnahme(Request $request, Sprechtag $sprechtag, VorlagenMailer $mailer): RedirectResponse
     {
         $lehrer = $this->lehrer($request, $sprechtag);
-        abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
+        $daten = $request->validate([
+            'absagen' => ['boolean'],
+            'grund' => ['nullable', 'string', 'max:500'],
+            'nachricht' => ['nullable', 'string', 'max:2000'],
+        ]);
+        $absagen = (bool) ($daten['absagen'] ?? false);
+        abort_unless($absagen
+            ? Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer)
+            : Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
 
-        $daten = $request->validate(['absagen' => ['boolean'], 'grund' => ['nullable', 'string', 'max:500']]);
         $plan = Plan::with(['termine.tag', 'termine.kind', 'termine.eltern'])
             ->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id], ['slot_minuten' => 15, 'vorbereitung_minuten' => 0]);
-        $absagen = (bool) ($daten['absagen'] ?? false);
-
-        if ($absagen && $plan->abgeschlossen_am) {
-            return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
-                ->with('error', 'Der Plan ist freigegeben. Bitte zuerst die Freigabe zurücknehmen, dann die Teilnahme absagen.');
-        }
 
         $ohneMail = 0;
         if ($absagen) {
             $plan->fill(['abgesagt_am' => now(), 'absage_grund' => $daten['grund'] ?? null, 'abgeschlossen_am' => null])->save();
-            foreach ($plan->termine as $termin) {
-                $ohneMail += $this->terminAbsagen($termin->setRelation('plan', $plan), $sprechtag, $lehrer, $mailer) ? 0 : 1;
-            }
+            $ohneMail = $this->alleAbsagen($plan, $sprechtag, $lehrer, $mailer, (string) ($daten['nachricht'] ?? ''));
         } elseif ($plan->exists) {
             $plan->update(['abgesagt_am' => null, 'absage_grund' => null]);
         }
@@ -411,10 +416,53 @@ class PlanController
         }
 
         $meldung = ! $absagen ? 'Teilnahme wieder zugesagt. Bitte den Plan prüfen und freigeben.'
-            : 'Teilnahme abgesagt.'.($plan->termine->isNotEmpty() ? ($plan->termine->count() === 1 ? ' Der gebuchte Termin wurde' : ' Die '.$plan->termine->count().' gebuchten Termine wurden').' abgesagt, die Eltern bekommen eine Mail.' : '')
+            : 'Teilnahme abgesagt – Eltern können bei '.($lehrer->is($request->user()) ? 'dir' : 'der Lehrkraft').' nichts mehr buchen.'.($plan->termine->isNotEmpty() ? ($plan->termine->count() === 1 ? ' Der gebuchte Termin wurde' : ' Die '.$plan->termine->count().' gebuchten Termine wurden').' abgesagt, die Eltern bekommen eine Mail.' : '')
                 .($ohneMail > 0 ? " {$ohneMail} Eltern ohne Mailadresse – bitte selbst Bescheid geben." : '');
 
         return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('status', $meldung);
+    }
+
+    /**
+     * Alle Termine des Plans absagen und je Elternteil EINE Mail mit allen
+     * betroffenen Terminen und der Nachricht schicken. Liefert die Zahl der
+     * Elternteile, die keine Mail bekommen konnten.
+     */
+    private function alleAbsagen(Plan $plan, Sprechtag $sprechtag, User $lehrer, VorlagenMailer $mailer, string $nachricht): int
+    {
+        $termine = $plan->termine;
+        $planIds = collect([$plan->id]);
+        $mitMail = Ausfall::jeEltern($termine);
+
+        foreach ($termine as $termin) {
+            $planIds = $planIds->concat($termin->gruppeTermine()->pluck('plan_id'));
+            $termin->absagenMitGruppe();
+        }
+        \Intranet\Modules\Elternsprechtag\Support\Lehrerinfo::pruefen($planIds);
+
+        $erreicht = [];
+        foreach ($mitMail as $eintrag) {
+            $eltern = $eintrag['eltern'];
+            [$html, $text] = Ausfall::werte($sprechtag, $eltern, $lehrer->name, $eintrag['termine'], $nachricht);
+            try {
+                $mailer->senden(
+                    ElternsprechtagServiceProvider::VORLAGE_AUSFALL, $eltern->email, $html, $text,
+                    quelle: 'Elternsprechtag-Ausfall', referenz: 'elternsprechtag-ausfall:'.$plan->id.':'.$eltern->id, modul: 'Elternsprechtag',
+                );
+                $erreicht[$eltern->id] = true;
+            } catch (\Throwable $e) {
+                Log::warning('Elternsprechtag-Ausfall nicht verschickt.', ['user' => $eltern->id, 'fehler' => $e->getMessage()]);
+            }
+        }
+
+        foreach ($termine as $termin) {
+            if (class_exists(\App\Support\Audit::class)) {
+                \App\Support\Audit::schreiben('elternsprechtag.absage_lehrer', $sprechtag->titel, betroffener: $termin->eltern,
+                    daten: ['sprechtag' => $sprechtag->id, 'lehrer' => $lehrer->id, 'kind' => $termin->kind_user_id, 'mail' => isset($erreicht[$termin->eltern_user_id]), 'ausfall' => true],
+                    ziel: "Elternsprechtag {$sprechtag->id}");
+            }
+        }
+
+        return $termine->pluck('eltern_user_id')->unique()->reject(fn ($id) => isset($erreicht[$id]))->count();
     }
 
     /**

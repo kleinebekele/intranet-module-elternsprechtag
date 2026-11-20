@@ -46,6 +46,15 @@ class Rechte
         return $user->is($lehrer) && ! $sprechtag->fristVorbei() && ! $sprechtag->veroeffentlicht();
     }
 
+    /**
+     * Teilnahme absagen (z. B. krank): die Lehrkraft selbst bis zum Ende des
+     * Sprechtags – auch nach Frist, Freigabe und Veröffentlichung.
+     */
+    public static function darfAbsagen(User $user, Sprechtag $sprechtag, User $lehrer): bool
+    {
+        return self::istVerwaltung($user) || ($user->is($lehrer) && ! $sprechtag->vorbei());
+    }
+
     /** Für den Menüpunkt „Mein Terminplan": irgendeine Linear-Lehrerrolle oder die Grundrolle „Lehrer". */
     public static function istLehrer(?User $user): bool
     {

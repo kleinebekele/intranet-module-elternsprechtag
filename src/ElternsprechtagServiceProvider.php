@@ -26,6 +26,9 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
 
     public const VORLAGE_ABSAGE = 'elternsprechtag_absage';
 
+    /** Lehrkraft fällt aus (Teilnahme abgesagt): eine Mail je Elternteil mit allen betroffenen Terminen. */
+    public const VORLAGE_AUSFALL = 'elternsprechtag_ausfall';
+
     /** Terminliste der Familie als PDF an das Elternteil (Knopf auf der Buchungsseite). */
     public const VORLAGE_ELTERNLISTE = 'elternsprechtag_elternliste';
 
@@ -173,6 +176,30 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 ],
                 modul: 'Elternsprechtag',
                 ausloeser: 'Elternsprechtag-Absage',
+            ));
+            $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
+                schluessel: self::VORLAGE_AUSFALL,
+                titel: 'Elternsprechtag: Lehrkraft fällt aus',
+                beschreibung: 'Geht an jedes Elternteil mit gebuchten Terminen, wenn die Lehrkraft ihre Teilnahme absagt (z. B. krank) – eine Mail mit allen betroffenen Terminen und der Nachricht der Lehrkraft.',
+                platzhalter: [
+                    'name' => 'Name des Elternteils',
+                    'sprechtag' => 'Titel des Sprechtags',
+                    'lehrer' => 'Name der Lehrkraft',
+                    'termine' => 'Liste der abgesagten Termine (Zeit und Kind)',
+                    'nachricht' => 'Persönliche Nachricht der Lehrkraft (leer, wenn keine geschrieben wurde)',
+                    'link' => 'Link zur Terminbuchung im Intranet',
+                ],
+                betreff: 'Elternsprechtag: {{ lehrer }} muss leider absagen',
+                html: self::AUSFALL_HTML,
+                text: self::AUSFALL_TEXT,
+                beispiele: [
+                    'sprechtag' => 'Elternsprechtag Herbst',
+                    'lehrer' => 'Frau Muster',
+                    'termine' => '<ul style="margin:0 0 16px;padding-left:20px;"><li><strong>Do 12.11.2026, 14:00–14:15 Uhr</strong> (für Max)</li></ul>',
+                    'nachricht' => '<div style="margin:0 0 16px;padding:12px 16px;background:#f3f4f6;border-left:4px solid #9ca3af;border-radius:4px;">Ich bin leider erkrankt und melde mich nach meiner Rückkehr bei Ihnen.</div>',
+                ],
+                modul: 'Elternsprechtag',
+                ausloeser: 'Elternsprechtag-Ausfall',
             ));
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_ELTERNLISTE,
@@ -336,6 +363,31 @@ Leider muss {{ lehrer }} Ihren Gesprächstermin zum {{ sprechtag }} absagen:
 {{ termin }} (für {{ kind }})
 
 Bitte buchen Sie bei Bedarf einen neuen Termin: {{ link }}
+
+Mit freundlichen Grüßen
+Ihr Kollegium
+TEXT;
+
+    private const AUSFALL_HTML = <<<'HTML'
+<p style="margin:0 0 16px;font-size:16px;">Liebe Eltern, hallo {{ name }}!</p>
+<p style="margin:0 0 16px;">Leider kann {{ lehrer }} am {{ sprechtag }} nicht teilnehmen. Diese Termine entfallen deshalb:</p>
+{{ termine }}
+{{ nachricht }}
+<p style="margin:0 0 16px;">Ihre übrigen Termine bleiben bestehen. Sie finden sie jederzeit in der Terminbuchung:</p>
+<p style="margin:0 0 24px;">
+  <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Zur Terminbuchung</a>
+</p>
+<p style="margin:0;color:#6b7280;font-size:14px;">Mit freundlichen Grüßen<br>Ihr Kollegium</p>
+HTML;
+
+    private const AUSFALL_TEXT = <<<'TEXT'
+Liebe Eltern, hallo {{ name }}!
+
+Leider kann {{ lehrer }} am {{ sprechtag }} nicht teilnehmen. Diese Termine entfallen deshalb:
+
+{{ termine }}
+
+{{ nachricht }}Ihre übrigen Termine bleiben bestehen. Sie finden sie jederzeit in der Terminbuchung: {{ link }}
 
 Mit freundlichen Grüßen
 Ihr Kollegium

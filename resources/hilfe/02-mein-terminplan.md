@@ -92,14 +92,19 @@ Terminliste herunter: je Tag alle Uhrzeiten mit Kind, Klasse und Eltern, freie T
 Pausen, eine leere Spalte für Notizen und am Ende die Gesprächswünsche, für die noch kein Termin
 gebucht ist.
 
-## Nicht dabei?
+## Nicht dabei oder krank?
 
-Neben „Speichern“ steht **Teilnahme absagen**. Es öffnet sich ein Fenster, in dem du einen Grund
-für das Sekretariat angeben kannst (optional). Ist dein Plan schon freigegeben, nimm zuerst die
-Freigabe zurück – vorher ist der Knopf gesperrt. Die
-Eltern sehen dich dann nicht mehr; schon gebuchte Termine werden abgesagt und die Eltern per
-E-Mail informiert. Mit **Doch teilnehmen** machst du das rückgängig – danach den Plan bitte prüfen
-und wieder freigeben.
+Neben „Speichern“ steht **Teilnahme absagen** – nach der Frist bzw. Veröffentlichung in einem roten
+Kasten unter dem Plan. Absagen geht bis zum Sprechtag, auch wenn dein Plan schon freigegeben ist.
+
+Im Fenster kannst du eine **Nachricht an die Eltern** schreiben (z. B. „Ich bin leider erkrankt und
+melde mich nach meiner Rückkehr bei Ihnen.“) und siehst daneben die Mail, wie sie ankommt. Der
+**Grund** darunter ist nur für das Sekretariat.
+
+Danach sehen die Eltern dich nicht mehr und können nichts mehr bei dir buchen. Alle gebuchten
+Termine werden abgesagt; jede Familie bekommt **eine** E-Mail mit allen ihren betroffenen Terminen
+und deiner Nachricht. Mit **Doch teilnehmen** machst du das rückgängig (bis zur Frist, danach über
+das Sekretariat) – danach den Plan bitte prüfen und wieder freigeben.
 
 ## Für die Verwaltung: Pläne für Lehrer eintragen
 rollen: elternsprechtag_verwaltung, admin

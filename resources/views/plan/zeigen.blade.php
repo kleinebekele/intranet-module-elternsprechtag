@@ -354,13 +354,22 @@
                     <button type="submit" name="freigeben" value="1"
                             class="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Speichern und freigeben</button>
                 @endunless
-                {{-- Nach der Freigabe erst die Freigabe zurücknehmen, dann absagen. --}}
-                <button type="button" @click="$dispatch('teilnahme-absagen')" @disabled($plan->abgeschlossen_am)
-                        @if ($plan->abgeschlossen_am) title="Erst die Freigabe zurücknehmen, dann absagen." @endif
-                        class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">Teilnahme absagen</button>
+                @if ($darfAbsagen)
+                    <button type="button" @click="$dispatch('teilnahme-absagen')"
+                            class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50">Teilnahme absagen</button>
+                @endif
             </div>
         @endif
     </form>
+
+    {{-- Nach Frist bzw. Veröffentlichung ist der Plan gesperrt – absagen (z. B. krank) geht trotzdem bis zum Sprechtag. --}}
+    @if (! $darfAendern && $darfAbsagen)
+        <div class="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+            <span>{{ $fremd ? 'Fällt die Lehrkraft aus' : 'Du fällst aus' }} (z. B. krank)? Dann alle Termine absagen und die Eltern benachrichtigen.</span>
+            <button type="button" @click="$dispatch('teilnahme-absagen')" x-data
+                    class="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100">Teilnahme absagen</button>
+        </div>
+    @endif
 
     @if ($darfAendern && $plan->abgeschlossen_am)
         <form method="POST" action="{{ route('module.elternsprechtag.plan.abschliessen', $ziel) }}" class="mt-2"
@@ -371,12 +380,13 @@
         </form>
     @endif
 
-    {{-- Teilnahme absagen: öffnet sich über den Knopf neben „Speichern". Eigenes Formular, daher außerhalb des Plan-Formulars. --}}
-    @if ($darfAendern)
-        <div x-data="{ offen: false }" @teilnahme-absagen.window="offen = true; $nextTick(() => $refs.grund.focus())" @keydown.escape.window="offen = false">
+    {{-- Teilnahme absagen (z. B. krank): Mailvorschau mit eigener Nachricht an die Eltern. Eigenes Formular, daher außerhalb des Plan-Formulars. --}}
+    @if ($darfAbsagen)
+        <div x-data="ausfallFenster(@js($ausfall['html'] ?? ''), @js(\Intranet\Modules\Elternsprechtag\Support\Ausfall::MARKE))"
+             @teilnahme-absagen.window="offen = true; $nextTick(() => ($refs.nachricht || $refs.grund).focus())" @keydown.escape.window="offen = false">
             <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
                  @click.self="offen = false">
-                <form method="POST" action="{{ route('module.elternsprechtag.plan.teilnahme', $ziel) }}" class="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
+                <form method="POST" action="{{ route('module.elternsprechtag.plan.teilnahme', $ziel) }}" class="w-full {{ $ausfall ? 'max-w-5xl' : 'max-w-lg' }} rounded-xl bg-white p-5 shadow-xl">
                     @csrf
                     <input type="hidden" name="absagen" value="1">
                     <div class="flex items-center justify-between gap-2">
@@ -384,13 +394,31 @@
                         <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
                     </div>
                     <p class="mt-2 text-sm text-gray-600">
-                        {{ $fremd ? $lehrer->name.' nimmt' : 'Du nimmst' }} an diesem Elternsprechtag nicht teil. Die Eltern sehen {{ $fremd ? 'die Lehrkraft' : 'dich' }} dann nicht mehr.
+                        {{ $fremd ? $lehrer->name.' nimmt' : 'Du nimmst' }} an diesem Elternsprechtag nicht teil. Die Eltern sehen {{ $fremd ? 'die Lehrkraft' : 'dich' }} dann nicht mehr und können keine Termine mehr buchen.
                         @if ($plan->termine->isNotEmpty())
                             <strong class="text-red-700">{{ $plan->termine->count() === 1 ? 'Der gebuchte Termin wird' : 'Die '.$plan->termine->count().' gebuchten Termine werden' }} abgesagt, die Eltern bekommen eine Mail.</strong>
                         @endif
                     </p>
-                    <label class="mt-4 block text-sm"><span class="text-gray-600">Grund (für das Sekretariat, optional)</span>
-                        <textarea name="grund" rows="3" maxlength="500" x-ref="grund" class="mt-1 w-full rounded-lg border-gray-300 text-sm"></textarea></label>
+                    <div class="mt-4 grid grid-cols-1 gap-4 {{ $ausfall ? 'lg:grid-cols-2' : '' }}">
+                        <div>
+                            @if ($ausfall)
+                                <label class="block text-sm"><span class="text-gray-600">Nachricht an die Eltern (optional, erscheint in der Mail)</span>
+                                    <textarea name="nachricht" rows="5" maxlength="2000" x-ref="nachricht" x-model="nachricht" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
+                                              placeholder="z. B. Ich bin leider erkrankt und melde mich nach meiner Rückkehr bei Ihnen."></textarea></label>
+                            @endif
+                            <label class="mt-4 block text-sm"><span class="text-gray-600">Grund (nur für das Sekretariat, optional)</span>
+                                <textarea name="grund" rows="3" maxlength="500" x-ref="grund" class="mt-1 w-full rounded-lg border-gray-300 text-sm"></textarea></label>
+                        </div>
+                        @if ($ausfall)
+                            <div class="min-w-0">
+                                <div class="text-sm text-gray-600">Vorschau der Mail{{ $ausfall['eltern'] > 1 ? ' – eine von '.$ausfall['eltern'].', jede mit den eigenen Terminen' : '' }}</div>
+                                <div class="mt-1 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"><span class="text-gray-500">Betreff:</span> {{ $ausfall['betreff'] }}</div>
+                                <iframe :srcdoc="vorschau" class="h-96 w-full rounded-b-lg border border-gray-200 bg-white" title="Mailvorschau"></iframe>
+                            </div>
+                        @elseif ($plan->termine->isNotEmpty())
+                            <p class="text-sm text-amber-800">Für die betroffenen Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.</p>
+                        @endif
+                    </div>
                     <div class="mt-4 flex justify-end gap-2">
                         <button type="button" @click="offen = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Abbrechen</button>
                         <button type="submit" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Teilnahme absagen</button>
@@ -402,6 +430,23 @@
     @endif
 
     <script>
+        // Absage-Fenster: Mailvorschau, in der die Nachricht beim Tippen erscheint.
+        // Der Block muss zu Support\Ausfall::nachrichtHtml() passen.
+        function ausfallFenster(vorlage, marke) {
+            const escape = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+
+            return {
+                offen: false,
+                nachricht: '',
+                block(t) {
+                    t = t.trim();
+                    if (t === '') return '';
+                    return '<div style="margin:0 0 16px;padding:12px 16px;background:#f3f4f6;border-left:4px solid #9ca3af;border-radius:4px;white-space:pre-line;">' + escape(t) + '</div>';
+                },
+                get vorschau() { return vorlage.split(marke).join(this.block(this.nachricht)); },
+            };
+        }
+
         function terminplan(start) {
             const min = (u) => { const m = /^(\d{1,2}):(\d{2})$/.exec(u || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };
             const uhr = (n) => String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0');
