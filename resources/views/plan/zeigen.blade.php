@@ -386,7 +386,7 @@
              @teilnahme-absagen.window="offen = true; $nextTick(() => ($refs.nachricht || $refs.grund).focus())" @keydown.escape.window="offen = false">
             <div x-show="offen" x-cloak class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center"
                  @click.self="offen = false">
-                <form method="POST" action="{{ route('module.elternsprechtag.plan.teilnahme', $ziel) }}" class="w-full {{ $ausfall ? 'max-w-5xl' : 'max-w-lg' }} rounded-xl bg-white p-5 shadow-xl">
+                <form method="POST" action="{{ route('module.elternsprechtag.plan.teilnahme', $ziel) }}" class="w-full {{ $ausfall ? 'max-w-7xl' : 'max-w-lg' }} rounded-xl bg-white p-5 shadow-xl">
                     @csrf
                     <input type="hidden" name="absagen" value="1">
                     <div class="flex items-center justify-between gap-2">
@@ -399,7 +399,7 @@
                             <strong class="text-red-700">{{ $plan->termine->count() === 1 ? 'Der gebuchte Termin wird' : 'Die '.$plan->termine->count().' gebuchten Termine werden' }} abgesagt, die Eltern bekommen eine Mail.</strong>
                         @endif
                     </p>
-                    <div class="mt-4 grid grid-cols-1 gap-4 {{ $ausfall ? 'lg:grid-cols-2' : '' }}">
+                    <div class="mt-4 grid grid-cols-1 gap-4 {{ $ausfall ? 'lg:grid-cols-3' : '' }}">
                         <div>
                             @if ($ausfall)
                                 <label class="block text-sm"><span class="text-gray-600">Nachricht an die Eltern (optional, erscheint in der Mail)</span>
@@ -410,10 +410,10 @@
                                 <textarea name="grund" rows="3" maxlength="500" x-ref="grund" class="mt-1 w-full rounded-lg border-gray-300 text-sm"></textarea></label>
                         </div>
                         @if ($ausfall)
-                            <div class="min-w-0">
+                            <div class="min-w-0 lg:col-span-2">
                                 <div class="text-sm text-gray-600">Vorschau der Mail{{ $ausfall['eltern'] > 1 ? ' – eine von '.$ausfall['eltern'].', jede mit den eigenen Terminen' : '' }}</div>
                                 <div class="mt-1 rounded-t-lg border border-b-0 border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"><span class="text-gray-500">Betreff:</span> {{ $ausfall['betreff'] }}</div>
-                                <iframe :srcdoc="vorschau" class="h-96 w-full rounded-b-lg border border-gray-200 bg-white" title="Mailvorschau"></iframe>
+                                <iframe :srcdoc="vorschau" style="height: 65vh" class="w-full rounded-b-lg border border-gray-200 bg-white" title="Mailvorschau"></iframe>
                             </div>
                         @elseif ($plan->termine->isNotEmpty())
                             <p class="text-sm text-amber-800">Für die betroffenen Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.</p>
