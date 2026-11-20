@@ -178,6 +178,9 @@ class ElternController
                     $mailer->senden(
                         ElternsprechtagServiceProvider::VORLAGE_ELTERN_ABSAGE, $eintrag['lehrer']->email, $html, $text,
                         quelle: 'Elternsprechtag-Elternabsage', referenz: 'elternsprechtag-elternabsage:'.$sprechtag->id.':'.$eltern->id, modul: 'Elternsprechtag',
+                        // Antworten der Lehrkraft gehen direkt an die Eltern – nur echte Adressen.
+                        antwortAn: filled($eltern->email) && ! str_ends_with(mb_strtolower($eltern->email), '.intern')
+                            ? [$eltern->email, ElternAbsage::natuerlich($eltern->name)] : null,
                     );
                     $gemailt++;
                 } catch (\Throwable $e) {

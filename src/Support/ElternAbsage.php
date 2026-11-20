@@ -90,8 +90,6 @@ class ElternAbsage
             'name' => self::natuerlich($lehrer->name),
             'sprechtag' => $sprechtag->titel,
             'eltern' => self::natuerlich($eltern->name),
-            'email' => (string) $eltern->email,
-            'link' => route('module.elternsprechtag.plan.zeigen', $sprechtag),
         ];
 
         $html = array_map('e', $basis) + [
