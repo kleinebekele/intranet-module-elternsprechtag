@@ -282,7 +282,7 @@ class PlanController
 
         $tage = $plan->tage->filter(fn ($pt) => $pt->tag !== null)->sortBy(fn ($pt) => $pt->tag->datum)->map(function ($pt) use ($plan) {
             $termine = $plan->termine->where('tag_id', $pt->tag_id)->keyBy('von');
-            $raster = collect(Slots::raster($plan, $pt));
+            $raster = collect(Slots::raster($plan, $pt))->reject(fn ($s) => $s['status'] === 'aus' && ! $plan->termine->where('tag_id', $pt->tag_id)->contains('von', $s['von']));
             $zeilen = $raster->map(fn ($s) => $s + [
                 'termin' => $termine->get($s['von']),
                 // Markierte, nicht gebuchte Zeiten erscheinen wie eine Pause, mit ihrer Bezeichnung.
@@ -325,13 +325,21 @@ class PlanController
         $lehrer = $this->lehrer($request, $sprechtag);
         abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
 
-        // Einheitliches Raster: Dauer und Zeiten legt das Sekretariat fest.
+        // Einheitliches Raster: Dauer legt das Sekretariat fest. Beginn und Ende darf die
+        // Lehrkraft im Rahmen des Tages wählen – solange in ihrem Plan noch nichts gebucht ist.
         if ($sprechtag->einheitlich()) {
+            $bisher = Plan::with(['tage', 'termine'])->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->first();
+            $fest = $bisher !== null && $bisher->termine->isNotEmpty();
             $tage = (array) $request->input('tage', []);
             foreach ($sprechtag->tage as $t) {
-                $tage[$t->id] = ['von' => $t->standard_von, 'bis' => $t->standard_bis] + (array) ($tage[$t->id] ?? []);
-                $tage[$t->id]['von'] = $t->standard_von;
-                $tage[$t->id]['bis'] = $t->standard_bis;
+                $alt = $bisher?->tage->firstWhere('tag_id', $t->id);
+                $tage[$t->id] = (array) ($tage[$t->id] ?? []);
+                $rahmen = [Slots::minuten($t->standard_von) ?? 0, Slots::minuten($t->standard_bis) ?? 24 * 60];
+                $von = $fest ? ($alt->von ?? $t->standard_von) : ($tage[$t->id]['von'] ?? $t->standard_von);
+                $bis = $fest ? ($alt->bis ?? $t->standard_bis) : ($tage[$t->id]['bis'] ?? $t->standard_bis);
+                // Auf den Tag begrenzen.
+                $tage[$t->id]['von'] = Slots::uhrzeit(max($rahmen[0], min($rahmen[1], Slots::minuten($von) ?? $rahmen[0])));
+                $tage[$t->id]['bis'] = Slots::uhrzeit(max($rahmen[0], min($rahmen[1], Slots::minuten($bis) ?? $rahmen[1])));
             }
             $request->merge(['slot_minuten' => $sprechtag->slot_minuten, 'vorbereitung_minuten' => 0, 'tage' => $tage]);
         }
@@ -523,6 +531,9 @@ class PlanController
 
         if (Termin::where(['plan_id' => $plan->id, 'tag_id' => $pt->tag_id, 'von' => $daten['von']])->exists()) {
             return response()->json(['message' => 'Der Termin ist schon gebucht – bitte erst absagen.'], 422);
+        }
+        if (collect(Slots::raster($plan, $pt))->firstWhere('von', $daten['von'])['status'] === 'aus') {
+            return response()->json(['message' => 'Die Uhrzeit liegt außerhalb deiner Zeiten – bitte Beginn bzw. Ende anpassen.'], 422);
         }
         if (collect(Slots::raster($plan, $pt))->firstWhere('von', $daten['von'])['status'] === 'dazu') {
             return response()->json(['message' => 'Zu der Zeit bist du bei einer Kollegin dazugebucht – das bitte dort zurücknehmen.'], 422);

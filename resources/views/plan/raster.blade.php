@@ -21,7 +21,10 @@
         <div class="mt-2 flex flex-wrap gap-1.5">
             @foreach ($raster as $s)
                 @php $termin = $termine->get($s['von']); @endphp
-                @if (! $termin && $s['status'] === 'dazu')
+                @if (! $termin && $s['status'] === 'aus')
+                    <span class="rounded-lg border border-dashed border-gray-200 px-2 py-1 text-xs tabular-nums text-gray-300"
+                          title="außerhalb deiner Zeiten (Beginn/Ende)">{{ $s['von'] }} nicht da</span>
+                @elseif (! $termin && $s['status'] === 'dazu')
                     <span class="rounded-lg border border-indigo-300 bg-indigo-50 px-2 py-1 text-xs tabular-nums text-indigo-900"
                           title="{{ $s['hinweis'] ?? '' }}">{{ $s['von'] }} <span class="font-medium">dazugebucht</span></span>
                 @elseif ($termin)

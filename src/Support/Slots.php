@@ -16,7 +16,7 @@ use Intranet\Modules\Elternsprechtag\Models\PlanTag;
 class Slots
 {
     /** Markierungen im einheitlichen Raster (Schlüssel = gespeicherter Wert). */
-    public const STATUS = ['frei' => 'frei', 'telefon' => 'Telefon', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve', 'dazu' => 'dazugebucht'];
+    public const STATUS = ['frei' => 'frei', 'telefon' => 'Telefon', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve', 'dazu' => 'dazugebucht', 'aus' => 'nicht da'];
 
     /** Was die Lehrkraft selbst wählen kann („dazu" entsteht durch Dazubuchen). */
     public const MARKIERBAR = ['frei' => 'frei', 'telefon' => 'Telefon', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
@@ -76,7 +76,11 @@ class Slots
             $markiert = (array) ($tag->markierungen ?? []);
             $slots = self::berechnen((string) ($tag->tag->standard_von ?: $tag->von), (string) ($tag->tag->standard_bis ?: $tag->bis),
                 (int) $sprechtag->slot_minuten, 0, []);
-            $slots = array_map(fn (array $s) => $s + ['status' => isset(self::MARKIERBAR[$markiert[$s['von']] ?? '']) ? $markiert[$s['von']] : 'frei'], $slots);
+            // Eigene Zeiten der Lehrkraft (Beginn/Ende im Plan): was außerhalb liegt, ist „nicht da".
+            $von = self::minuten($tag->von) ?? 0;
+            $bis = self::minuten($tag->bis) ?? 24 * 60;
+            $slots = array_map(fn (array $s) => $s + ['status' => self::minuten($s['von']) < $von || self::minuten($s['bis']) > $bis ? 'aus'
+                : (isset(self::MARKIERBAR[$markiert[$s['von']] ?? '']) ? $markiert[$s['von']] : 'frei')], $slots);
         } else {
             $slots = array_map(fn (array $s) => $s + ['status' => 'frei'],
                 self::berechnen($tag->von, $tag->bis, (int) $plan->slot_minuten, (int) $plan->vorbereitung_minuten, $tag->pausenListe()));

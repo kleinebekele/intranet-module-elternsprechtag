@@ -17,8 +17,8 @@
             ] : [
                 // Neuer Plan: alle Tage mit den Vorschlagszeiten angehakt.
                 'dabei' => $pt !== null || ! $plan->exists,
-                'von' => $sprechtag->einheitlich() ? ($t->standard_von ?? '08:00') : ($pt->von ?? $t->standard_von ?? '08:00'),
-                'bis' => $sprechtag->einheitlich() ? ($t->standard_bis ?? '15:00') : ($pt->bis ?? $t->standard_bis ?? '15:00'),
+                'von' => $pt->von ?? $t->standard_von ?? '08:00',
+                'bis' => $pt->bis ?? $t->standard_bis ?? '15:00',
                 'pausen' => $pt?->pausenListe() ?? [],
             ]];
         }),
@@ -258,7 +258,7 @@
                         </label>
                         @if ($sprechtag->einheitlich())
                             @php $ptZ = $plan->exists ? $plan->tage->firstWhere('tag_id', $t->id) : null; @endphp
-                            <span class="text-sm text-gray-500" x-show="tage[id].dabei">{{ $t->standard_von }}–{{ $t->standard_bis }} Uhr @if ($ptZ) · {{ count(\Intranet\Modules\Elternsprechtag\Support\Slots::fuer($plan, $ptZ)) }} buchbar @endif</span>
+                            <span class="text-sm text-gray-500" x-show="tage[id].dabei">@if ($ptZ) {{ count(\Intranet\Modules\Elternsprechtag\Support\Slots::fuer($plan, $ptZ)) }} buchbar @endif</span>
                         @else
                         <span class="text-sm text-gray-500" x-show="tage[id].dabei"><span x-text="slots(id).length"></span> Termine</span>
                         @endif
@@ -266,6 +266,18 @@
                     </div>
 
                     @if ($sprechtag->einheitlich())
+                        @php $zeitenFest = $plan->termine->isNotEmpty(); @endphp
+                        <div x-show="tage[id].dabei" class="mt-3 flex flex-wrap items-end gap-2 text-sm">
+                            <label class="block"><span class="text-gray-600">Beginn</span>
+                                <input type="time" name="tage[{{ $t->id }}][von]" x-model="tage[id].von" min="{{ $t->standard_von }}" max="{{ $t->standard_bis }}" step="{{ (int) $sprechtag->slot_minuten * 60 }}"
+                                       @disabled($zeitenFest) class="mt-1 rounded-lg border-gray-300 text-sm {{ $zeitenFest ? 'bg-gray-100 text-gray-500' : '' }}"></label>
+                            <label class="block"><span class="text-gray-600">Ende</span>
+                                <input type="time" name="tage[{{ $t->id }}][bis]" x-model="tage[id].bis" min="{{ $t->standard_von }}" max="{{ $t->standard_bis }}" step="{{ (int) $sprechtag->slot_minuten * 60 }}"
+                                       @disabled($zeitenFest) class="mt-1 rounded-lg border-gray-300 text-sm {{ $zeitenFest ? 'bg-gray-100 text-gray-500' : '' }}"></label>
+                            <span class="pb-2 text-xs text-gray-500">
+                                {{ $zeitenFest ? 'Fest, weil schon Termine gebucht sind – einzelne Zeiten unten markieren.' : 'im Rahmen von '.$t->standard_von.'–'.$t->standard_bis.' Uhr · danach speichern' }}
+                            </span>
+                        </div>
                         @include('elternsprechtag::plan.raster')
                     @else
                     <div x-show="tage[id].dabei" class="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
