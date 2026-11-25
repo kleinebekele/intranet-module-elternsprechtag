@@ -242,10 +242,18 @@
                             <input type="checkbox" name="tage[{{ $t->id }}][dabei]" value="1" x-model="tage[id].dabei" class="rounded border-gray-300">
                             <span class="text-base font-semibold text-gray-800">{{ $t->beschriftung() }}</span>
                         </label>
+                        @if ($sprechtag->einheitlich())
+                            @php $ptZ = $plan->exists ? $plan->tage->firstWhere('tag_id', $t->id) : null; @endphp
+                            <span class="text-sm text-gray-500" x-show="tage[id].dabei">{{ $t->standard_von }}–{{ $t->standard_bis }} Uhr @if ($ptZ) · {{ count(\Intranet\Modules\Elternsprechtag\Support\Slots::fuer($plan, $ptZ)) }} buchbar @endif</span>
+                        @else
                         <span class="text-sm text-gray-500" x-show="tage[id].dabei"><span x-text="slots(id).length"></span> Termine</span>
+                        @endif
                         <span class="text-sm text-gray-400" x-show="! tage[id].dabei">nicht dabei</span>
                     </div>
 
+                    @if ($sprechtag->einheitlich())
+                        @include('elternsprechtag::plan.raster')
+                    @else
                     <div x-show="tage[id].dabei" class="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div>
                             <div class="flex flex-wrap items-end gap-2">
@@ -304,6 +312,7 @@
                             </div>
                         </div>
                     </div>
+                    @endif
                 </div>
             @endforeach
         </div>

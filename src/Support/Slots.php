@@ -15,17 +15,39 @@ use Intranet\Modules\Elternsprechtag\Models\PlanTag;
  */
 class Slots
 {
-    /** @return list<array{von: string, bis: string}> */
+    /** Markierungen im einheitlichen Raster (Schlüssel = gespeicherter Wert). */
+    public const STATUS = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
+
+    /**
+     * Buchbare Termine eines Tages (Status „frei").
+     *
+     * @return list<array{von: string, bis: string, status: string}>
+     */
     public static function fuer(Plan $plan, PlanTag $tag): array
     {
-        // Einheitliches Raster: Zeiten des Tages und Dauer des Sprechtags, keine Vorbereitung.
+        return array_values(array_filter(self::raster($plan, $tag), fn (array $s) => $s['status'] === 'frei'));
+    }
+
+    /**
+     * Alle Termine eines Tages mit Status. Einheitliches Raster: Zeiten des Tages
+     * und Dauer des Sprechtags, keine Vorbereitung, statt Pausen-Zeiträumen die
+     * Markierung je Uhrzeit. Sonst: eigene Zeiten und Pausen der Lehrkraft, alles frei.
+     *
+     * @return list<array{von: string, bis: string, status: string}>
+     */
+    public static function raster(Plan $plan, PlanTag $tag): array
+    {
         $sprechtag = $plan->sprechtag;
         if ($sprechtag?->einheitlich() && $tag->tag) {
-            return self::berechnen((string) ($tag->tag->standard_von ?: $tag->von), (string) ($tag->tag->standard_bis ?: $tag->bis),
-                (int) $sprechtag->slot_minuten, 0, $tag->pausenListe());
+            $markiert = (array) ($tag->markierungen ?? []);
+            $slots = self::berechnen((string) ($tag->tag->standard_von ?: $tag->von), (string) ($tag->tag->standard_bis ?: $tag->bis),
+                (int) $sprechtag->slot_minuten, 0, []);
+
+            return array_map(fn (array $s) => $s + ['status' => isset(self::STATUS[$markiert[$s['von']] ?? '']) ? $markiert[$s['von']] : 'frei'], $slots);
         }
 
-        return self::berechnen($tag->von, $tag->bis, (int) $plan->slot_minuten, (int) $plan->vorbereitung_minuten, $tag->pausenListe());
+        return array_map(fn (array $s) => $s + ['status' => 'frei'],
+            self::berechnen($tag->von, $tag->bis, (int) $plan->slot_minuten, (int) $plan->vorbereitung_minuten, $tag->pausenListe()));
     }
 
     /**

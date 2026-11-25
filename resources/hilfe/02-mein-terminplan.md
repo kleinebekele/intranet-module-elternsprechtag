@@ -44,6 +44,20 @@ Je Tag des Sprechtags:
 Rechts siehst du sofort, welche Termine sich daraus ergeben. Ein Gespräch, das in eine Pause
 ragen würde, rückt hinter die Pause; eines, das über das Ende hinausginge, entfällt.
 
+## Einzelne Termine: frei, Pause, gesperrt, Reserve
+
+Gibt es eine Gesprächsdauer für alle, stehen bei jedem Tag alle Uhrzeiten. Ein Klick auf eine
+Uhrzeit öffnet die Auswahl:
+
+- **frei** – Eltern können buchen.
+- **Pause** – für dich, z. B. Essen oder ein kurzes Gespräch unter Kollegen.
+- **gesperrt** – du bist zu der Zeit nicht da (z. B. kommst später).
+- **Reserve** – vorerst nicht buchbar.
+
+Das geht bis zum Elternsprechtag, auch nach der Frist und dem Veröffentlichen – gespeichert wird
+sofort. Gebuchte Termine lassen sich so nicht ändern; die musst du erst absagen. In der
+Terminliste stehen Pause, gesperrt und Reserve mit ihrer Bezeichnung.
+
 ## Gemeinsame Gespräche mit der zweiten Klassenlehrkraft
 
 Hat deine Klasse zwei Klassenlehrkräfte, steht im linken Kasten **Gemeinsame Gespräche**. Dort

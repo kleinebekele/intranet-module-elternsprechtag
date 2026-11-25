@@ -112,6 +112,8 @@ class PlanController
             'wuensche' => $plan->wuensche->keyBy('kind_user_id'),
             'darfAendern' => Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer),
             'darfAbsagen' => ! $plan->abgesagt() && Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer),
+            // Raster markieren: wie Absagen bis zum Ende des Sprechtags.
+            'darfMarkieren' => ! $plan->abgesagt() && Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer),
             // Mailvorschau fürs Absage-Fenster (erstes betroffenes Elternteil).
             'ausfall' => $plan->abgesagt() ? null : Ausfall::vorschau($sprechtag, $lehrer->name, $plan->termine),
             'verwaltung' => Rechte::istVerwaltung($request->user()),
@@ -209,15 +211,21 @@ class PlanController
     /** Inhalt der Terminliste eines Lehrers – auch für die Mail mit PDF (Support\Lehrerinfo). */
     public function terminliste(User $lehrer, Sprechtag $sprechtag): array
     {
-        $plan =Plan::with(['tage.tag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
+        $plan = Plan::with(['tage.tag', 'sprechtag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
             ->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
 
         $tage = $plan->tage->filter(fn ($pt) => $pt->tag !== null)->sortBy(fn ($pt) => $pt->tag->datum)->map(function ($pt) use ($plan) {
             $termine = $plan->termine->where('tag_id', $pt->tag_id)->keyBy('von');
-            $zeilen = collect(Slots::fuer($plan, $pt))->map(fn ($s) => $s + ['termin' => $termine->get($s['von']), 'pause' => false])
-                ->concat(collect($pt->pausenListe())->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis'], 'termin' => null, 'pause' => true]))
+            $raster = collect(Slots::raster($plan, $pt));
+            $zeilen = $raster->map(fn ($s) => $s + [
+                'termin' => $termine->get($s['von']),
+                // Markierte, nicht gebuchte Zeiten erscheinen wie eine Pause, mit ihrer Bezeichnung.
+                'pause' => $s['status'] !== 'frei' && ! $termine->has($s['von']),
+                'label' => Slots::STATUS[$s['status']] ?? 'Pause',
+            ])
+                ->concat($plan->sprechtag?->einheitlich() ? collect() : collect($pt->pausenListe())->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis'], 'termin' => null, 'pause' => true, 'label' => 'Pause']))
                 // Termine, die nicht mehr zu den Zeiten passen, trotzdem aufführen.
-                ->concat($termine->reject(fn ($t, $von) => collect(Slots::fuer($plan, $pt))->contains('von', $von))
+                ->concat($termine->reject(fn ($t, $von) => $raster->contains('von', $von))
                     ->map(fn ($t) => ['von' => $t->von, 'bis' => $t->bis, 'termin' => $t, 'pause' => false]))
                 ->sortBy('von')->values();
 
@@ -334,7 +342,7 @@ class PlanController
                     ->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis']])
                     ->sortBy('von')->values()->all();
 
-                $plan->tage()->updateOrCreate(['tag_id' => $tagId], ['von' => $t['von'], 'bis' => $t['bis'], 'pausen' => $pausen]);
+                $plan->tage()->updateOrCreate(['tag_id' => $tagId], ['von' => $t['von'], 'bis' => $t['bis'], 'pausen' => $sprechtag->einheitlich() ? [] : $pausen]);
             }
 
             $plan->wuensche()->whereNotIn('kind_user_id', $wuensche)->delete();
@@ -403,6 +411,49 @@ class PlanController
             ->with('status', 'Termin abgesagt: '.$text.'.'.($ohneMail ? ' Es wurde keine Mail verschickt.' : ($benachrichtigt
                 ? ' Die Eltern bekommen eine Mail.'
                 : ' Für die Eltern ist keine Mailadresse hinterlegt – bitte selbst Bescheid geben.')));
+    }
+
+    /**
+     * Einheitliches Raster: einen Termin als frei, Pause, gesperrt oder Reserve
+     * markieren – bis zum Ende des Sprechtags, auch nach Frist und Veröffentlichung
+     * (kurzfristige kollegiale Gespräche). Gebuchte Termine bleiben unberührt.
+     */
+    public function markieren(Request $request, Sprechtag $sprechtag): \Illuminate\Http\JsonResponse
+    {
+        $lehrer = $this->lehrer($request, $sprechtag);
+        abort_unless($sprechtag->einheitlich(), 404);
+        abort_unless(Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer), 403, 'Der Sprechtag ist vorbei.');
+
+        $daten = $request->validate([
+            'tag_id' => ['required', 'integer'],
+            'von' => ['required', 'date_format:H:i'],
+            'status' => ['required', Rule::in(array_keys(Slots::STATUS))],
+        ]);
+        $plan = Plan::with(['tage.tag', 'sprechtag'])->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
+        $pt = $plan->tage->firstWhere('tag_id', (int) $daten['tag_id']);
+        abort_if($pt === null || ! collect(Slots::raster($plan, $pt))->contains('von', $daten['von']), 422, 'Diese Uhrzeit gibt es im Raster nicht.');
+
+        if (Termin::where(['plan_id' => $plan->id, 'tag_id' => $pt->tag_id, 'von' => $daten['von']])->exists()) {
+            return response()->json(['message' => 'Der Termin ist schon gebucht – bitte erst absagen.'], 422);
+        }
+
+        $markiert = (array) ($pt->markierungen ?? []);
+        if ($daten['status'] === 'frei') {
+            unset($markiert[$daten['von']]);
+        } else {
+            $markiert[$daten['von']] = $daten['status'];
+        }
+        ksort($markiert);
+        $pt->update(['markierungen' => $markiert ?: null]);
+        \Intranet\Modules\Elternsprechtag\Support\Lehrerinfo::pruefen([$plan->id]);
+
+        if (class_exists(\App\Support\Audit::class)) {
+            \App\Support\Audit::schreiben('elternsprechtag.markiert', $sprechtag->titel, betroffener: $lehrer,
+                daten: ['sprechtag' => $sprechtag->id, 'slot' => $pt->tag_id.'|'.$daten['von'], 'status' => $daten['status']],
+                ziel: "Elternsprechtag {$sprechtag->id}");
+        }
+
+        return response()->json(['ok' => true, 'status' => $daten['status']]);
     }
 
     /**

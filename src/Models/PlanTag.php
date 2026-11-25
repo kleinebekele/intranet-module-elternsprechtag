@@ -14,7 +14,7 @@ class PlanTag extends Model
 
     protected function casts(): array
     {
-        return ['pausen' => 'array'];
+        return ['pausen' => 'array', 'markierungen' => 'array'];
     }
 
     public function plan(): BelongsTo

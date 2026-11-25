@@ -81,7 +81,7 @@
             <tbody>
                 @foreach ($vorschau ? $t['zeilen'] : $zusammenfassen($t['zeilen']) as $z)
                     @if ($z['pause'])
-                        <tr class="pause">@if ($vorschau)<td></td>@endif<td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td><td colspan="4">Pause</td></tr>
+                        <tr class="pause">@if ($vorschau)<td></td>@endif<td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td><td colspan="4">{{ $z['label'] ?? 'Pause' }}</td></tr>
                     @elseif ($z['termin'])
                         <tr>
                             @if ($vorschau)
