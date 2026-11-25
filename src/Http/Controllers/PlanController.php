@@ -286,7 +286,7 @@ class PlanController
             $zeilen = $raster->map(fn ($s) => $s + [
                 'termin' => $termine->get($s['von']),
                 // Markierte, nicht gebuchte Zeiten erscheinen wie eine Pause, mit ihrer Bezeichnung.
-                'pause' => $s['status'] !== 'frei' && ! $termine->has($s['von']),
+                'pause' => ! in_array($s['status'], Slots::BUCHBAR, true) && ! $termine->has($s['von']),
                 'label' => $s['hinweis'] ?? (Slots::STATUS[$s['status']] ?? 'Pause'),
             ])
                 ->concat($plan->sprechtag?->einheitlich() ? collect() : collect($pt->pausenListe())->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis'], 'termin' => null, 'pause' => true, 'label' => 'Pause']))

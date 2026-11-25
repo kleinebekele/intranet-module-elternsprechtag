@@ -84,11 +84,12 @@ und niemand kommt mit einer alten Fassung. Ab dann stehen dort die Knöpfe **Als
 
 ## Telefontermin
 
-Sie können ein Gespräch auch am Telefon führen. Setzen Sie beim Buchen unter **Manuelle Termine**
-den Haken **als Telefontermin** und tragen Sie die Nummer ein, unter der Sie zur Uhrzeit erreichbar
-sind – die Lehrkraft ruft Sie dann an. Einen schon gebuchten Termin stellen Sie mit **als
-Telefontermin** um; **Nummer ändern** und **lieber vor Ort** gibt es dort ebenfalls. Die Nummer
-sehen nur die Lehrkraft und das Sekretariat.
+Manche Lehrkräfte bieten einzelne Uhrzeiten als **Telefontermin** an – in der Auswahl steht dann
+„· Telefontermin“ hinter der Uhrzeit. Wählen Sie so eine Uhrzeit, tragen Sie im Feld
+**Telefonnummer** ein, unter der Sie erreichbar sind; die Lehrkraft ruft Sie an. Ohne Nummer lässt
+sich ein Telefontermin nicht buchen. Bei einem gebuchten Telefontermin können Sie die **Nummer
+ändern**. Die Nummer sehen nur die Lehrkraft und das Sekretariat. Der Termin-Assistent plant nur
+Gespräche vor Ort – Telefontermine buchen Sie unter **Manuelle Termine**.
 
 ## Umbuchen und absagen
 

@@ -16,10 +16,13 @@ use Intranet\Modules\Elternsprechtag\Models\PlanTag;
 class Slots
 {
     /** Markierungen im einheitlichen Raster (Schlüssel = gespeicherter Wert). */
-    public const STATUS = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve', 'dazu' => 'dazugebucht'];
+    public const STATUS = ['frei' => 'frei', 'telefon' => 'Telefon', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve', 'dazu' => 'dazugebucht'];
 
     /** Was die Lehrkraft selbst wählen kann („dazu" entsteht durch Dazubuchen). */
-    public const MARKIERBAR = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
+    public const MARKIERBAR = ['frei' => 'frei', 'telefon' => 'Telefon', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
+
+    /** Buchbare Status: „frei" vor Ort, „telefon" nur als Telefontermin. */
+    public const BUCHBAR = ['frei', 'telefon'];
 
     /**
      * Buchbare Termine eines Tages: „frei" – und „Reserve", sobald alle übrigen
@@ -32,7 +35,7 @@ class Slots
         $raster = self::raster($plan, $tag);
         $reserve = in_array('backup', array_column($raster, 'status'), true) && self::reserveOffen($plan);
 
-        return array_values(array_filter($raster, fn (array $s) => $s['status'] === 'frei' || ($reserve && $s['status'] === 'backup')));
+        return array_values(array_filter($raster, fn (array $s) => in_array($s['status'], self::BUCHBAR, true) || ($reserve && $s['status'] === 'backup')));
     }
 
     /**
@@ -49,7 +52,7 @@ class Slots
             }
             $vergeben = $plan->termine->where('tag_id', $pt->tag_id)->pluck('von')->all();
             foreach (self::raster($plan, $pt) as $s) {
-                if ($s['status'] === 'frei' && ! in_array($s['von'], $vergeben, true)
+                if (in_array($s['status'], self::BUCHBAR, true) && ! in_array($s['von'], $vergeben, true)
                     && $pt->tag->datum->copy()->setTimeFromTimeString($s['von'])->isFuture()) {
                     return false;
                 }
@@ -86,7 +89,7 @@ class Slots
                 $a = self::minuten($s['von']);
                 $e = self::minuten($s['bis']);
                 $t = $dazu->first(fn ($d) => self::minuten($d->von) < $e && $a < self::minuten($d->bis));
-                if ($t && in_array($s['status'], ['frei', 'backup'], true)) {
+                if ($t && in_array($s['status'], ['frei', 'telefon', 'backup'], true)) {
                     $s['status'] = 'dazu';
                     $s['hinweis'] = 'dabei bei '.Namen::anzeige($t->plan?->user?->name).' ('.Namen::anzeige($t->kind?->name).($t->ort() !== '' ? ', Raum '.$t->ort() : '').')';
                 }

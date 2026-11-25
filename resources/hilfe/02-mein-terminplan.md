@@ -50,6 +50,8 @@ Gibt es eine Gesprächsdauer für alle, stehen bei jedem Tag alle Uhrzeiten. Ein
 Uhrzeit öffnet die Auswahl:
 
 - **frei** – Eltern können buchen.
+- **Telefon** – Eltern können buchen, aber nur als Telefontermin; sie geben dabei ihre Nummer an,
+  und du rufst sie an (hellblau).
 - **Pause** – für dich, z. B. Essen oder ein kurzes Gespräch unter Kollegen.
 - **gesperrt** – du bist zu der Zeit nicht da (z. B. kommst später).
 - **Reserve** – wird erst buchbar, wenn alle deine freien Termine vergeben sind. Wird danach ein

@@ -131,6 +131,8 @@ class Team
             ->filter(fn ($s, $k) => $je->every(fn ($liste) => $liste->has($k)))
             ->map(fn ($s, $k) => [
                 'frei' => $s['frei'] && $je->every(fn ($liste) => $liste[$k]['frei']),
+                // Bietet eine der Lehrkräfte die Uhrzeit nur am Telefon an, ist das ganze Gespräch telefonisch.
+                'telefon' => ($s['telefon'] ?? false) || $je->contains(fn ($liste) => $liste[$k]['telefon'] ?? false),
                 'familie' => ($s['frei'] || $s['familie']) && $je->every(fn ($liste) => $liste[$k]['frei'] || $liste[$k]['familie'])
                     && ($s['familie'] || $je->contains(fn ($liste) => $liste[$k]['familie'])),
             ] + $s)

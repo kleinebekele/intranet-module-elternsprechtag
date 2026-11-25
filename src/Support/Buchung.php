@@ -168,6 +168,8 @@ class Buchung
                     'von' => $s['von'],
                     'bis' => $s['bis'],
                     'frei' => $offen && ! $belegt,
+                    // Von der Lehrkraft als Telefon angeboten: nur als Telefontermin buchbar.
+                    'telefon' => ($s['status'] ?? '') === 'telefon',
                     // Bei der Lehrkraft frei, aber die Familie hat zur selben Zeit schon ein Gespräch.
                     'familie' => $offen && $belegt,
                 ];

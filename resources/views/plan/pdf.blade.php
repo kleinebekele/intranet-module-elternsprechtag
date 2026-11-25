@@ -10,7 +10,7 @@
         foreach ($zeilen as $z) {
             $frei = ! $z['pause'] && ! $z['termin'];
             $letzte = end($aus);
-            if ($frei && $letzte && ($letzte['frei'] ?? false)) {
+            if ($frei && $letzte && ($letzte['frei'] ?? false) && ($letzte['status'] ?? 'frei') === ($z['status'] ?? 'frei')) {
                 $aus[array_key_last($aus)]['bis'] = $z['bis'];
                 $aus[array_key_last($aus)]['anzahl']++;
             } else {
@@ -136,7 +136,7 @@
                         <tr>
                             @if ($vorschau)<td></td>@endif
                             <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
-                            <td class="frei" colspan="3">frei @if (($z['anzahl'] ?? 1) > 1)({{ $z['anzahl'] }} Termine)@endif</td>
+                            <td class="frei" colspan="3">frei{{ ($z['status'] ?? '') === 'telefon' ? ' · Telefon' : '' }} @if (($z['anzahl'] ?? 1) > 1)({{ $z['anzahl'] }} Termine)@endif</td>
                             <td class="notiz"></td>
                         </tr>
                     @endif

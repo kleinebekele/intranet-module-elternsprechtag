@@ -225,24 +225,18 @@
                                     <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
                                         <span class="font-medium text-green-800">Ihr {{ $termin->telefon ? 'Telefontermin' : 'Termin' }}: {{ $termin->tag?->beschriftung() }}, {{ $termin->von }}–{{ $termin->bis }} Uhr @if ($l['team'] && ! $termin->gruppe) <span class="font-normal">(nur bei {{ \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($l['team']->firstWhere('id', $termin->plan_id)?->user?->name) }})</span>@endif</span>
                                         @if ($darfBuchen)
-                                            <div x-data="{ auf: false }" class="flex flex-wrap items-center gap-2">
-                                                @if ($termin->telefon)
-                                                    <span class="text-xs text-gray-600"><i class="bx bx-phone align-middle"></i> {{ $termin->telefon }}</span>
-                                                @endif
-                                                <button type="button" @click="auf = ! auf" class="text-xs text-indigo-700 hover:underline">{{ $termin->telefon ? 'Nummer ändern' : 'als Telefontermin' }}</button>
-                                                @if ($termin->telefon)
-                                                    <form method="POST" action="{{ route('module.elternsprechtag.eltern.telefon', [$termin] + $als) }}">
+                                            @if ($termin->telefon)
+                                                <div x-data="{ auf: false }" class="flex flex-wrap items-center gap-2">
+                                                    <span class="text-xs text-sky-700"><i class="bx bx-phone align-middle"></i> {{ $termin->telefon }}</span>
+                                                    <button type="button" @click="auf = ! auf" class="text-xs text-indigo-700 hover:underline">Nummer ändern</button>
+                                                    <form x-show="auf" x-cloak method="POST" action="{{ route('module.elternsprechtag.eltern.telefon', [$termin] + $als) }}" class="flex items-center gap-1">
                                                         @csrf @method('PATCH')
-                                                        <button type="submit" class="text-xs text-indigo-700 hover:underline">lieber vor Ort</button>
+                                                        <input type="tel" name="telefon" required maxlength="30" value="{{ $termin->telefon !== 'Nummer folgt' ? $termin->telefon : $telefonVorschlag }}"
+                                                               placeholder="Ihre Telefonnummer" class="w-40 rounded-lg border-gray-300 py-1 text-xs">
+                                                        <button type="submit" class="rounded-lg bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700">Speichern</button>
                                                     </form>
-                                                @endif
-                                                <form x-show="auf" x-cloak method="POST" action="{{ route('module.elternsprechtag.eltern.telefon', [$termin] + $als) }}" class="flex items-center gap-1">
-                                                    @csrf @method('PATCH')
-                                                    <input type="tel" name="telefon" required maxlength="30" value="{{ $termin->telefon ?? $telefonVorschlag }}"
-                                                           placeholder="Ihre Telefonnummer" class="w-40 rounded-lg border-gray-300 py-1 text-xs">
-                                                    <button type="submit" class="rounded-lg bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700">Speichern</button>
-                                                </form>
-                                            </div>
+                                                </div>
+                                            @endif
                                             <form method="POST" action="{{ route('module.elternsprechtag.eltern.absagen', [$termin] + $als) }}"
                                                   data-bestaetigen="Den Termin bei {{ $l['namen'] }} wirklich absagen?"
                                                   data-titel="Termin absagen" data-knopf="Absagen">
@@ -285,12 +279,14 @@
                                                 'name' => 'slot',
                                                 'optionen' => $freie->map(fn ($sl) => [
                                                     'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
-                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''), 'gruppe' => $sl['tag'],
+                                                    'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : '').(($sl['telefon'] ?? false) ? ' · Telefontermin' : ''), 'gruppe' => $sl['tag'],
                                                 ])->values()->all(),
                                                 'leer' => 'Uhrzeit wählen …',
                                                 'breite' => 'w-56',
                                             ])
-                                            @include('elternsprechtag::eltern.telefon', ['nummer' => $telefonVorschlag, 'an' => (bool) $termin?->telefon])
+                                            @if ($freie->contains('telefon', true))
+                                                @include('elternsprechtag::eltern.telefon', ['nummer' => $telefonVorschlag])
+                                            @endif
                                             <button type="submit" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
                                                 {{ $termin ? 'Umbuchen' : 'Buchen' }}
                                             </button>

@@ -89,7 +89,7 @@ class ElternController
             'plan_id' => $eintrag['plan']->id,
             'slots' => collect($eintrag['slots'])->where('frei', true)->map(fn ($sl) => [
                 'wert' => $sl['tag_id'].'|'.$sl['von'].(isset($sl['plan']) ? '|'.$sl['plan'] : ''),
-                'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : ''),
+                'text' => $sl['von'].'–'.$sl['bis'].' Uhr'.(isset($sl['nur']) ? ' (nur '.$sl['nur'].')' : '').(($sl['telefon'] ?? false) ? ' · Telefon' : ''),
                 'tag' => $sl['tag'],
             ])->values(),
         ]);
@@ -293,7 +293,7 @@ class ElternController
 
                     return (! $f[0] || $s['von'] >= $f[0]) && (! $f[1] || $s['bis'] <= $f[1]);
                 });
-                $slots = $imFenster->where('frei', true)
+                $slots = $imFenster->where('frei', true)->where('telefon', false)
                     ->map(fn ($s) => array_intersect_key($s, array_flip(['tag_id', 'tag', 'von', 'bis', 'plan', 'nur'])))->values()->all();
                 $wuensche[] = ['key' => $key, 'prio' => $prio, 'lehrer' => $l['plan']->user_id, 'slots' => $slots];
 
@@ -390,6 +390,15 @@ class ElternController
         if ($slot === null || (! $slot['frei'] && ! $gleich)) {
             return [false, 'Diese Uhrzeit ist nicht mehr frei oder überschneidet sich mit einem anderen Ihrer Termine.'];
         }
+        // Telefontermin legt die Lehrkraft fest (Raster „Telefon"); dann braucht es eine Nummer.
+        if (! ($slot['telefon'] ?? false)) {
+            $telefon = null;
+        } elseif ($telefon === null) {
+            if (! Rechte::istVerwaltung($request->user())) {
+                return [false, 'Um '.$slot['von'].' Uhr ist ein Telefontermin – bitte geben Sie Ihre Telefonnummer an.'];
+            }
+            $telefon = 'Nummer folgt';
+        }
 
         try {
             DB::transaction(function () use ($alt, $plaene, $tagId, $slot, $kindId, $eltern, $request, $allein, $telefon, $sprechtag) {
@@ -447,17 +456,17 @@ class ElternController
         if (! Rechte::istVerwaltung($request->user()) && ($sprechtag->buchungGeschlossen() || $termin->beginn()->isPast())) {
             return $this->zurueckManuell($request, $eltern, $sprechtag)->with('error', 'Die Terminbuchung ist geschlossen. Bitte geben Sie der Lehrkraft direkt Bescheid.');
         }
-        $daten = $request->validate(['telefon' => ['nullable', 'string', 'max:30', 'regex:/^[0-9 +()\/\-]{5,30}$/']], ['telefon.regex' => 'Bitte eine gültige Telefonnummer angeben.']);
-        $telefon = trim((string) ($daten['telefon'] ?? '')) ?: null;
+        abort_if($termin->telefon === null, 404);
+        $daten = $request->validate(['telefon' => ['required', 'string', 'max:30', 'regex:/^[0-9 +()\/\-]{5,30}$/']], ['telefon.regex' => 'Bitte eine gültige Telefonnummer angeben.']);
+        $telefon = trim((string) $daten['telefon']);
 
         $gruppe = $termin->gruppeTermine();
         Termin::whereIn('id', $gruppe->pluck('id'))->update(['telefon' => $telefon]);
         Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
         $this->audit('elternsprechtag.telefon', $sprechtag, $eltern, ['termin' => $termin->id, 'telefon' => $telefon !== null]);
 
-        return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', $telefon
-            ? 'Der Termin '.$termin->beschriftung().' ist jetzt ein Telefontermin – die Lehrkraft ruft Sie unter '.$telefon.' an.'
-            : 'Der Termin '.$termin->beschriftung().' findet wieder vor Ort statt.');
+        return $this->zurueckManuell($request, $eltern, $sprechtag)
+            ->with('status', 'Für den Telefontermin '.$termin->beschriftung().' ruft die Lehrkraft Sie unter '.$telefon.' an.');
     }
 
     public function absagen(Request $request, Termin $termin): RedirectResponse

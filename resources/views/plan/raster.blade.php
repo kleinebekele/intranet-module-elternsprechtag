@@ -15,7 +15,7 @@
 @endphp
 <div x-show="tage[id].dabei" class="mt-3">
         <p class="text-xs text-gray-500">
-            Klick auf eine Uhrzeit: <strong>frei</strong> (buchbar), <strong>Pause</strong>, <strong>gesperrt</strong> (z. B. später da)
+            Klick auf eine Uhrzeit: <strong>frei</strong> (buchbar), <strong>Telefon</strong> (nur als Telefontermin buchbar), <strong>Pause</strong>, <strong>gesperrt</strong> (z. B. später da)
             oder <strong>Reserve</strong> (wird erst buchbar, wenn alle freien Termine vergeben sind). Gebuchte Termine lassen sich hier nicht ändern.
         </p>
         <div class="mt-2 flex flex-wrap gap-1.5">
@@ -33,7 +33,8 @@
                              @if ($darfMarkieren) @click="auf = ! auf" @keydown.enter.prevent="auf = ! auf" @endif
                              class="select-none rounded-lg border px-2 py-1 text-xs tabular-nums {{ $darfMarkieren ? 'cursor-pointer' : 'cursor-default' }}"
                              :class="{ 'border-gray-300 bg-white text-gray-800': s === 'frei', 'border-gray-300 bg-gray-200 text-gray-600': s === 'pause',
-                                       'border-red-300 bg-red-50 text-red-800': s === 'gesperrt', 'border-amber-300 bg-amber-50 text-amber-900': s === 'backup' }">
+                                       'border-red-300 bg-red-50 text-red-800': s === 'gesperrt', 'border-amber-300 bg-amber-50 text-amber-900': s === 'backup',
+                                       'border-sky-300 bg-sky-50 text-sky-900': s === 'telefon' }">
                             {{ $s['von'] }} <span class="font-medium" x-text="@js($stati)[s]"></span>
                         </div>
                         @if ($darfMarkieren)
