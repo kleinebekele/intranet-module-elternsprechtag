@@ -25,7 +25,7 @@
                           title="{{ $s['hinweis'] ?? '' }}">{{ $s['von'] }} <span class="font-medium">dazugebucht</span></span>
                 @elseif ($termin)
                     <span class="rounded-lg border border-green-300 bg-green-50 px-2 py-1 text-xs tabular-nums text-green-900"
-                          title="gebucht: {{ $nv($termin->kind?->name) }}">{{ $s['von'] }} <span class="font-medium">gebucht</span></span>
+                          title="gebucht: {{ $nv($termin->kind?->name) }}@if ($termin->telefon) · Telefontermin {{ $termin->telefon }}@endif">{{ $s['von'] }} <span class="font-medium">gebucht</span>@if ($termin->telefon) <i class="bx bx-phone align-middle"></i>@endif</span>
                 @else
                     <div class="relative" x-data="{ s: @js($s['status']), auf: false, fehler: '' }" @click.outside="auf = false">
                         <div role="button" tabindex="0"

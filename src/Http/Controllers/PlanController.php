@@ -170,7 +170,7 @@ class PlanController
                     'sort' => $gruppe->first()->tag?->datum?->format('Y-m-d').' '.$gruppe->first()->von,
                     'zeit' => $gruppe->first()->tag?->beschriftung().', '.$gruppe->first()->von.'–'.$gruppe->first()->bis.' Uhr',
                     'namen' => $gruppe->map(fn (Termin $t) => Namen::anzeige($t->plan?->user?->name))->filter()->join(' & '),
-                    'raum' => $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->join(', '),
+                    'raum' => $gruppe->first()->telefon ? 'Telefon' : $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->join(', '),
                     'eigen' => $gruppe->contains(fn (Termin $t) => (int) $t->plan?->user_id === $lehrer->id),
                     'termin' => $gruppe->first(),
                     'dazu' => $gruppe->first()->dazu->contains('id', $lehrer->id),

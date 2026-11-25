@@ -31,7 +31,7 @@
                             <td class="py-2 align-top">
                                 @forelse ($z['termine'] as $t)
                                     <div class="{{ $t['eigen'] ? 'text-green-800' : 'text-gray-800' }}">
-                                        <span class="tabular-nums">{{ $t['zeit'] }}</span> · {{ $t['namen'] }}@if ($t['raum']) <span class="text-gray-500">· Raum {{ $t['raum'] }}</span>@endif
+                                        <span class="tabular-nums">{{ $t['zeit'] }}</span> · {{ $t['namen'] }}@if ($t['raum'] === 'Telefon') <span class="text-indigo-700">· <i class="bx bx-phone align-middle"></i> Telefontermin</span>@elseif ($t['raum']) <span class="text-gray-500">· Raum {{ $t['raum'] }}</span>@endif
                                         @if ($t['eigen'])
                                             <span class="text-xs text-green-700">(bei dir)</span>
                                         @elseif ($t['dazu'])

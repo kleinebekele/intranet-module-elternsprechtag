@@ -28,14 +28,14 @@
         <p class="leer">Sie haben noch keine Termine gebucht.</p>
     @else
         <table>
-            <thead><tr><th>Wann</th><th>Lehrkraft</th><th>Für</th><th>Raum</th></tr></thead>
+            <thead><tr><th>Wann</th><th>Lehrkraft</th><th>Für</th><th>Raum / Telefon</th></tr></thead>
             <tbody>
                 @foreach ($eintraege as $e)
                     <tr>
                         <td class="zeit">{{ $e['tag'] }}<br>{{ $e['von'] }}–{{ $e['bis'] }} Uhr</td>
                         <td>{{ $e['lehrer'] }}</td>
                         <td>{{ $e['kind'] }} <span style="color:#6b7280;">(Klasse {{ $e['klasse'] }})</span></td>
-                        <td>{{ $e['raum'] ?: '–' }}</td>
+                        <td>@if (($e['telefon'] ?? '') !== '') Telefontermin<br><span style="color:#6b7280;">Sie werden unter {{ $e['telefon'] }} angerufen</span>@else {{ $e['raum'] ?: '–' }}@endif</td>
                     </tr>
                 @endforeach
             </tbody>

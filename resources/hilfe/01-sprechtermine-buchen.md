@@ -82,6 +82,14 @@ Die Liste **zum Ausdrucken (PDF)** gibt es erst nach dem Buchungsschluss – dan
 und niemand kommt mit einer alten Fassung. Ab dann stehen dort die Knöpfe **Als PDF ansehen**,
 **Herunterladen** und **Per Mail schicken**.
 
+## Telefontermin
+
+Sie können ein Gespräch auch am Telefon führen. Setzen Sie beim Buchen unter **Manuelle Termine**
+den Haken **als Telefontermin** und tragen Sie die Nummer ein, unter der Sie zur Uhrzeit erreichbar
+sind – die Lehrkraft ruft Sie dann an. Einen schon gebuchten Termin stellen Sie mit **als
+Telefontermin** um; **Nummer ändern** und **lieber vor Ort** gibt es dort ebenfalls. Die Nummer
+sehen nur die Lehrkraft und das Sekretariat.
+
 ## Umbuchen und absagen
 
 Absagen können Sie direkt oben in Ihrer Terminliste oder auf dem Reiter **Manuelle Termine**;

@@ -39,6 +39,7 @@ class Elternliste
                     'klasse' => implode(', ', $z['klassen']),
                     'lehrer' => $lehrer,
                     'raum' => (string) ($plan instanceof Plan ? $plan->raum : ''),
+                    'telefon' => (string) ($t->telefon ?? ''),
                 ];
             }))
             ->sortBy(fn ($e) => $e['datum'].' '.$e['von'])
@@ -78,9 +79,10 @@ class Elternliste
         $pfad = $ordner.'/termine-'.$sprechtag->id.'-'.$eltern->id.'.pdf';
         file_put_contents($pfad, self::pdf($eltern, $sprechtag));
 
-        $text = $eintraege->map(fn ($e) => $e['tag'].', '.$e['von'].'–'.$e['bis'].' Uhr: '.$e['lehrer'].' für '.$e['kind'].($e['raum'] !== '' ? ' (Raum '.$e['raum'].')' : ''))->join("\n");
+        $ort = fn ($e) => $e['telefon'] !== '' ? ' (Telefontermin, Sie werden unter '.$e['telefon'].' angerufen)' : ($e['raum'] !== '' ? ' (Raum '.$e['raum'].')' : '');
+        $text = $eintraege->map(fn ($e) => $e['tag'].', '.$e['von'].'–'.$e['bis'].' Uhr: '.$e['lehrer'].' für '.$e['kind'].$ort($e))->join("\n");
         $html = '<ul style="margin:0;padding-left:20px;">'.$eintraege->map(fn ($e) => '<li><strong>'.e($e['tag'].', '.$e['von'].'–'.$e['bis'].' Uhr')
-            .'</strong>: '.e($e['lehrer']).' für '.e($e['kind']).($e['raum'] !== '' ? ' (Raum '.e($e['raum']).')' : '').'</li>')->join('').'</ul>';
+            .'</strong>: '.e($e['lehrer']).' für '.e($e['kind']).e($ort($e)).'</li>')->join('').'</ul>';
 
         $werte = [
             'name' => $eltern->name,

@@ -53,4 +53,5 @@ Route::middleware(['web', 'auth'])
         Route::post('termine/{sprechtag}/keine-zeit', [ElternController::class, 'keineZeit'])->name('eltern.keinezeit');
         Route::post('termine/{sprechtag}/teilnahme', [ElternController::class, 'teilnahmeAbsagen'])->name('eltern.teilnahme');
         Route::delete('termine/termin/{termin}', [ElternController::class, 'absagen'])->name('eltern.absagen');
+        Route::patch('termine/termin/{termin}/telefon', [ElternController::class, 'telefon'])->name('eltern.telefon');
     });

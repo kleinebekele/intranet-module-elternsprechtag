@@ -120,6 +120,9 @@ Sobald Eltern buchen:
 - Dort kannst du einen einzelnen Termin **absagen**, solange er noch nicht begonnen hat. Die Eltern
   bekommen automatisch eine E-Mail und können neu buchen.
 
+Telefontermine erkennst du am Hörer-Symbol; in der Terminliste steht „Telefontermin“ mit der Nummer,
+unter der du die Eltern anrufst.
+
 ## Terminliste ausdrucken
 
 Das rote **PDF-Symbol** im blauen Kasten lädt deine Terminliste herunter: je Tag alle Uhrzeiten

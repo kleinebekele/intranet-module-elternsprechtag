@@ -61,6 +61,7 @@ class ElternController
             'vorschlaege' => $sprechtage->mapWithKeys(fn ($z) => [$z['sprechtag']->id => session($this->vorschlagSchluessel($z['sprechtag'], $eltern))]),
             'personen' => $verwaltung ? $this->alleEltern() : collect(),
             'keineZeit' => DB::table('elternsprechtag_besuche')->where('user_id', $eltern->id)->whereNotNull('keine_zeit_am')->get()->keyBy('sprechtag_id'),
+            'telefonVorschlag' => $this->telefonVorschlag($eltern),
         ]);
     }
 
@@ -219,14 +220,16 @@ class ElternController
             'plan_id' => ['required', 'integer'],
             'kind_id' => ['required', 'integer'],
             'slot' => ['required', 'string', 'regex:/^\d+\|\d{2}:\d{2}(\|\d+)?$/'],
-        ], ['slot.required' => 'Bitte eine Uhrzeit auswählen.']);
+            'telefon' => ['nullable', 'string', 'max:30', 'regex:/^[0-9 +()\/\-]{5,30}$/'],
+        ], ['slot.required' => 'Bitte eine Uhrzeit auswählen.', 'telefon.regex' => 'Bitte eine gültige Telefonnummer angeben.']);
 
         if (! $verwaltung && ! Buchung::offen($sprechtag, $eltern)) {
             return $this->zurueck($request, $eltern)->with('error', 'Die Buchung ist für Sie noch nicht geöffnet.');
         }
 
         [$tagId, $von, $nurPlan] = explode('|', $daten['slot']) + [2 => null];
-        $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, (int) $daten['plan_id'], (int) $daten['kind_id'], (int) $tagId, $von, $nurPlan !== null ? (int) $nurPlan : null);
+        $ergebnis = $this->einenBuchen($request, $eltern, $sprechtag, (int) $daten['plan_id'], (int) $daten['kind_id'], (int) $tagId, $von, $nurPlan !== null ? (int) $nurPlan : null,
+            trim((string) ($daten['telefon'] ?? '')) ?: null);
         abort_if($ergebnis === null, 404);
 
         // Gebucht aus der Sprechtag-Übersicht (Wunschgespräche) → dorthin zurück.
@@ -366,7 +369,7 @@ class ElternController
      *
      * @return array{0: bool, 1: string}|null
      */
-    private function einenBuchen(Request $request, User $eltern, Sprechtag $sprechtag, int $planId, int $kindId, int $tagId, string $von, ?int $nurPlan = null): ?array
+    private function einenBuchen(Request $request, User $eltern, Sprechtag $sprechtag, int $planId, int $kindId, int $tagId, string $von, ?int $nurPlan = null, ?string $telefon = null): ?array
     {
         $eintrag = Buchung::angebot($eltern, $sprechtag)->first(fn ($z) => $z['kind']->id === $kindId)['lehrer']
             ?->first(fn ($l) => $l['plan']->id === $planId);
@@ -389,7 +392,7 @@ class ElternController
         }
 
         try {
-            DB::transaction(function () use ($alt, $plaene, $tagId, $slot, $kindId, $eltern, $request, $allein) {
+            DB::transaction(function () use ($alt, $plaene, $tagId, $slot, $kindId, $eltern, $request, $allein, $telefon) {
                 // Auch die Gruppen-Partner eines alten gemeinsamen Termins mitnehmen.
                 $alt->each(fn (Termin $t) => $t->absagenMitGruppe());
                 $gruppe = $plaene->count() > 1 ? (string) Str::uuid() : null;
@@ -404,6 +407,7 @@ class ElternController
                         'gebucht_von' => $request->user()->id,
                         'gruppe' => $gruppe,
                         'allein' => $allein,
+                        'telefon' => $telefon,
                     ]);
                 }
             });
@@ -415,14 +419,41 @@ class ElternController
 
         $this->audit('elternsprechtag.termin', $sprechtag, $eltern, [
             'lehrer' => $plaene->pluck('user_id')->all(), 'kind' => $kindId, 'slot' => $tagId.'|'.$von, 'umgebucht' => $alt->isNotEmpty(), 'allein' => $allein,
+            'telefon' => $telefon !== null,
         ]);
 
-        return [true, 'Termin bei '.($allein ? $slot['nur'] : $eintrag['namen']).' gebucht: '.$slot['tag'].', '.$slot['von'].' Uhr.'];
+        return [true, ($telefon ? 'Telefontermin' : 'Termin').' bei '.($allein ? $slot['nur'] : $eintrag['namen']).' gebucht: '.$slot['tag'].', '.$slot['von'].' Uhr.'];
     }
 
     private function vorschlagSchluessel(Sprechtag $sprechtag, User $eltern): string
     {
         return 'elternsprechtag.vorschlag.'.$sprechtag->id.'.'.$eltern->id;
+    }
+
+    /**
+     * Gebuchten Termin auf Telefon umstellen (mit Nummer) bzw. zurück auf vor Ort –
+     * bei einem gemeinsamen Gespräch für alle Beteiligten.
+     */
+    public function telefon(Request $request, Termin $termin): RedirectResponse
+    {
+        $eltern = $this->eltern($request);
+        $termin->load(['plan.sprechtag', 'tag']);
+        $sprechtag = $termin->plan->sprechtag;
+        abort_unless(Buchung::kinder($eltern, $sprechtag)->contains(fn ($z) => $z['kind']->id === (int) $termin->kind_user_id), 404);
+        if (! Rechte::istVerwaltung($request->user()) && ($sprechtag->buchungGeschlossen() || $termin->beginn()->isPast())) {
+            return $this->zurueckManuell($request, $eltern, $sprechtag)->with('error', 'Die Terminbuchung ist geschlossen. Bitte geben Sie der Lehrkraft direkt Bescheid.');
+        }
+        $daten = $request->validate(['telefon' => ['nullable', 'string', 'max:30', 'regex:/^[0-9 +()\/\-]{5,30}$/']], ['telefon.regex' => 'Bitte eine gültige Telefonnummer angeben.']);
+        $telefon = trim((string) ($daten['telefon'] ?? '')) ?: null;
+
+        $gruppe = $termin->gruppeTermine();
+        Termin::whereIn('id', $gruppe->pluck('id'))->update(['telefon' => $telefon]);
+        Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
+        $this->audit('elternsprechtag.telefon', $sprechtag, $eltern, ['termin' => $termin->id, 'telefon' => $telefon !== null]);
+
+        return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', $telefon
+            ? 'Der Termin '.$termin->beschriftung().' ist jetzt ein Telefontermin – die Lehrkraft ruft Sie unter '.$telefon.' an.'
+            : 'Der Termin '.$termin->beschriftung().' findet wieder vor Ort statt.');
     }
 
     public function absagen(Request $request, Termin $termin): RedirectResponse
@@ -450,6 +481,12 @@ class ElternController
         $this->audit('elternsprechtag.absage', $sprechtag, $eltern, ['lehrer' => $lehrer, 'kind' => $termin->kind_user_id, 'ohne_mail' => $ohneMail]);
 
         return $this->zurueckManuell($request, $eltern, $sprechtag)->with('status', 'Termin abgesagt: '.$text.'.'.($ohneMail ? ' Es wurde keine Mail verschickt.' : ''));
+    }
+
+    /** Zuletzt bei einem Telefontermin angegebene Nummer dieses Elternteils – als Vorschlag. */
+    private function telefonVorschlag(User $eltern): string
+    {
+        return (string) Termin::where('eltern_user_id', $eltern->id)->whereNotNull('telefon')->latest('updated_at')->value('telefon');
     }
 
     /** Wer bucht? Man selbst – oder für die Verwaltung das Elternteil aus `?eltern=`. */

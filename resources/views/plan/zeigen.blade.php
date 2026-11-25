@@ -27,7 +27,7 @@
             $t->von => [
                 'kind' => $nv($t->kind?->name),
                 'eltern' => $t->eltern ? $nv($t->eltern->name) : 'Eltern',
-                'zusatz' => trim(($t->gruppe ? 'gemeinsam mit '.($team['partnerVon'][$t->gruppe] ?? '') : '')
+                'zusatz' => trim(($t->telefon ? 'Telefontermin: '.$t->telefon.' ' : '').($t->gruppe ? 'gemeinsam mit '.($team['partnerVon'][$t->gruppe] ?? '') : '')
                     .($t->allein ? 'nur bei '.($fremd ? $nv($lehrer->name) : 'dir') : '')),
                 'wunsch' => $wuensche->has($t->kind_user_id),
             ],
