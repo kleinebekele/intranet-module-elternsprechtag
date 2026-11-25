@@ -38,7 +38,7 @@ class Elternliste
                     'kind' => Namen::vorname($z['kind']->name),
                     'klasse' => implode(', ', $z['klassen']),
                     'lehrer' => $lehrer,
-                    'raum' => (string) ($plan instanceof Plan ? $plan->raum : ''),
+                    'raum' => (string) ($t->raum ?: ($plan instanceof Plan ? $plan->raum : '')),
                     'telefon' => (string) ($t->telefon ?? ''),
                 ];
             }))

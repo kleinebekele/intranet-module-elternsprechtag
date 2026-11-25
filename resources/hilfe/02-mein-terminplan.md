@@ -74,6 +74,11 @@ Vorbereitungszeit** sind für euch gleich und werden beim Speichern für beide �
 Ende und Pausen trägt jede selbst ein. Gemeinsam buchbar sind die Uhrzeiten, die bei euch beiden
 genau gleich liegen; der Kasten zeigt, wie viele das sind.
 
+Unter **Raum für gemeinsame Gespräche** wählt ihr, in wessen Raum sie stattfinden (eigener oder der
+der Kollegin). Das gilt für alle gemeinsamen Termine der Klasse, auch die schon gebuchten. Einzelne
+Termine könnt ihr in der Terminliste (Auge) abweichend auf einen anderen eurer Räume setzen – die
+behalten dann ihren Raum, auch wenn ihr die Raumwahl später ändert.
+
 Die Eltern sehen euch als eine Karte und buchen einmal – der Termin steht dann in beiden Plänen,
 in der Liste mit „gemeinsam mit …“. Sagt eine von euch ab, fällt der Termin für beide weg.
 

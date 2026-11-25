@@ -38,7 +38,7 @@
                                     <span class="ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-xs font-medium text-white">{{ $p['team'] ? 'Klassenlehrkräfte gemeinsam' : 'Klassenlehrkraft' }}</span>
                                 @endif
                             </div>
-                            <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!} · Klasse {{ $p['klasse'] }}@if ($p['plan']->raum) · Raum {{ $p['plan']->raum }}@endif
+                            <div class="text-xs text-gray-500">für {!! $kn($p['kind']) !!} · Klasse {{ $p['klasse'] }}@if ($p['termin']?->raum ?: $p['plan']->raum) · Raum {{ $p['termin']?->raum ?: $p['plan']->raum }}@endif
                                 @if ($p['wunsch'] && ! $p['termin']) · <span class="text-indigo-700">möchte Sie gern sprechen</span>@endif</div>
                         </div>
                         @if ($p['termin'])

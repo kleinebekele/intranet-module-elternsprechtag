@@ -192,6 +192,16 @@
                             </label>
                         @endforeach
                     </div>
+                    @php $raumWahl = old('team_raum.'.$klasse, $tk['raumVon'] ?? $tk['raeume']->filter()->keys()->first()); @endphp
+                    <div class="mt-3 font-medium text-indigo-900">Raum für gemeinsame Gespräche</div>
+                    <div class="mt-1 space-y-1">
+                        @foreach ($tk['raeume'] as $uid => $r)
+                            <label class="flex items-center gap-2 {{ filled($r) ? '' : 'text-gray-400' }}">
+                                <input type="radio" name="team_raum[{{ $klasse }}]" value="{{ $uid }}" @checked((int) $raumWahl === (int) $uid) @disabled(blank($r)) class="border-gray-300">
+                                {{ (int) $uid === $lehrer->id ? ($fremd ? $nv($lehrer->name) : 'eigener Raum') : $nv($tk['partner']->firstWhere('id', $uid)?->name) }}: {{ filled($r) ? $r : 'noch kein Raum eingetragen' }}
+                            </label>
+                        @endforeach
+                    </div>
                     <p class="mt-2 text-xs text-gray-600">Gesprächsdauer und Vorbereitungszeit gelten für alle Klassenlehrkräfte der Klasse und werden beim Speichern übernommen. Beginn, Ende und Pausen bleiben eigene Sache – gemeinsam buchbar sind die Uhrzeiten, die bei allen gleich liegen.</p>
                     <p class="mt-1 text-xs">
                         @if ($tk['ohnePlan']->isNotEmpty())

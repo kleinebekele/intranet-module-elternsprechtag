@@ -170,7 +170,7 @@ class PlanController
                     'sort' => $gruppe->first()->tag?->datum?->format('Y-m-d').' '.$gruppe->first()->von,
                     'zeit' => $gruppe->first()->tag?->beschriftung().', '.$gruppe->first()->von.'–'.$gruppe->first()->bis.' Uhr',
                     'namen' => $gruppe->map(fn (Termin $t) => Namen::anzeige($t->plan?->user?->name))->filter()->join(' & '),
-                    'raum' => $gruppe->first()->telefon ? 'Telefon' : $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->join(', '),
+                    'raum' => $gruppe->first()->telefon ? 'Telefon' : ($gruppe->first()->raum ?: $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->join(', ')),
                     'eigen' => $gruppe->contains(fn (Termin $t) => (int) $t->plan?->user_id === $lehrer->id),
                     'termin' => $gruppe->first(),
                     'dazu' => $gruppe->first()->dazu->contains('id', $lehrer->id),
@@ -205,6 +205,10 @@ class PlanController
             $klassen[$klasse] = [
                 'partner' => $users,
                 'modus' => $modi[$klasse] ?? 'wunsch',
+                'raumVon' => Klassenteam::where(['sprechtag_id' => $sprechtag->id, 'klasse' => $klasse])->value('raum_user_id'),
+                // Wählbare Räume: eigener und die der Partner (aus ihren Plänen).
+                'raeume' => collect([$lehrer->id => $plan->raum])
+                    ->union($partnerPlaene->whereIn('user_id', $users->pluck('id'))->mapWithKeys(fn (Plan $p) => [$p->user_id => $p->raum])),
                 'ohnePlan' => $users->reject(fn (User $u) => $partnerPlaene->contains('user_id', $u->id)),
                 'gemeinsam' => $plan->exists && $plaene->isNotEmpty() ? count(Team::slots(collect([$plan])->concat($plaene), collect())) : null,
             ];
@@ -308,6 +312,10 @@ class PlanController
             'wuensche' => $plan->wuensche->pluck('kind_user_id')->all(),
             'offeneWuensche' => $offeneWuensche,
             'partnerVon' => $team['partnerVon'],
+            // Gemeinsame Gespräche: Räume der beteiligten Lehrkräfte (zum Umschalten).
+            'raeume' => ($gr = $plan->termine->pluck('gruppe')->filter()->unique())->isEmpty() ? collect()
+                : Termin::with('plan')->whereIn('gruppe', $gr)->get()->groupBy('gruppe')
+                    ->map(fn ($ts) => $ts->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->values()->all()),
             'beiPartner' => $team['beiPartner'],
         ];
     }
@@ -347,6 +355,8 @@ class PlanController
             'notiz' => ['array'],
             'notiz.*' => ['nullable', 'string', 'max:255'],
             'team' => ['array'],
+            'team_raum' => ['array'],
+            'team_raum.*' => ['nullable', 'integer'],
             'team.*' => [Rule::in(array_keys(Team::MODI))],
         ], [
             '*.date_format' => 'Uhrzeiten bitte als HH:MM.',
@@ -416,9 +426,17 @@ class PlanController
                 $p->update(['slot_minuten' => $daten['slot_minuten'], 'vorbereitung_minuten' => $daten['vorbereitung_minuten']]);
             }
             foreach (array_intersect_key($daten['team'] ?? [], $partner) as $klasse => $modus) {
-                Klassenteam::updateOrCreate(['sprechtag_id' => $sprechtag->id, 'klasse' => (string) $klasse], ['modus' => $modus]);
+                $wer = (int) ($daten['team_raum'][$klasse] ?? 0);
+                $erlaubt = collect($partner[$klasse])->pluck('id')->push($lehrer->id)->contains($wer);
+                Klassenteam::updateOrCreate(['sprechtag_id' => $sprechtag->id, 'klasse' => (string) $klasse],
+                    ['modus' => $modus] + ($erlaubt ? ['raum_user_id' => $wer] : []));
             }
         });
+
+        // Raum der schon gebuchten gemeinsamen Gespräche nachziehen (Raumwahl oder eigener Raum geändert).
+        foreach (array_keys($partner) as $klasse) {
+            Team::raumAktualisieren($sprechtag, (string) $klasse);
+        }
 
         if (class_exists(\App\Support\Audit::class)) {
             \App\Support\Audit::schreiben('elternsprechtag.plan', $sprechtag->titel, betroffener: $lehrer,
@@ -572,6 +590,36 @@ class PlanController
         }
 
         return $zurueck->with('status', $text.$termin->beschriftung().' bei '.Namen::anzeige($termin->plan->user?->name).' ('.Namen::anzeige($termin->kind?->name).').');
+    }
+
+    /**
+     * Gemeinsames Gespräch: Raum auf den einer der beteiligten Lehrkräfte setzen –
+     * für alle Termine der Gruppe. Dürfen die beteiligten Lehrkräfte und die Verwaltung.
+     */
+    public function raum(Request $request, Termin $termin): RedirectResponse
+    {
+        $termin->load(['plan.sprechtag', 'kind.roles']);
+        $sprechtag = $termin->plan->sprechtag;
+        $lehrer = $this->lehrer($request, $sprechtag);
+        abort_if($termin->gruppe === null, 404);
+        $gruppe = $termin->gruppeTermine()->load('plan');
+        abort_unless($gruppe->contains(fn (Termin $t) => (int) $t->plan?->user_id === $lehrer->id), 404);
+
+        $raeume = $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->values()->all();
+        $raum = (string) $request->validate(['raum' => ['required', 'string', Rule::in($raeume)]])['raum'];
+        // Abweichend, wenn nicht der Standardraum der Klasse – dann überschreibt eine spätere Raumwahl ihn nicht.
+        $klassen = array_values(array_intersect(Klassen::vonKind($termin->kind), $sprechtag->klassenListe()));
+        $standard = Team::raum($sprechtag, $klassen, $gruppe->pluck('plan')->filter());
+        Termin::where('gruppe', $termin->gruppe)->update(['raum' => $raum, 'raum_abweichend' => $raum !== $standard]);
+        \Intranet\Modules\Elternsprechtag\Support\Lehrerinfo::pruefen($gruppe->pluck('plan_id'));
+
+        if (class_exists(\App\Support\Audit::class)) {
+            \App\Support\Audit::schreiben('elternsprechtag.raum', $sprechtag->titel, betroffener: $lehrer,
+                daten: ['sprechtag' => $sprechtag->id, 'termin' => $termin->id, 'raum' => $raum], ziel: "Elternsprechtag {$sprechtag->id}");
+        }
+
+        return redirect()->to($this->zurueck($sprechtag, $lehrer, $request))
+            ->with('status', 'Raum für das gemeinsame Gespräch '.$termin->beschriftung().': '.$raum.'.');
     }
 
     /**

@@ -66,7 +66,7 @@
                         @php
                             $t = $x['termin']; $l = $x['l'];
                             $nur = $l['team'] && ! $t->gruppe ? \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($l['team']->firstWhere('id', $t->plan_id)?->user?->name) : null;
-                            $raum = $t->plan?->raum ?: $l['plan']->raum;
+                            $raum = $t->raum ?: ($t->plan?->raum ?: $l['plan']->raum);
                         @endphp
                         <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 py-2">
                             <span>
@@ -207,8 +207,8 @@
                                             <div class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Klassenlehrkräfte · gemeinsames Gespräch</div>
                                         @endif
                                         <div class="{{ $l['klassenlehrer'] ? 'text-base font-semibold' : 'font-medium' }} text-gray-800">{{ $l['namen'] }}</div>
-                                        @if ($plan->raum)
-                                            <div class="text-xs text-gray-500">Raum: {{ $plan->raum }}</div>
+                                        @if ($termin?->raum ?: $plan->raum)
+                                            <div class="text-xs text-gray-500">Raum: {{ $termin?->raum ?: $plan->raum }}</div>
                                         @endif
                                     </div>
                                     @if ($nichtsFrei)

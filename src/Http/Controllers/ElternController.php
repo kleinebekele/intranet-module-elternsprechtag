@@ -392,10 +392,13 @@ class ElternController
         }
 
         try {
-            DB::transaction(function () use ($alt, $plaene, $tagId, $slot, $kindId, $eltern, $request, $allein, $telefon) {
+            DB::transaction(function () use ($alt, $plaene, $tagId, $slot, $kindId, $eltern, $request, $allein, $telefon, $sprechtag) {
                 // Auch die Gruppen-Partner eines alten gemeinsamen Termins mitnehmen.
                 $alt->each(fn (Termin $t) => $t->absagenMitGruppe());
                 $gruppe = $plaene->count() > 1 ? (string) Str::uuid() : null;
+                // Gemeinsames Gespräch: ein Raum für alle – den legen die Klassenlehrkräfte im Terminplan fest.
+                $raum = $gruppe ? \Intranet\Modules\Elternsprechtag\Support\Team::raum($sprechtag,
+                    array_values(array_intersect(Klassen::vonKind(User::findOrFail($kindId)), $sprechtag->klassenListe())), $plaene) : null;
                 foreach ($plaene as $plan) {
                     Termin::create([
                         'plan_id' => $plan->id,
@@ -408,6 +411,7 @@ class ElternController
                         'gruppe' => $gruppe,
                         'allein' => $allein,
                         'telefon' => $telefon,
+                        'raum' => $raum,
                     ]);
                 }
             });

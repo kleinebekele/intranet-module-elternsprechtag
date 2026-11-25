@@ -88,7 +88,7 @@ class Slots
                 $t = $dazu->first(fn ($d) => self::minuten($d->von) < $e && $a < self::minuten($d->bis));
                 if ($t && in_array($s['status'], ['frei', 'backup'], true)) {
                     $s['status'] = 'dazu';
-                    $s['hinweis'] = 'dabei bei '.Namen::anzeige($t->plan?->user?->name).' ('.Namen::anzeige($t->kind?->name).($t->plan?->raum ? ', Raum '.$t->plan->raum : '').')';
+                    $s['hinweis'] = 'dabei bei '.Namen::anzeige($t->plan?->user?->name).' ('.Namen::anzeige($t->kind?->name).($t->ort() !== '' ? ', Raum '.$t->ort() : '').')';
                 }
             }
             unset($s);

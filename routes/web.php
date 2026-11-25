@@ -39,6 +39,7 @@ Route::middleware(['web', 'auth'])
         Route::post('plan/{sprechtag}/teilnahme', [PlanController::class, 'teilnahme'])->name('plan.teilnahme');
         Route::post('plan/{sprechtag}/markieren', [PlanController::class, 'markieren'])->name('plan.markieren');
         Route::match(['post', 'delete'], 'plan/termin/{termin}/dazu', [PlanController::class, 'dazu'])->name('plan.dazu');
+        Route::post('plan/termin/{termin}/raum', [PlanController::class, 'raum'])->name('plan.raum');
         Route::delete('plan/termin/{termin}', [PlanController::class, 'absagen'])->name('plan.absagen');
         Route::post('plan/termin/{termin}/notiz', [PlanController::class, 'notiz'])->name('plan.notiz');
 

@@ -45,6 +45,12 @@ class Termin extends Model
         return $this->belongsTo(User::class, 'eltern_user_id');
     }
 
+    /** Wo das Gespräch stattfindet: festgelegter Raum (gemeinsame Gespräche), sonst der Raum aus dem Plan. */
+    public function ort(): string
+    {
+        return (string) ($this->raum ?: $this->plan?->raum);
+    }
+
     /** Lehrkräfte, die zu diesem Termin dazukommen (Tabelle elternsprechtag_dazu). */
     public function dazu(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {

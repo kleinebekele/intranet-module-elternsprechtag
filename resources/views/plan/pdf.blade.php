@@ -100,7 +100,22 @@
                             <td class="zeit">{{ $z['von'] }}–{{ $z['bis'] }}</td>
                             <td>{{ $nv($z['termin']->kind?->name) }}
                                 @if (in_array($z['termin']->kind_user_id, $wuensche)) <span class="wunsch">(Wunsch)</span> @endif
-                                @if ($z['termin']->gruppe) <span class="wunsch">(gemeinsam mit {{ $partnerVon[$z['termin']->gruppe] ?? '' }})</span> @endif
+                                @if ($z['termin']->gruppe) <span class="wunsch">(gemeinsam mit {{ $partnerVon[$z['termin']->gruppe] ?? '' }})</span>
+                                    @php $wahl = ($raeume ?? collect())->get($z['termin']->gruppe, []); @endphp
+                                    @if ($vorschau && count($wahl) > 1 && ! $z['termin']->telefon)
+                                        <form method="POST" target="_top" style="display:inline"
+                                              action="{{ route('module.elternsprechtag.plan.raum', [$z['termin'], ...$param]) }}">
+                                            @csrf
+                                            · Raum{{ $z['termin']->raum_abweichend ? ' (abweichend)' : '' }} <select name="raum" onchange="this.form.submit()" style="font-size:11px;padding:0 2px;">
+                                                @foreach ($wahl as $r)
+                                                    <option value="{{ $r }}" @selected($r === $z['termin']->ort())>{{ $r }}</option>
+                                                @endforeach
+                                            </select>
+                                        </form>
+                                    @elseif ($z['termin']->ort() !== '' && ! $z['termin']->telefon)
+                                        <strong>· Raum {{ $z['termin']->ort() }}</strong>
+                                    @endif
+                                @endif
                                 @if ($z['termin']->allein) <span class="wunsch">(nur hier – gemeinsam war nichts frei)</span> @endif
                                 @if ($z['termin']->telefon) <strong>· Telefontermin: {{ $z['termin']->telefon }}</strong> @endif
                                 @if ($z['termin']->relationLoaded('dazu') && $z['termin']->dazu->isNotEmpty()) <span class="wunsch">(+ {{ $z['termin']->dazu->map(fn ($u) => $nv($u->name))->join(', ') }} kommt dazu)</span> @endif

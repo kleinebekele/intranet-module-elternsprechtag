@@ -26,6 +26,38 @@ class Team
         'alle' => 'Alle Gespräche der Klasse',
     ];
 
+    /**
+     * Raum der gemeinsamen Gespräche: aus dem Plan der gewählten Klassenlehrkraft,
+     * sonst der erste eingetragene Raum der übergebenen Pläne.
+     *
+     * @param  iterable<Plan>  $plaene  Pläne der beteiligten Lehrkräfte
+     */
+    public static function raum(Sprechtag $sprechtag, array $klassen, iterable $plaene): ?string
+    {
+        $plaene = collect($plaene);
+        $wer = Klassenteam::where('sprechtag_id', $sprechtag->id)->whereIn('klasse', $klassen)->whereNotNull('raum_user_id')->value('raum_user_id');
+        $gewaehlt = $wer ? $plaene->firstWhere('user_id', $wer)?->raum : null;
+
+        return filled($gewaehlt) ? $gewaehlt : $plaene->pluck('raum')->first(fn ($r) => filled($r));
+    }
+
+    /**
+     * Raum aller gebuchten gemeinsamen Gespräche einer Klasse neu setzen – nach
+     * einer Änderung der Raumwahl oder des Raums einer Lehrkraft. Termine mit
+     * abweichend gesetztem Raum bleiben, wie sie sind.
+     */
+    public static function raumAktualisieren(Sprechtag $sprechtag, string $klasse): void
+    {
+        $kinder = Klassen::kinder([$klasse])->map(fn ($z) => $z['kind']->id);
+        $termine = \Intranet\Modules\Elternsprechtag\Models\Termin::with('plan')->whereNotNull('gruppe')->where('raum_abweichend', false)
+            ->whereIn('kind_user_id', $kinder)
+            ->whereHas('plan', fn ($q) => $q->where('sprechtag_id', $sprechtag->id))->get();
+        foreach ($termine->groupBy('gruppe') as $gruppe => $ts) {
+            $raum = self::raum($sprechtag, [$klasse], $ts->pluck('plan')->filter());
+            \Intranet\Modules\Elternsprechtag\Models\Termin::where('gruppe', $gruppe)->update(['raum' => $raum]);
+        }
+    }
+
     /** @return array<string, string>  Klasse => Modus */
     public static function modi(Sprechtag $sprechtag): array
     {
