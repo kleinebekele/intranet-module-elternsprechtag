@@ -45,6 +45,12 @@ class Termin extends Model
         return $this->belongsTo(User::class, 'eltern_user_id');
     }
 
+    /** Lehrkräfte, die zu diesem Termin dazukommen (Tabelle elternsprechtag_dazu). */
+    public function dazu(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'elternsprechtag_dazu', 'termin_id', 'user_id')->withTimestamps();
+    }
+
     /**
      * Alle Termine des gemeinsamen Gesprächs (mit Plan und Lehrer), sonst nur dieser.
      *

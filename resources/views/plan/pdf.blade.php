@@ -102,6 +102,7 @@
                                 @if (in_array($z['termin']->kind_user_id, $wuensche)) <span class="wunsch">(Wunsch)</span> @endif
                                 @if ($z['termin']->gruppe) <span class="wunsch">(gemeinsam mit {{ $partnerVon[$z['termin']->gruppe] ?? '' }})</span> @endif
                                 @if ($z['termin']->allein) <span class="wunsch">(nur hier – gemeinsam war nichts frei)</span> @endif
+                                @if ($z['termin']->relationLoaded('dazu') && $z['termin']->dazu->isNotEmpty()) <span class="wunsch">(+ {{ $z['termin']->dazu->map(fn ($u) => $nv($u->name))->join(', ') }} kommt dazu)</span> @endif
                             </td>
                             <td class="klasse">{{ $klasse($z['termin']->kind) }}</td>
                             <td>{{ $nv($z['termin']->eltern?->name) }}</td>

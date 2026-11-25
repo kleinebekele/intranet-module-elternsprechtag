@@ -45,7 +45,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             ->item('plan', 'Mein Terminplan', 'module.elternsprechtag.plan.index', icon: 'calendar')
             ->item('termine', 'Sprechtermine', 'module.elternsprechtag.eltern.index', icon: 'users')
             ->item('sprechtage', 'Einstellungen', 'module.elternsprechtag.sprechtage.index', icon: 'list')
-            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.markieren', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.teilnahme', 'eltern.keinezeit', 'eltern.liste', 'eltern.listemail', 'eltern.zeiten')
+            ->lesend('plan.zeigen', 'plan.pdf','plan.speichern', 'plan.abschliessen', 'plan.teilnahme', 'plan.markieren', 'plan.dazu', 'plan.absagen', 'plan.notiz','eltern.buchen', 'eltern.assistent', 'eltern.vorschlag', 'eltern.absagen', 'eltern.teilnahme', 'eltern.keinezeit', 'eltern.liste', 'eltern.listemail', 'eltern.zeiten')
             ->stufe(Zugriffsstufe::Verwalten, 'sprechtage.info');
     }
 
@@ -84,6 +84,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                 'elternsprechtag.absage_lehrer' => 'Elternsprechtag: Termin von der Lehrkraft abgesagt',
                 'elternsprechtag.freigabe' => 'Elternsprechtag: Terminplan freigegeben bzw. Freigabe zurückgenommen',
                 'elternsprechtag.teilnahme' => 'Elternsprechtag: Teilnahme abgesagt bzw. wieder zugesagt',
+                'elternsprechtag.dazu' => 'Elternsprechtag: Lehrkraft kommt zu einem Termin dazu bzw. nimmt es zurück',
                 'elternsprechtag.markiert' => 'Elternsprechtag: Termin als frei, Pause, gesperrt oder Reserve markiert',
                 'elternsprechtag.eltern_teilnahme' => 'Elternsprechtag: Eltern sagen ihre Teilnahme ab',
             ]);

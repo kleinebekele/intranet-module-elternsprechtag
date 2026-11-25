@@ -16,7 +16,10 @@ use Intranet\Modules\Elternsprechtag\Models\PlanTag;
 class Slots
 {
     /** Markierungen im einheitlichen Raster (Schlüssel = gespeicherter Wert). */
-    public const STATUS = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
+    public const STATUS = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve', 'dazu' => 'dazugebucht'];
+
+    /** Was die Lehrkraft selbst wählen kann („dazu" entsteht durch Dazubuchen). */
+    public const MARKIERBAR = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
 
     /**
      * Buchbare Termine eines Tages: „frei" – und „Reserve", sobald alle übrigen
@@ -70,12 +73,45 @@ class Slots
             $markiert = (array) ($tag->markierungen ?? []);
             $slots = self::berechnen((string) ($tag->tag->standard_von ?: $tag->von), (string) ($tag->tag->standard_bis ?: $tag->bis),
                 (int) $sprechtag->slot_minuten, 0, []);
-
-            return array_map(fn (array $s) => $s + ['status' => isset(self::STATUS[$markiert[$s['von']] ?? '']) ? $markiert[$s['von']] : 'frei'], $slots);
+            $slots = array_map(fn (array $s) => $s + ['status' => isset(self::MARKIERBAR[$markiert[$s['von']] ?? '']) ? $markiert[$s['von']] : 'frei'], $slots);
+        } else {
+            $slots = array_map(fn (array $s) => $s + ['status' => 'frei'],
+                self::berechnen($tag->von, $tag->bis, (int) $plan->slot_minuten, (int) $plan->vorbereitung_minuten, $tag->pausenListe()));
         }
 
-        return array_map(fn (array $s) => $s + ['status' => 'frei'],
-            self::berechnen($tag->von, $tag->bis, (int) $plan->slot_minuten, (int) $plan->vorbereitung_minuten, $tag->pausenListe()));
+        // Dazugebucht: Zeiten, zu denen die Lehrkraft bei einer Kollegin mitsitzt, sind bei ihr selbst nicht buchbar.
+        $dazu = self::dazuVon((int) $plan->user_id, (int) $tag->tag_id);
+        if ($dazu->isNotEmpty()) {
+            foreach ($slots as &$s) {
+                $a = self::minuten($s['von']);
+                $e = self::minuten($s['bis']);
+                $t = $dazu->first(fn ($d) => self::minuten($d->von) < $e && $a < self::minuten($d->bis));
+                if ($t && in_array($s['status'], ['frei', 'backup'], true)) {
+                    $s['status'] = 'dazu';
+                    $s['hinweis'] = 'dabei bei '.Namen::anzeige($t->plan?->user?->name).' ('.Namen::anzeige($t->kind?->name).($t->plan?->raum ? ', Raum '.$t->plan->raum : '').')';
+                }
+            }
+            unset($s);
+        }
+
+        return $slots;
+    }
+
+    /**
+     * Termine anderer Lehrkräfte, zu denen diese Lehrkraft an dem Tag dazukommt.
+     * Einmal je Anfrage geladen (die Slots werden oft gerechnet).
+     */
+    public static function dazuVon(int $userId, int $tagId): \Illuminate\Support\Collection
+    {
+        $attr = request()->attributes;
+        $cache = $attr->get('elternsprechtag.dazu', []);
+        if (! array_key_exists($userId, $cache)) {
+            $cache[$userId] = \Intranet\Modules\Elternsprechtag\Models\Termin::with(['plan.user', 'kind'])
+                ->whereHas('dazu', fn ($q) => $q->where('users.id', $userId))->get();
+            $attr->set('elternsprechtag.dazu', $cache);
+        }
+
+        return $cache[$userId]->where('tag_id', $tagId)->values();
     }
 
     /**

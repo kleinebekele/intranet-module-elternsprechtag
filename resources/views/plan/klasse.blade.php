@@ -3,7 +3,7 @@
 @php
     $mitTermin = $klasse['zeilen']->filter(fn ($z) => $z['termine']->isNotEmpty())->count();
 @endphp
-<div class="mb-4 rounded-xl border border-indigo-200 bg-white p-5" x-data="{ offen: false, suche: '' }">
+<div class="mb-4 rounded-xl border border-indigo-200 bg-white p-5" x-data="{ offen: @js((bool) session('elternsprechtag_klasse_offen')), suche: '' }">
     <div role="button" tabindex="0" @click="offen = ! offen" @keydown.enter.prevent="offen = ! offen" class="flex cursor-pointer items-center justify-between gap-2">
         <div>
             <h2 class="text-base font-semibold text-gray-800">Meine Klasse{{ count($klasse['klassen']) > 1 ? 'n' : '' }} {{ implode(', ', $klasse['klassen']) }}: Termine der Schüler</h2>
@@ -32,7 +32,23 @@
                                 @forelse ($z['termine'] as $t)
                                     <div class="{{ $t['eigen'] ? 'text-green-800' : 'text-gray-800' }}">
                                         <span class="tabular-nums">{{ $t['zeit'] }}</span> · {{ $t['namen'] }}@if ($t['raum']) <span class="text-gray-500">· Raum {{ $t['raum'] }}</span>@endif
-                                        @if ($t['eigen']) <span class="text-xs text-green-700">(bei dir)</span>@endif
+                                        @if ($t['eigen'])
+                                            <span class="text-xs text-green-700">(bei dir)</span>
+                                        @elseif ($t['dazu'])
+                                            <span class="text-xs font-medium text-indigo-700">· du kommst dazu</span>
+                                            @if ($darfMarkieren && ! $t['vorbei'])
+                                                <form method="POST" action="{{ route('module.elternsprechtag.plan.dazu', [$t['termin']] + ($fremd ? ['lehrer' => $lehrer->id] : [])) }}" class="inline">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="text-xs text-gray-500 underline hover:text-red-700">zurücknehmen</button>
+                                                </form>
+                                            @endif
+                                        @elseif ($darfMarkieren && ! $t['vorbei'])
+                                            <form method="POST" action="{{ route('module.elternsprechtag.plan.dazu', [$t['termin']] + ($fremd ? ['lehrer' => $lehrer->id] : [])) }}" class="inline"
+                                                  data-bestaetigen="Du kommst zu diesem Gespräch dazu. Bei dir ist zu der Zeit dann nichts buchbar." data-titel="Dazukommen" data-knopf="Dazukommen">
+                                                @csrf
+                                                <button type="submit" class="ml-1 rounded border border-indigo-300 px-1.5 py-0.5 text-xs text-indigo-700 hover:bg-indigo-50">dazukommen</button>
+                                            </form>
+                                        @endif
                                     </div>
                                 @empty
                                     <span class="text-gray-400">kein Termin</span>

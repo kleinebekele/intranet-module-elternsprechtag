@@ -85,8 +85,12 @@ stattfindet – auch in der PDF-Terminliste.
 
 Bist du Klassenlehrkraft einer beteiligten Klasse, steht oben der Kasten **Meine Klasse: Termine der
 Schüler** (zum Aufklappen). Dort siehst du je Kind, wann es bei wem einen Termin hat – mit Raum.
-So weißt du, bei welchem Gespräch du ggf. dazukommen kannst. Kinder ohne Termin stehen mit
-„kein Termin“ da.
+Kinder ohne Termin stehen mit „kein Termin“ da.
+
+Mit **dazukommen** buchst du dich zu einem Gespräch einer Kollegin dazu. Bei dir ist zu der Zeit
+dann nichts mehr buchbar (im Raster „dazugebucht“), in ihrer Terminliste steht „+ … kommt dazu“
+und in deiner „dabei bei …“. Hast du zu der Zeit selbst einen Termin, geht es nicht. Mit
+**zurücknehmen** machst du es rückgängig.
 
 ## Mit diesen Eltern möchte ich unbedingt sprechen
 

@@ -156,7 +156,7 @@ class PlanController
         }
 
         $kinder = Klassen::kinder($klassen);
-        $termine = Termin::with(['plan.user', 'tag'])
+        $termine = Termin::with(['plan.user', 'tag', 'dazu'])
             ->whereIn('kind_user_id', $kinder->map(fn ($z) => $z['kind']->id))
             ->whereHas('plan', fn ($q) => $q->where('sprechtag_id', $sprechtag->id))
             ->get()
@@ -172,6 +172,9 @@ class PlanController
                     'namen' => $gruppe->map(fn (Termin $t) => Namen::anzeige($t->plan?->user?->name))->filter()->join(' & '),
                     'raum' => $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->join(', '),
                     'eigen' => $gruppe->contains(fn (Termin $t) => (int) $t->plan?->user_id === $lehrer->id),
+                    'termin' => $gruppe->first(),
+                    'dazu' => $gruppe->first()->dazu->contains('id', $lehrer->id),
+                    'vorbei' => $gruppe->first()->beginn()->isPast(),
                 ])
                 ->sortBy('sort')->values();
 
@@ -270,7 +273,7 @@ class PlanController
     /** Inhalt der Terminliste eines Lehrers – auch für die Mail mit PDF (Support\Lehrerinfo). */
     public function terminliste(User $lehrer, Sprechtag $sprechtag): array
     {
-        $plan = Plan::with(['tage.tag', 'sprechtag', 'termine.kind.roles', 'termine.eltern', 'wuensche.kind.roles'])
+        $plan = Plan::with(['tage.tag', 'sprechtag', 'termine.kind.roles', 'termine.eltern', 'termine.dazu', 'wuensche.kind.roles'])
             ->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
 
         $tage = $plan->tage->filter(fn ($pt) => $pt->tag !== null)->sortBy(fn ($pt) => $pt->tag->datum)->map(function ($pt) use ($plan) {
@@ -280,7 +283,7 @@ class PlanController
                 'termin' => $termine->get($s['von']),
                 // Markierte, nicht gebuchte Zeiten erscheinen wie eine Pause, mit ihrer Bezeichnung.
                 'pause' => $s['status'] !== 'frei' && ! $termine->has($s['von']),
-                'label' => Slots::STATUS[$s['status']] ?? 'Pause',
+                'label' => $s['hinweis'] ?? (Slots::STATUS[$s['status']] ?? 'Pause'),
             ])
                 ->concat($plan->sprechtag?->einheitlich() ? collect() : collect($pt->pausenListe())->map(fn ($p) => ['von' => $p['von'], 'bis' => $p['bis'], 'termin' => null, 'pause' => true, 'label' => 'Pause']))
                 // Termine, die nicht mehr zu den Zeiten passen, trotzdem aufführen.
@@ -486,7 +489,7 @@ class PlanController
         $daten = $request->validate([
             'tag_id' => ['required', 'integer'],
             'von' => ['required', 'date_format:H:i'],
-            'status' => ['required', Rule::in(array_keys(Slots::STATUS))],
+            'status' => ['required', Rule::in(array_keys(Slots::MARKIERBAR))],
         ]);
         $plan = Plan::with(['tage.tag', 'sprechtag'])->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
         $pt = $plan->tage->firstWhere('tag_id', (int) $daten['tag_id']);
@@ -494,6 +497,9 @@ class PlanController
 
         if (Termin::where(['plan_id' => $plan->id, 'tag_id' => $pt->tag_id, 'von' => $daten['von']])->exists()) {
             return response()->json(['message' => 'Der Termin ist schon gebucht – bitte erst absagen.'], 422);
+        }
+        if (collect(Slots::raster($plan, $pt))->firstWhere('von', $daten['von'])['status'] === 'dazu') {
+            return response()->json(['message' => 'Zu der Zeit bist du bei einer Kollegin dazugebucht – das bitte dort zurücknehmen.'], 422);
         }
 
         $markiert = (array) ($pt->markierungen ?? []);
@@ -513,6 +519,51 @@ class PlanController
         }
 
         return response()->json(['ok' => true, 'status' => $daten['status']]);
+    }
+
+    /**
+     * Klassenlehrkraft kommt zu einem Termin einer Kollegin dazu (bzw. nimmt das
+     * zurück). Erlaubt für Klassenlehrkräfte der Klasse des Kindes, bis zum Ende
+     * des Sprechtags. Eigene Termine zur selben Zeit verhindern das Dazukommen.
+     */
+    public function dazu(Request $request, Termin $termin): RedirectResponse
+    {
+        $termin->load(['plan.sprechtag', 'plan.user', 'tag', 'kind.roles']);
+        $sprechtag = $termin->plan->sprechtag;
+        $lehrer = $this->lehrer($request, $sprechtag);
+        $zurueck = redirect()->to($this->zurueck($sprechtag, $lehrer, $request))->with('elternsprechtag_klasse_offen', true);
+
+        abort_if((int) $termin->plan->user_id === $lehrer->id, 404);
+        $klassen = array_intersect(Klassen::vonKind($termin->kind), $sprechtag->klassenListe());
+        abort_unless(Klassen::alsKlassenlehrer($lehrer, $klassen) !== [] || Rechte::istVerwaltung($request->user()), 403);
+        abort_unless(Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer), 403, 'Der Sprechtag ist vorbei.');
+
+        $gruppe = $termin->gruppeTermine();
+        if ($request->isMethod('delete')) {
+            $termin->dazu()->detach($lehrer->id);
+            $text = 'Du kommst nicht mehr dazu: ';
+        } else {
+            // Eigener Termin zur selben Zeit? Dann geht es nicht.
+            $eigen = Termin::where('tag_id', $termin->tag_id)
+                ->whereHas('plan', fn ($q) => $q->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]))->get()
+                ->first(fn (Termin $t) => \Intranet\Modules\Elternsprechtag\Support\Buchung::ueberschneidet((int) $termin->tag_id, $termin->von, $termin->bis, collect([$t])));
+            if ($eigen) {
+                return $zurueck->with('error', 'Zu der Zeit hast du selbst einen Termin ('.$eigen->von.'–'.$eigen->bis.' Uhr).');
+            }
+            if ($gruppe->contains(fn (Termin $t) => (int) $t->plan?->user_id === $lehrer->id)) {
+                return $zurueck->with('error', 'Das ist ein gemeinsames Gespräch, bei dem du ohnehin dabei bist.');
+            }
+            $termin->dazu()->syncWithoutDetaching([$lehrer->id]);
+            $text = 'Du kommst dazu: ';
+        }
+
+        if (class_exists(\App\Support\Audit::class)) {
+            \App\Support\Audit::schreiben('elternsprechtag.dazu', $sprechtag->titel, betroffener: $lehrer,
+                daten: ['sprechtag' => $sprechtag->id, 'termin' => $termin->id, 'bei' => $termin->plan->user_id, 'dazu' => ! $request->isMethod('delete')],
+                ziel: "Elternsprechtag {$sprechtag->id}");
+        }
+
+        return $zurueck->with('status', $text.$termin->beschriftung().' bei '.Namen::anzeige($termin->plan->user?->name).' ('.Namen::anzeige($termin->kind?->name).').');
     }
 
     /**

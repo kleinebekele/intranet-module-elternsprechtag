@@ -7,6 +7,7 @@
     $raster = $pt ? \Intranet\Modules\Elternsprechtag\Support\Slots::raster($plan, $pt) : [];
     $termine = $plan->termine->where('tag_id', $t->id)->keyBy('von');
     $stati = \Intranet\Modules\Elternsprechtag\Support\Slots::STATUS;
+    $wahl = \Intranet\Modules\Elternsprechtag\Support\Slots::MARKIERBAR;
 @endphp
 <div x-show="tage[id].dabei" class="mt-3">
     @if (! $pt)
@@ -19,7 +20,10 @@
         <div class="mt-2 flex flex-wrap gap-1.5">
             @foreach ($raster as $s)
                 @php $termin = $termine->get($s['von']); @endphp
-                @if ($termin)
+                @if (! $termin && $s['status'] === 'dazu')
+                    <span class="rounded-lg border border-indigo-300 bg-indigo-50 px-2 py-1 text-xs tabular-nums text-indigo-900"
+                          title="{{ $s['hinweis'] ?? '' }}">{{ $s['von'] }} <span class="font-medium">dazugebucht</span></span>
+                @elseif ($termin)
                     <span class="rounded-lg border border-green-300 bg-green-50 px-2 py-1 text-xs tabular-nums text-green-900"
                           title="gebucht: {{ $nv($termin->kind?->name) }}">{{ $s['von'] }} <span class="font-medium">gebucht</span></span>
                 @else
@@ -33,7 +37,7 @@
                         </div>
                         @if ($darfMarkieren)
                             <div x-show="auf" x-cloak class="absolute left-0 top-full z-30 mt-1 w-32 rounded-lg border border-gray-200 bg-white py-1 text-sm shadow-lg">
-                                @foreach ($stati as $wert => $text)
+                                @foreach ($wahl as $wert => $text)
                                     <div role="button" tabindex="0" class="cursor-pointer px-3 py-1 hover:bg-gray-100"
                                          :class="s === @js($wert) && 'font-semibold'"
                                          @click="auf = false; const alt = s; s = @js($wert);
