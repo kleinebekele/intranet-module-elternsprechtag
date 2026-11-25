@@ -88,6 +88,24 @@ class PlanController
         $lehrer = $this->lehrer($request, $sprechtag);
         $sprechtag->load('tage');
 
+        // Einheitliches Raster: Ruft die Lehrkraft die Seite zum ersten Mal selbst auf,
+        // gleich Plan und alle Tage anlegen – dann sind die Uhrzeiten sofort markierbar.
+        if ($sprechtag->einheitlich() && $lehrer->is($request->user()) && ! $sprechtag->vorbei()
+            && ! Plan::where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->exists()) {
+            DB::transaction(function () use ($sprechtag, $lehrer) {
+                $neu = Plan::create([
+                    'sprechtag_id' => $sprechtag->id,
+                    'user_id' => $lehrer->id,
+                    'klassen' => Plan::klassenVon(null, $lehrer, $sprechtag),
+                    'slot_minuten' => $sprechtag->slot_minuten,
+                    'vorbereitung_minuten' => 0,
+                ]);
+                foreach ($sprechtag->tage as $t) {
+                    $neu->tage()->create(['tag_id' => $t->id, 'von' => $t->standard_von ?? '08:00', 'bis' => $t->standard_bis ?? '15:00', 'pausen' => []]);
+                }
+            });
+        }
+
         $plan = Plan::with(['tage.tag', 'wuensche', 'termine.tag', 'termine.kind', 'termine.eltern'])->firstOrNew(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id]);
         $klassen = Plan::klassenVon($plan->exists ? $plan : null, $lehrer, $sprechtag);
         $planTage = $plan->tage->keyBy('tag_id');
