@@ -10,6 +10,9 @@ Hier legst du fest, wann und wo du am Elternsprechtag zur Verfügung stehst. Aus
 entstehen die Termine, die die Eltern später buchen. Bitte trag alles bis zur Frist ein, die oben
 auf der Seite steht.
 
+„Mein Terminplan“ öffnet direkt den aktuellen Elternsprechtag. Die Übersicht aller anstehenden
+Sprechtage erreichst du über „← zurück“.
+
 ## Für welche Klassen bist du da?
 
 Unter **Ich stehe zur Verfügung für** stehen alle Klassen dieses Sprechtags. Vorausgewählt sind

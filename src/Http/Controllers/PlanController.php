@@ -29,7 +29,7 @@ use Intranet\Modules\Elternsprechtag\Support\Team;
 class PlanController
 {
     /** Die kommenden Sprechtage – für jeden Lehrer, welche Klassen er übernimmt, wählt er im Plan. */
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();
         if ($request->filled('lehrer') && (int) $request->input('lehrer') !== $user->id) {
@@ -43,6 +43,17 @@ class PlanController
             ->reject->vorbei()
             ->sortBy(fn (Sprechtag $s) => $s->tage->first()?->datum)
             ->values();
+
+        // Direkt in den aktuellen Sprechtag: der veröffentlichte, sonst der einzige
+        // anstehende. `?liste=1` (Link „zurück") zeigt die Übersicht.
+        if (! $request->boolean('liste')) {
+            $aktuell = $sprechtage->first(fn (Sprechtag $s) => $s->veroeffentlicht())
+                ?? ($sprechtage->count() === 1 ? $sprechtage->first() : null);
+            if ($aktuell && Rechte::istLehrerIn($user, $aktuell)) {
+                return redirect()->route('module.elternsprechtag.plan.zeigen', $user->is($request->user())
+                    ? [$aktuell] : [$aktuell, 'lehrer' => $user->id]);
+            }
+        }
 
         return view('elternsprechtag::plan.index', [
             'sprechtage' => $sprechtage,

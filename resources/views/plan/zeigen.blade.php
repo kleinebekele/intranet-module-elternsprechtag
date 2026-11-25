@@ -43,7 +43,7 @@
                 Terminplan · {{ $sprechtag->titel }}@if ($fremd) · <span class="text-indigo-700">{{ $lehrer->name }}</span>@endif
             </h1>
             <div class="flex flex-wrap items-center gap-3">
-                <a href="{{ $fremd ? route('module.elternsprechtag.sprechtage.show', $sprechtag) : route('module.elternsprechtag.plan.index') }}"
+                <a href="{{ $fremd ? route('module.elternsprechtag.sprechtage.show', $sprechtag) : route('module.elternsprechtag.plan.index', ['liste' => 1]) }}"
                    class="text-sm text-indigo-700 hover:underline">← zurück</a>
             </div>
         </div>
