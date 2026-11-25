@@ -3,16 +3,17 @@
      Bedienung über div statt button/select: ein deaktiviertes fieldset (Plan gesperrt) sperrt sonst
      auch das Markieren, das bis zum Sprechtag möglich bleibt. --}}
 @php
-    $pt = $plan->exists ? $plan->tage->firstWhere('tag_id', $t->id) : null;
-    $raster = $pt ? \Intranet\Modules\Elternsprechtag\Support\Slots::raster($plan, $pt) : [];
+    // Noch kein gespeicherter Tag (neuer Plan, Handeln als, Tag später dazugekommen):
+    // Raster trotzdem aus dem Sprechtag rechnen – der erste Klick legt Plan und Tag an.
+    $pt = ($plan->exists ? $plan->tage->firstWhere('tag_id', $t->id) : null)
+        ?? (new \Intranet\Modules\Elternsprechtag\Models\PlanTag(['tag_id' => $t->id, 'von' => $t->standard_von, 'bis' => $t->standard_bis, 'pausen' => []]))->setRelation('tag', $t);
+    $plan->setRelation('sprechtag', $sprechtag);
+    $raster = \Intranet\Modules\Elternsprechtag\Support\Slots::raster($plan, $pt);
     $termine = $plan->termine->where('tag_id', $t->id)->keyBy('von');
     $stati = \Intranet\Modules\Elternsprechtag\Support\Slots::STATUS;
     $wahl = \Intranet\Modules\Elternsprechtag\Support\Slots::MARKIERBAR;
 @endphp
 <div x-show="tage[id].dabei" class="mt-3">
-    @if (! $pt)
-        <p class="text-sm text-amber-700">Erst speichern – dann kannst du hier einzelne Termine als Pause, gesperrt oder Reserve markieren.</p>
-    @else
         <p class="text-xs text-gray-500">
             Klick auf eine Uhrzeit: <strong>frei</strong> (buchbar), <strong>Pause</strong>, <strong>gesperrt</strong> (z. B. später da)
             oder <strong>Reserve</strong> (wird erst buchbar, wenn alle freien Termine vergeben sind). Gebuchte Termine lassen sich hier nicht ändern.
@@ -56,5 +57,4 @@
                 <span class="text-xs text-amber-700">Keine Termine – bitte beim Sekretariat Beginn und Ende des Tages prüfen lassen.</span>
             @endif
         </div>
-    @endif
 </div>

@@ -491,9 +491,17 @@ class PlanController
             'von' => ['required', 'date_format:H:i'],
             'status' => ['required', Rule::in(array_keys(Slots::MARKIERBAR))],
         ]);
-        $plan = Plan::with(['tage.tag', 'sprechtag'])->where(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id])->firstOrFail();
-        $pt = $plan->tage->firstWhere('tag_id', (int) $daten['tag_id']);
-        abort_if($pt === null || ! collect(Slots::raster($plan, $pt))->contains('von', $daten['von']), 422, 'Diese Uhrzeit gibt es im Raster nicht.');
+        // Plan bzw. Tag gibt es noch nicht (z. B. Handeln als, Tag später angelegt): jetzt anlegen.
+        $tag = $sprechtag->tage()->findOrFail((int) $daten['tag_id']);
+        $plan = Plan::firstOrCreate(['sprechtag_id' => $sprechtag->id, 'user_id' => $lehrer->id], [
+            'klassen' => Plan::klassenVon(null, $lehrer, $sprechtag),
+            'slot_minuten' => $sprechtag->slot_minuten,
+            'vorbereitung_minuten' => 0,
+        ]);
+        $plan->tage()->firstOrCreate(['tag_id' => $tag->id], ['von' => $tag->standard_von ?? '08:00', 'bis' => $tag->standard_bis ?? '15:00', 'pausen' => []]);
+        $plan->load(['tage.tag', 'sprechtag']);
+        $pt = $plan->tage->firstWhere('tag_id', $tag->id);
+        abort_if(! collect(Slots::raster($plan, $pt))->contains('von', $daten['von']), 422, 'Diese Uhrzeit gibt es im Raster nicht.');
 
         if (Termin::where(['plan_id' => $plan->id, 'tag_id' => $pt->tag_id, 'von' => $daten['von']])->exists()) {
             return response()->json(['message' => 'Der Termin ist schon gebucht – bitte erst absagen.'], 422);
