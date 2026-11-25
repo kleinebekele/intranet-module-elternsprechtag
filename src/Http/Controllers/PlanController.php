@@ -152,6 +152,10 @@ class PlanController
     /** Terminliste zum Ausdrucken: je Tag alle Slots mit Kind und Eltern, dazu offene Gesprächswünsche. */
     public function pdf(Request $request, Sprechtag $sprechtag)
     {
+        $sprechtag->loadMissing('tage');
+        if (! $sprechtag->pdfFrei($request->user())) {
+            return back()->with('error', 'Die Terminliste als PDF gibt es nach dem Buchungsschluss – dann ist sie endgültig. Bis dahin zeigt das Auge den aktuellen Stand.');
+        }
         $daten = $this->listenDaten($request, $sprechtag);
 
         return \Barryvdh\DomPDF\Facade\Pdf::setOption('isFontSubsettingEnabled', true)

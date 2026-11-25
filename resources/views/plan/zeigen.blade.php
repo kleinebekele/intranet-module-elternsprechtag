@@ -68,7 +68,9 @@
                     <div class="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-3">
                         <h2 class="text-base font-semibold text-gray-800">Terminliste</h2>
                         <div class="flex items-center gap-3">
-                            <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" class="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf text-xl"></i> PDF</a>
+                            @if ($sprechtag->pdfFrei(auth()->user()))
+                                <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" class="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf text-xl"></i> PDF</a>
+                            @endif
                             <button type="button" @click="offen = false" class="text-2xl leading-none text-gray-400 hover:text-gray-600" title="Schließen">×</button>
                         </div>
                     </div>
@@ -213,8 +215,13 @@
                         <span class="font-medium text-green-700">({{ $plan->termine->count() }} gebucht)</span>
                     @endif
                     @if ($plan->exists)
-                        <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" title="Terminliste als PDF herunterladen"
-                           class="inline-flex items-center text-2xl leading-none text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf"></i></a>
+                        @if ($sprechtag->pdfFrei(auth()->user()))
+                            <a href="{{ route('module.elternsprechtag.plan.pdf', $ziel) }}" title="Terminliste als PDF herunterladen"
+                               class="inline-flex items-center text-2xl leading-none text-red-600 hover:text-red-700"><i class="bx bxs-file-pdf"></i></a>
+                        @else
+                            <span title="Die Terminliste als PDF gibt es ab {{ $sprechtag->buchungsschluss()?->format('d.m.Y, H:i') }} Uhr (Buchungsschluss) – dann ist sie endgültig. Den aktuellen Stand zeigt das Auge."
+                                  class="inline-flex cursor-help items-center text-2xl leading-none text-gray-300"><i class="bx bxs-file-pdf"></i></span>
+                        @endif
                         <a href="#" @click.prevent="$dispatch('liste-ansehen')" title="Terminliste ansehen (wie im PDF)"
                            class="inline-flex items-center text-2xl leading-none text-gray-500 hover:text-indigo-700"><i class="bx bx-show"></i></a>
                     @endif

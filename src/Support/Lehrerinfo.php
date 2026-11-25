@@ -14,11 +14,12 @@ use Throwable;
 /**
  * Terminliste als PDF per Mail an die Lehrkraft.
  *
- * - Plan voll (jeder Slot gebucht) → Liste geht raus, `voll_gemeldet_am` gesetzt.
- *   Wird wieder ein Termin frei, fällt die Marke weg; beim nächsten Vollwerden
- *   geht die Liste erneut raus.
+ * - Plan voll (jeder Slot gebucht) → Mail OHNE PDF („Liste folgt nach dem
+ *   Buchungsschluss"), `voll_gemeldet_am` gesetzt. Wird wieder ein Termin frei,
+ *   fällt die Marke weg; beim nächsten Vollwerden kommt die Mail erneut.
  * - Buchungsschluss (Vorabend 18 Uhr, Task Elternsprechtag/Buchungsschluss) →
- *   alle übrigen teilnehmenden Lehrkräfte bekommen ihre Liste.
+ *   jede teilnehmende Lehrkraft mit Terminen bekommt ihre Liste als PDF. Vorher
+ *   gibt es kein PDF – niemand soll mit einer alten Fassung arbeiten.
  * - Danach ändert nur noch die Verwaltung etwas; jede solche Änderung schickt
  *   der Lehrkraft die aktuelle Liste (eigene Absagen der Lehrkraft nicht).
  */
@@ -88,15 +89,15 @@ class Lehrerinfo
     }
 
     /**
-     * Buchungsschluss: Liste an alle teilnehmenden Lehrkräfte, die noch keine
-     * Voll-Meldung haben. Gibt die Zahl der verschickten Mails zurück.
+     * Buchungsschluss: Liste als PDF an alle teilnehmenden Lehrkräfte mit
+     * Terminen. Gibt die Zahl der verschickten Mails zurück.
      */
     public static function schliessen(Sprechtag $sprechtag): int
     {
         $gesendet = 0;
         $plaene = Plan::with(['tage.tag', 'termine', 'user', 'sprechtag.tage'])->where('sprechtag_id', $sprechtag->id)->get();
         foreach ($plaene as $plan) {
-            if ($plan->abgesagt() || $plan->user === null || $plan->voll_gemeldet_am !== null || $plan->anzahlTermine() === 0) {
+            if ($plan->abgesagt() || $plan->user === null || $plan->anzahlTermine() === 0) {
                 continue;
             }
             $gesendet += self::senden($plan, 'schluss') ? 1 : 0;
@@ -116,7 +117,9 @@ class Lehrerinfo
         }
 
         try {
-            $pfad = self::pdf($plan);
+            // Vor dem Buchungsschluss (Voll-Meldung) kein PDF – es könnte sich noch ändern.
+            $mitPdf = $anlass !== 'voll';
+            $pfad = $mitPdf ? self::pdf($plan) : null;
             $gebucht = $plan->termine->count();
             $gesamt = $plan->anzahlTermine();
             $werte = [
@@ -124,17 +127,19 @@ class Lehrerinfo
                 'sprechtag' => $sprechtag->titel,
                 'tage' => $sprechtag->tageText(),
                 'anlass' => match ($anlass) {
-                    'voll' => 'dein Terminplan ist voll – alle Termine sind gebucht. Sagt jemand ab, bekommst du die Liste erneut, sobald wieder alles belegt ist.',
+                    'voll' => 'dein Terminplan ist voll – alle Termine sind gebucht.',
                     'schluss' => 'die Terminbuchung ist geschlossen; Eltern können jetzt nichts mehr buchen oder absagen.',
                     default => 'an deinem Terminplan hat sich nach dem Buchungsschluss etwas geändert.',
                 },
                 'stand' => $gebucht.' von '.$gesamt.' Terminen gebucht',
+                'pdf' => $mitPdf ? 'Deine Terminliste hängt als PDF an.'
+                    : 'Die Terminliste als PDF bekommst du nach dem Buchungsschluss'.($sprechtag->buchungsschluss() ? ' am '.$sprechtag->buchungsschluss()->format('d.m.Y, H:i').' Uhr' : '').' – dann ist sie endgültig.',
                 'link' => route('module.elternsprechtag.plan.index'),
             ];
             app(VorlagenMailer::class)->senden(
                 ElternsprechtagServiceProvider::VORLAGE_TERMINLISTE, $lehrer->email, array_map('e', $werte), $werte,
                 quelle: self::QUELLE, referenz: 'elternsprechtag-terminliste:'.$sprechtag->id.':'.$plan->id, modul: 'Elternsprechtag',
-                anhaenge: [['pfad' => $pfad, 'name' => 'Terminliste-'.str($lehrer->name)->slug().'.pdf']],
+                anhaenge: $pfad ? [['pfad' => $pfad, 'name' => 'Terminliste-'.str($lehrer->name)->slug().'.pdf']] : [],
             );
 
             return true;

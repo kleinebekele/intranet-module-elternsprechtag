@@ -76,8 +76,11 @@ Assistent nicht.
 ## Ihre Termine
 
 Sobald Sie gebucht haben, stehen oben auf der Seite alle Ihre Termine untereinander – mit Uhrzeit,
-Lehrkraft, Kind, Klasse und Raum. Daneben gibt es die Liste als PDF, zum Herunterladen oder per
-E-Mail.
+Lehrkraft, Kind, Klasse und Raum.
+
+Die Liste **zum Ausdrucken (PDF)** gibt es erst nach dem Buchungsschluss – dann ist sie endgültig,
+und niemand kommt mit einer alten Fassung. Ab dann stehen dort die Knöpfe **Als PDF ansehen**,
+**Herunterladen** und **Per Mail schicken**.
 
 ## Umbuchen und absagen
 

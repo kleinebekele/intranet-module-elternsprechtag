@@ -39,6 +39,16 @@ class Sprechtag extends Model
         return $this->buchungsschluss()?->isPast() ?? false;
     }
 
+    /**
+     * Terminlisten als PDF gibt es erst nach dem Buchungsschluss – vorher kann
+     * sich noch alles ändern, und niemand soll mit einer alten Fassung kommen.
+     * Die Verwaltung darf immer.
+     */
+    public function pdfFrei(?\App\Models\User $user = null): bool
+    {
+        return $this->buchungGeschlossen() || \Intranet\Modules\Elternsprechtag\Support\Rechte::istVerwaltung($user);
+    }
+
     public function tage(): HasMany
     {
         return $this->hasMany(Tag::class, 'sprechtag_id')->orderBy('datum');

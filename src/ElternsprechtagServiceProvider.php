@@ -258,13 +258,14 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
             $register->registrieren(new \App\Mail\Vorlagen\VorlagenDefinition(
                 schluessel: self::VORLAGE_TERMINLISTE,
                 titel: 'Elternsprechtag: Terminliste an die Lehrkraft',
-                beschreibung: 'Geht mit der Terminliste als PDF an die Lehrkraft, sobald ihr Plan voll ist (nach einer Absage beim nächsten Vollwerden erneut), am Vorabend um 18 Uhr beim Buchungsschluss an alle übrigen teilnehmenden Lehrkräfte und danach bei jeder Änderung durch die Verwaltung.',
+                beschreibung: 'Geht an die Lehrkraft, sobald ihr Plan voll ist (ohne PDF, mit Hinweis), beim Buchungsschluss (meist Vorabend 18 Uhr) mit der Terminliste als PDF an alle teilnehmenden Lehrkräfte und danach bei jeder Änderung durch die Verwaltung.',
                 platzhalter: [
                     'name' => 'Name der Lehrkraft',
                     'sprechtag' => 'Titel des Sprechtags',
                     'tage' => 'Die Tage, z. B. „Do 12.11.2026, Fr 13.11.2026"',
                     'anlass' => 'Warum die Mail kommt (Plan voll / Buchungsschluss / Änderung)',
                     'stand' => 'z. B. „12 von 14 Terminen gebucht"',
+                    'pdf' => 'Satz zum Anhang: „hängt als PDF an" bzw. „folgt nach dem Buchungsschluss"',
                     'link' => 'Link zu „Mein Terminplan"',
                 ],
                 betreff: 'Elternsprechtag: {{ sprechtag }} – deine Terminliste',
@@ -275,6 +276,7 @@ class ElternsprechtagServiceProvider extends ModuleServiceProvider
                     'tage' => 'Do 12.11.2026, Fr 13.11.2026',
                     'anlass' => 'die Terminbuchung ist geschlossen; Eltern können jetzt nichts mehr buchen oder absagen.',
                     'stand' => '12 von 14 Terminen gebucht',
+                    'pdf' => 'Deine Terminliste hängt als PDF an.',
                 ],
                 modul: 'Elternsprechtag',
                 ausloeser: Support\Lehrerinfo::QUELLE,
@@ -354,7 +356,7 @@ TEXT;
     private const TERMINLISTE_HTML = <<<'HTML'
 <p style="margin:0 0 16px;font-size:16px;">Hallo {{ name }},</p>
 <p style="margin:0 0 16px;">zum <strong>{{ sprechtag }}</strong> ({{ tage }}): {{ anlass }}</p>
-<p style="margin:0 0 16px;"><strong>Stand:</strong> {{ stand }}. Deine Terminliste hängt als PDF an.</p>
+<p style="margin:0 0 16px;"><strong>Stand:</strong> {{ stand }}. {{ pdf }}</p>
 <p style="margin:0 0 24px;">
   <a href="{{ link }}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;">Mein Terminplan</a>
 </p>
@@ -366,7 +368,7 @@ Hallo {{ name }},
 
 zum {{ sprechtag }} ({{ tage }}): {{ anlass }}
 
-Stand: {{ stand }}. Deine Terminliste hängt als PDF an.
+Stand: {{ stand }}. {{ pdf }}
 
 Mein Terminplan: {{ link }}
 

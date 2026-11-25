@@ -90,10 +90,16 @@ Sobald Eltern buchen:
 
 ## Terminliste ausdrucken
 
-Das rote **PDF-Symbol** im blauen Kasten (oder der Knopf in der Buchungsliste) lädt deine
-Terminliste herunter: je Tag alle Uhrzeiten mit Kind, Klasse und Eltern, freie Termine und
-Pausen, eine leere Spalte für Notizen und am Ende die Gesprächswünsche, für die noch kein Termin
-gebucht ist.
+Das rote **PDF-Symbol** im blauen Kasten lädt deine Terminliste herunter: je Tag alle Uhrzeiten
+mit Kind, Klasse und Eltern, freie Termine und Pausen, eine leere Spalte für Notizen und am Ende
+die Gesprächswünsche, für die noch kein Termin gebucht ist.
+
+Das PDF gibt es erst **nach dem Buchungsschluss** – vorher ist das Symbol grau, denn bis dahin
+können Eltern noch umbuchen. Den aktuellen Stand zeigt jederzeit das **Auge** daneben.
+
+Per E-Mail: Ist dein Plan voll, bekommst du eine kurze Nachricht (noch ohne PDF). Zum
+Buchungsschluss bekommst du deine endgültige Liste als PDF; ändert das Sekretariat danach noch
+etwas, kommt die neue Liste automatisch.
 
 ## Nicht dabei oder krank?
 

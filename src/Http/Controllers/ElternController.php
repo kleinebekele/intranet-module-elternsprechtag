@@ -99,6 +99,9 @@ class ElternController
     {
         $eltern = $this->eltern($request);
         abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
+        if (! $sprechtag->pdfFrei($request->user())) {
+            return $this->zurueck($request, $eltern)->with('error', 'Ihre Terminliste gibt es nach dem Buchungsschluss – dann ist sie endgültig.');
+        }
 
         return response(Elternliste::pdf($eltern, $sprechtag), 200, [
             'Content-Type' => 'application/pdf',
@@ -111,6 +114,9 @@ class ElternController
     {
         $eltern = $this->eltern($request);
         abort_unless(Buchung::kinder($eltern, $sprechtag)->isNotEmpty(), 404);
+        if (! $sprechtag->pdfFrei($request->user())) {
+            return $this->zurueck($request, $eltern)->with('error', 'Ihre Terminliste gibt es nach dem Buchungsschluss – dann ist sie endgültig.');
+        }
 
         return $this->zurueck($request, $eltern)->with(...(Elternliste::senden($eltern, $sprechtag)
             ? ['status', 'Ihre Terminliste ist unterwegs an '.$eltern->email.'.']

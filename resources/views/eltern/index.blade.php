@@ -37,6 +37,9 @@
             @if ($hatTermine)
                 <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
                     <span class="text-gray-600">Ihre Termine:</span>
+                    @if (! $s->pdfFrei(auth()->user()))
+                        <span class="text-gray-500"><i class="bx bx-time-five align-middle"></i> Die Terminliste zum Ausdrucken gibt es ab {{ $s->buchungsschluss()?->format('d.m.Y, H:i') }} Uhr – dann ist sie endgültig.</span>
+                    @else
                     <a href="{{ route('module.elternsprechtag.eltern.liste', [$s] + $als) }}" target="_blank" rel="noopener"
                        class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 hover:bg-gray-50"><i class="bx bx-file"></i> Als PDF ansehen</a>
                     <a href="{{ route('module.elternsprechtag.eltern.liste', [$s, 'download' => 1] + $als) }}"
@@ -46,6 +49,7 @@
                             @csrf
                             <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-gray-700 hover:bg-gray-50"><i class="bx bx-envelope"></i> Per Mail schicken</button>
                         </form>
+                    @endif
                     @endif
                 </div>
 
