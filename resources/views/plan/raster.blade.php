@@ -14,7 +14,7 @@
     @else
         <p class="text-xs text-gray-500">
             Klick auf eine Uhrzeit: <strong>frei</strong> (buchbar), <strong>Pause</strong>, <strong>gesperrt</strong> (z. B. später da)
-            oder <strong>Reserve</strong>. Gebuchte Termine lassen sich hier nicht ändern.
+            oder <strong>Reserve</strong> (wird erst buchbar, wenn alle freien Termine vergeben sind). Gebuchte Termine lassen sich hier nicht ändern.
         </p>
         <div class="mt-2 flex flex-wrap gap-1.5">
             @foreach ($raster as $s)

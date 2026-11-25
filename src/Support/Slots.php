@@ -19,13 +19,41 @@ class Slots
     public const STATUS = ['frei' => 'frei', 'pause' => 'Pause', 'gesperrt' => 'gesperrt', 'backup' => 'Reserve'];
 
     /**
-     * Buchbare Termine eines Tages (Status „frei").
+     * Buchbare Termine eines Tages: „frei" – und „Reserve", sobald alle übrigen
+     * Termine der Lehrkraft vergeben sind (s. {@see reserveOffen()}).
      *
      * @return list<array{von: string, bis: string, status: string}>
      */
     public static function fuer(Plan $plan, PlanTag $tag): array
     {
-        return array_values(array_filter(self::raster($plan, $tag), fn (array $s) => $s['status'] === 'frei'));
+        $raster = self::raster($plan, $tag);
+        $reserve = in_array('backup', array_column($raster, 'status'), true) && self::reserveOffen($plan);
+
+        return array_values(array_filter($raster, fn (array $s) => $s['status'] === 'frei' || ($reserve && $s['status'] === 'backup')));
+    }
+
+    /**
+     * Reserve öffnet, wenn die Lehrkraft an allen Tagen keinen freien Termin mehr
+     * hat – jeder „frei"-Termin ist gebucht oder schon vorbei. Wird danach ein
+     * Termin wieder frei, schließt die Reserve; dort Gebuchtes bleibt.
+     */
+    public static function reserveOffen(Plan $plan): bool
+    {
+        $plan->loadMissing(['tage.tag', 'termine']);
+        foreach ($plan->tage as $pt) {
+            if ($pt->tag === null) {
+                continue;
+            }
+            $vergeben = $plan->termine->where('tag_id', $pt->tag_id)->pluck('von')->all();
+            foreach (self::raster($plan, $pt) as $s) {
+                if ($s['status'] === 'frei' && ! in_array($s['von'], $vergeben, true)
+                    && $pt->tag->datum->copy()->setTimeFromTimeString($s['von'])->isFuture()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**

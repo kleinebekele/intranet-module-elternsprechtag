@@ -52,7 +52,8 @@ Uhrzeit öffnet die Auswahl:
 - **frei** – Eltern können buchen.
 - **Pause** – für dich, z. B. Essen oder ein kurzes Gespräch unter Kollegen.
 - **gesperrt** – du bist zu der Zeit nicht da (z. B. kommst später).
-- **Reserve** – vorerst nicht buchbar.
+- **Reserve** – wird erst buchbar, wenn alle deine freien Termine vergeben sind. Wird danach ein
+  Termin wieder frei, schließt die Reserve wieder; dort schon Gebuchtes bleibt.
 
 Das geht bis zum Elternsprechtag, auch nach der Frist und dem Veröffentlichen – gespeichert wird
 sofort. Gebuchte Termine lassen sich so nicht ändern; die musst du erst absagen. In der
