@@ -81,6 +81,13 @@ Ist keine gemeinsame Uhrzeit mehr frei, können die Eltern bei einer von euch al
 steht oben auf der Seite bei euch beiden ein gelber Hinweis, welches Gespräch nur bei wem
 stattfindet – auch in der PDF-Terminliste.
 
+## Für Klassenlehrkräfte: Termine der eigenen Klasse
+
+Bist du Klassenlehrkraft einer beteiligten Klasse, steht oben der Kasten **Meine Klasse: Termine der
+Schüler** (zum Aufklappen). Dort siehst du je Kind, wann es bei wem einen Termin hat – mit Raum.
+So weißt du, bei welchem Gespräch du ggf. dazukommen kannst. Kinder ohne Termin stehen mit
+„kein Termin“ da.
+
 ## Mit diesen Eltern möchte ich unbedingt sprechen
 
 Zum Aufklappen. Hak die Kinder an, mit deren Eltern du auf jeden Fall sprechen willst. Die Eltern

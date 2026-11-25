@@ -129,6 +129,7 @@ class PlanController
             'kinder' => Klassen::kinder($sprechtag->klassenListe()),
             'wuensche' => $plan->wuensche->keyBy('kind_user_id'),
             'darfAendern' => Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer),
+            'klasse' => $this->klassenTermine($lehrer, $sprechtag),
             'darfAbsagen' => ! $plan->abgesagt() && Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer),
             // Raster markieren: wie Absagen bis zum Ende des Sprechtags.
             'darfMarkieren' => ! $plan->abgesagt() && Rechte::darfAbsagen($request->user(), $sprechtag, $lehrer),
@@ -138,6 +139,46 @@ class PlanController
             'personen' => $this->allePersonen($request),
             'team' => $team,
         ]);
+    }
+
+    /**
+     * Für Klassenlehrkräfte: je Kind der eigenen Klassen die gebuchten Termine
+     * (Zeit, Lehrkräfte, Raum) – damit sie sehen, wo sie dazukommen können.
+     * null, wenn die Lehrkraft in keiner Klasse des Sprechtags Klassenlehrkraft ist.
+     *
+     * @return array{klassen: list<string>, zeilen: \Illuminate\Support\Collection}|null
+     */
+    private function klassenTermine(User $lehrer, Sprechtag $sprechtag): ?array
+    {
+        $klassen = Klassen::alsKlassenlehrer($lehrer, $sprechtag->klassenListe());
+        if ($klassen === []) {
+            return null;
+        }
+
+        $kinder = Klassen::kinder($klassen);
+        $termine = Termin::with(['plan.user', 'tag'])
+            ->whereIn('kind_user_id', $kinder->map(fn ($z) => $z['kind']->id))
+            ->whereHas('plan', fn ($q) => $q->where('sprechtag_id', $sprechtag->id))
+            ->get()
+            ->groupBy('kind_user_id');
+
+        $zeilen = $kinder->map(function ($z) use ($termine, $lehrer) {
+            // Gemeinsame Gespräche stehen in mehreren Plänen – einmal zeigen, mit allen Namen.
+            $liste = ($termine->get($z['kind']->id) ?? collect())
+                ->groupBy(fn (Termin $t) => $t->gruppe ?: 't'.$t->id)
+                ->map(fn ($gruppe) => [
+                    'sort' => $gruppe->first()->tag?->datum?->format('Y-m-d').' '.$gruppe->first()->von,
+                    'zeit' => $gruppe->first()->tag?->beschriftung().', '.$gruppe->first()->von.'–'.$gruppe->first()->bis.' Uhr',
+                    'namen' => $gruppe->map(fn (Termin $t) => Namen::anzeige($t->plan?->user?->name))->filter()->join(' & '),
+                    'raum' => $gruppe->map(fn (Termin $t) => $t->plan?->raum)->filter()->unique()->join(', '),
+                    'eigen' => $gruppe->contains(fn (Termin $t) => (int) $t->plan?->user_id === $lehrer->id),
+                ])
+                ->sortBy('sort')->values();
+
+            return $z + ['termine' => $liste];
+        });
+
+        return ['klassen' => $klassen, 'zeilen' => $zeilen];
     }
 
     /**

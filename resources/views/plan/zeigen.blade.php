@@ -123,6 +123,10 @@
         </div>
     @endunless
 
+    @if ($klasse)
+        @include('elternsprechtag::plan.klasse')
+    @endif
+
     @if ($plan->abgesagt())
         <div class="rounded-xl border border-gray-300 bg-gray-50 p-5 text-sm text-gray-700">
             <div class="font-semibold text-gray-800">{{ $fremd ? $lehrer->name.' nimmt' : 'Du nimmst' }} an diesem Elternsprechtag nicht teil.</div>
