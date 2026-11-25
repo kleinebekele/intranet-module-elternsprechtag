@@ -2,10 +2,10 @@
     $nv = fn ($n) => \Intranet\Modules\Elternsprechtag\Support\Namen::anzeige($n);
     $ziel = $fremd ? [$sprechtag, 'lehrer' => $lehrer->id] : [$sprechtag];
     $start = [
-        'slot' => (int) old('slot_minuten', $plan->slot_minuten ?? 15),
-        'vorb' => (int) old('vorbereitung_minuten', $plan->vorbereitung_minuten ?? 0),
+        'slot' => $sprechtag->einheitlich() ? (int) $sprechtag->slot_minuten : (int) old('slot_minuten', $plan->slot_minuten ?? 15),
+        'vorb' => $sprechtag->einheitlich() ? 0 : (int) old('vorbereitung_minuten', $plan->vorbereitung_minuten ?? 0),
         'klassen' => array_map('strval', old('klassen', $klassen)),
-        'tage' => $sprechtag->tage->mapWithKeys(function ($t) use ($planTage, $plan) {
+        'tage' => $sprechtag->tage->mapWithKeys(function ($t) use ($planTage, $plan, $sprechtag) {
             $pt = $planTage->get($t->id);
             $alt = old('tage.'.$t->id);
 
@@ -17,8 +17,8 @@
             ] : [
                 // Neuer Plan: alle Tage mit den Vorschlagszeiten angehakt.
                 'dabei' => $pt !== null || ! $plan->exists,
-                'von' => $pt->von ?? $t->standard_von ?? '08:00',
-                'bis' => $pt->bis ?? $t->standard_bis ?? '15:00',
+                'von' => $sprechtag->einheitlich() ? ($t->standard_von ?? '08:00') : ($pt->von ?? $t->standard_von ?? '08:00'),
+                'bis' => $sprechtag->einheitlich() ? ($t->standard_bis ?? '15:00') : ($pt->bis ?? $t->standard_bis ?? '15:00'),
                 'pausen' => $pt?->pausenListe() ?? [],
             ]];
         }),
@@ -162,6 +162,11 @@
             </p>
 
             <h2 class="mt-5 text-base font-semibold text-gray-800">Termine (in Minuten)</h2>
+            @if ($sprechtag->einheitlich())
+                <p class="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    Gesprächsdauer <strong>{{ $sprechtag->slot_minuten }} Min.</strong> – gilt für alle Lehrkräfte, ebenso Beginn und Ende der Tage. Das legt das Sekretariat fest.
+                </p>
+            @else
             <div class="mt-3 grid grid-cols-2 gap-3">
                 <label class="block text-sm"><span class="text-gray-600">Gesprächsdauer</span>
                     <input type="number" name="slot_minuten" min="5" max="120" step="5" x-model.number="slot" required
@@ -170,6 +175,7 @@
                     <input type="number" name="vorbereitung_minuten" min="0" max="60" x-model.number="vorb" required
                            class="mt-1 w-full rounded-lg border-gray-300 text-sm"></label>
             </div>
+            @endif
             @foreach ($team['klassen'] as $klasse => $tk)
                 <div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 text-sm">
                     <div class="font-semibold text-indigo-900">Gemeinsame Gespräche · Klasse {{ $klasse }}</div>
@@ -243,10 +249,14 @@
                     <div x-show="tage[id].dabei" class="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div>
                             <div class="flex flex-wrap items-end gap-2">
+                                @if ($sprechtag->einheitlich())
+                                    <span class="text-sm text-gray-700">{{ $t->standard_von }}–{{ $t->standard_bis }} Uhr <span class="text-gray-500">(für alle gleich)</span></span>
+                                @else
                                 <label class="block text-sm"><span class="text-gray-600">Beginn</span>
                                     <input type="time" name="tage[{{ $t->id }}][von]" x-model="tage[id].von" class="mt-1 rounded-lg border-gray-300 text-sm"></label>
                                 <label class="block text-sm"><span class="text-gray-600">Ende</span>
                                     <input type="time" name="tage[{{ $t->id }}][bis]" x-model="tage[id].bis" class="mt-1 rounded-lg border-gray-300 text-sm"></label>
+                                @endif
                             </div>
                             <div class="mt-3 text-sm text-gray-600">Pausen</div>
                             <template x-for="(p, i) in tage[id].pausen" :key="i">

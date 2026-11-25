@@ -41,6 +41,8 @@
                             –
                         @endforelse
                     </dd></div>
+                <div><dt class="text-gray-500">Gesprächsdauer</dt>
+                    <dd>{{ $sprechtag->einheitlich() ? $sprechtag->slot_minuten.' Min. für alle (einheitliches Raster)' : 'wählt jede Lehrkraft selbst' }}</dd></div>
                 <div><dt class="text-gray-500">Klassen</dt><dd>{{ implode(', ', $sprechtag->klassenListe()) ?: '–' }}</dd></div>
                 <div><dt class="text-gray-500">Frist für die Lehrer</dt>
                     <dd>{{ $sprechtag->lehrer_frist?->format('d.m.Y') ?? 'keine' }}

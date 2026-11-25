@@ -18,6 +18,13 @@ class Slots
     /** @return list<array{von: string, bis: string}> */
     public static function fuer(Plan $plan, PlanTag $tag): array
     {
+        // Einheitliches Raster: Zeiten des Tages und Dauer des Sprechtags, keine Vorbereitung.
+        $sprechtag = $plan->sprechtag;
+        if ($sprechtag?->einheitlich() && $tag->tag) {
+            return self::berechnen((string) ($tag->tag->standard_von ?: $tag->von), (string) ($tag->tag->standard_bis ?: $tag->bis),
+                (int) $sprechtag->slot_minuten, 0, $tag->pausenListe());
+        }
+
         return self::berechnen($tag->von, $tag->bis, (int) $plan->slot_minuten, (int) $plan->vorbereitung_minuten, $tag->pausenListe());
     }
 

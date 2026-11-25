@@ -24,7 +24,17 @@ class Sprechtag extends Model
             'info_rest_versendet_am' => 'datetime',
             'schluss_gemeldet_am' => 'datetime',
             'eltern_frist' => 'datetime',
+            'slot_minuten' => 'integer',
         ];
+    }
+
+    /**
+     * Einheitliches Raster: das Sekretariat legt die Gesprächsdauer für alle fest,
+     * Beginn und Ende kommen von den Tagen. Sonst wählt jede Lehrkraft selbst.
+     */
+    public function einheitlich(): bool
+    {
+        return (int) $this->slot_minuten > 0;
     }
 
     /** Frist für die Eltern (Buchungsschluss): eingetragen, sonst Vorabend des ersten Tages, 18 Uhr. */

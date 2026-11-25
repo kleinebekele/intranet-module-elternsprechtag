@@ -21,8 +21,11 @@ und veröffentlichen am Ende die Termine für die Eltern.
 
 ## Anlegen und bearbeiten
 
-- **Tage**: einer oder mehrere, je mit Vorschlag für Beginn und Ende (Standard 8–15 Uhr). Die
-  Lehrkräfte übernehmen den Vorschlag und passen ihn an.
+- **Gesprächsdauer für alle**: z. B. 15 Minuten. Dann haben alle Lehrkräfte dasselbe Raster –
+  Beginn und Ende der Tage und diese Dauer, ohne eigene Vorbereitungszeit. Das macht gemeinsame
+  Gespräche und spontanes Dazukommen einfacher. Leer = jede Lehrkraft wählt Dauer und Zeiten selbst.
+- **Tage**: einer oder mehrere, je mit Beginn und Ende (Standard 8–15 Uhr). Bei fester
+  Gesprächsdauer gelten sie für alle, sonst sind sie der Vorschlag für die Lehrkräfte.
 - **Klassen**: Nur Eltern dieser Klassen werden informiert und können buchen.
 - **Frist für die Lehrer**: bis einschließlich dieses Tages können Lehrkräfte ihren Plan ändern.
 - **Hinweis**: erscheint in der E-Mail und auf der Buchungsseite der Eltern.

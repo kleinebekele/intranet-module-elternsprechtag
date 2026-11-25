@@ -22,6 +22,9 @@ Klassen selbst an. Eltern sehen dich nur bei Kindern aus den Klassen, die hier a
 
 ## Termine (in Minuten), Raum, Bemerkung
 
+Hat das Sekretariat eine **Gesprächsdauer für alle** festgelegt, steht sie hier nur zur Info –
+ebenso Beginn und Ende der Tage. Dann haben alle Lehrkräfte dasselbe Raster. Sonst gilt:
+
 - **Gesprächsdauer**: Länge eines Termins, Standard 15 Minuten.
 - **Vorbereitungszeit**: Puffer zwischen zwei Gesprächen, z. B. für Notizen. 0 = direkt
   hintereinander.

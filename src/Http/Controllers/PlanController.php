@@ -247,6 +247,17 @@ class PlanController
         $lehrer = $this->lehrer($request, $sprechtag);
         abort_unless(Rechte::darfPlanAendern($request->user(), $sprechtag, $lehrer), 403, 'Der Terminplan kann nicht mehr geändert werden.');
 
+        // Einheitliches Raster: Dauer und Zeiten legt das Sekretariat fest.
+        if ($sprechtag->einheitlich()) {
+            $tage = (array) $request->input('tage', []);
+            foreach ($sprechtag->tage as $t) {
+                $tage[$t->id] = ['von' => $t->standard_von, 'bis' => $t->standard_bis] + (array) ($tage[$t->id] ?? []);
+                $tage[$t->id]['von'] = $t->standard_von;
+                $tage[$t->id]['bis'] = $t->standard_bis;
+            }
+            $request->merge(['slot_minuten' => $sprechtag->slot_minuten, 'vorbereitung_minuten' => 0, 'tage' => $tage]);
+        }
+
         $daten = $request->validate([
             'slot_minuten' => ['required', 'integer', 'min:5', 'max:120'],
             'vorbereitung_minuten' => ['required', 'integer', 'min:0', 'max:60'],
@@ -288,7 +299,7 @@ class PlanController
             ->whereIn('user_id', collect($partner)->flatten()->pluck('id')->unique())->get();
         $anders = $partnerPlaene->filter(fn (Plan $p) => (int) $p->slot_minuten !== (int) $daten['slot_minuten']
             || (int) $p->vorbereitung_minuten !== (int) $daten['vorbereitung_minuten']);
-        if ($gebucht = $anders->first(fn (Plan $p) => $p->termine->isNotEmpty())) {
+        if (! $sprechtag->einheitlich() && $gebucht = $anders->first(fn (Plan $p) => $p->termine->isNotEmpty())) {
             return back()->withInput()->withErrors(['slot_minuten' => 'Gesprächsdauer und Vorbereitungszeit gelten auch für '
                 .Namen::anzeige($gebucht->user?->name).' – dort sind schon Termine gebucht. Bitte die bisherigen Werte lassen ('
                 .$gebucht->slot_minuten.' / '.$gebucht->vorbereitung_minuten.' Min.).']);

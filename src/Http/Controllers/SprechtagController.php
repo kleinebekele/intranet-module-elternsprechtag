@@ -416,12 +416,15 @@ class SprechtagController
             'lehrer_frist' => ['nullable', 'date'],
             'eltern_frist' => ['nullable', 'date'],
             'hinweis' => ['nullable', 'string', 'max:5000'],
+            'slot_minuten' => ['nullable', 'integer', 'min:5', 'max:60'],
             'tage' => ['required', 'array', 'min:1'],
             'tage.*.id' => ['nullable', 'integer'],
             'tage.*.datum' => ['required', 'date'],
-            'tage.*.von' => ['nullable', 'date_format:H:i'],
-            'tage.*.bis' => ['nullable', 'date_format:H:i', 'after:tage.*.von'],
+            'tage.*.von' => ['nullable', 'required_with:slot_minuten', 'date_format:H:i'],
+            'tage.*.bis' => ['nullable', 'required_with:slot_minuten', 'date_format:H:i', 'after:tage.*.von'],
         ], [
+            'tage.*.von.required_with' => 'Bei fester Gesprächsdauer braucht jeder Tag Beginn und Ende.',
+            'tage.*.bis.required_with' => 'Bei fester Gesprächsdauer braucht jeder Tag Beginn und Ende.',
             'tage.required' => 'Mindestens einen Tag eintragen.',
             'tage.*.datum.required' => 'Jeder Tag braucht ein Datum.',
             'tage.*.bis.after' => 'Das Ende muss nach dem Beginn liegen.',
@@ -433,6 +436,7 @@ class SprechtagController
             'lehrer_frist' => $daten['lehrer_frist'] ?? null,
             'eltern_frist' => $daten['eltern_frist'] ?? null,
             'hinweis' => $daten['hinweis'] ?? null,
+            'slot_minuten' => $daten['slot_minuten'] ?? null,
         ])->save();
 
         // Bestehende Tage behalten (an ihnen hängen die Pläne der Lehrer),

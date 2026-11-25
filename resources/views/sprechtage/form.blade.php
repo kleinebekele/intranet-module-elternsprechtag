@@ -25,6 +25,11 @@
                     <input type="datetime-local" name="eltern_frist" value="{{ old('eltern_frist', $sprechtag->eltern_frist?->format('Y-m-d\TH:i')) }}"
                            class="mt-1 w-full rounded-lg border-gray-300 text-sm">
                     <span class="mt-1 block text-xs text-gray-500">Leer = Vorabend des ersten Tages, 18 Uhr. Danach können Eltern nichts mehr buchen oder absagen, und alle Lehrkräfte bekommen ihre Terminliste per Mail.</span></label>
+                <label class="block text-sm"><span class="text-gray-600">Gesprächsdauer für alle (Minuten)</span>
+                    <input type="number" name="slot_minuten" min="5" max="60" step="5"
+                           value="{{ old('slot_minuten', $sprechtag->exists ? $sprechtag->slot_minuten : 15) }}"
+                           class="mt-1 w-full rounded-lg border-gray-300 text-sm">
+                    <span class="mt-1 block text-xs text-gray-500">Alle Lehrkräfte haben dann dasselbe Raster: Beginn und Ende der Tage (rechts) und diese Dauer, ohne eigene Vorbereitungszeit. Leer = jede Lehrkraft wählt Dauer und Zeiten selbst.</span></label>
                 <label class="block text-sm"><span class="text-gray-600">Hinweis für die Eltern (steht in der Info-Mail)</span>
                     <textarea name="hinweis" rows="4" maxlength="5000" class="mt-1 w-full rounded-lg border-gray-300 text-sm"
                               placeholder="z. B. Die Terminbuchung öffnet am … im Intranet.">{{ old('hinweis', $sprechtag->hinweis) }}</textarea></label>
@@ -33,7 +38,7 @@
 
         <div class="rounded-xl border border-gray-200 bg-white p-5">
             <h2 class="text-base font-semibold text-gray-800">Tage</h2>
-            <p class="mt-1 text-sm text-gray-500">Start und Ende sind der Vorschlag, mit dem der Terminplan jedes Lehrers beginnt.</p>
+            <p class="mt-1 text-sm text-gray-500">Start und Ende gelten bei fester Gesprächsdauer für alle Lehrkräfte, sonst sind sie der Vorschlag, mit dem der Terminplan jedes Lehrers beginnt.</p>
             <div class="mt-3 space-y-2">
                 <template x-for="(tag, i) in tage" :key="i">
                     <div class="flex flex-wrap items-end gap-2">
